@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Deno
+      uses: denoland/setup-deno@v1
+      with:
+        deno-version: v1.40.x
+    
+    - name: Test Event Store Core
+      run: |
+        cd event-store
+        deno test --allow-all
+    
+    - name: Test Admin UI
+      run: |
+        cd admin-ui
+        deno test --allow-all

@@ -1,0 +1,57 @@
+{
+  "lock": false,
+  "tasks": {
+    "check": "deno fmt --check && deno lint && deno check **/*.ts && deno check **/*.tsx",
+    "cli": "echo \"import '\\$fresh/src/dev/cli.ts'\" | deno run --unstable -A -",
+    "manifest": "deno task cli manifest $(pwd)",
+    "start": "deno run -A --watch=static/,routes/ dev.ts",
+    "build": "deno run -A dev.ts build",
+    "preview": "deno run -A main.ts",
+    "update": "deno run -A -r https://fresh.deno.dev/update .",
+    "test": "deno test --allow-all --coverage=coverage",
+    "test:watch": "deno test --allow-all --watch",
+    "test:unit": "deno test --allow-all tests/unit/",
+    "test:integration": "deno test --allow-all tests/integration/",
+    "test:e2e": "deno test --allow-all tests/e2e/",
+    "test:coverage": "deno coverage coverage --html --output=coverage/html",
+    "test:ci": "deno test --allow-all --coverage=coverage --parallel"
+  },
+  "lint": {
+    "rules": {
+      "tags": [
+        "fresh",
+        "recommended"
+      ]
+    }
+  },
+  "exclude": [
+    "**/_fresh/*",
+    "coverage/",
+    "tests/e2e/screenshots/"
+  ],
+  "imports": {
+    "$fresh/": "https://deno.land/x/fresh@1.7.3/",
+    "preact": "https://esm.sh/preact@10.22.0",
+    "preact/": "https://esm.sh/preact@10.22.0/",
+    "@preact/signals": "https://esm.sh/*@preact/signals@1.2.2",
+    "@preact/signals-core": "https://esm.sh/*@preact/signals-core@1.5.1",
+    "tailwindcss": "npm:tailwindcss@3.4.1",
+    "tailwindcss/": "npm:/tailwindcss@3.4.1/",
+    "tailwindcss/plugin": "npm:/tailwindcss@3.4.1/plugin.js",
+    "$std/": "https://deno.land/std@0.216.0/",
+    "$std/testing/": "https://deno.land/std@0.216.0/testing/",
+    "$std/assert/": "https://deno.land/std@0.216.0/assert/",
+    "$std/mock/": "https://deno.land/std@0.216.0/mock/",
+    "$std/http/": "https://deno.land/std@0.216.0/http/",
+    "preact-render-to-string": "https://esm.sh/*preact-render-to-string@6.2.2",
+    "@testing-library/preact": "https://esm.sh/@testing-library/preact@3.2.4",
+    "@testing-library/preact/": "https://esm.sh/@testing-library/preact@3.2.4/",
+    "happy-dom": "https://esm.sh/happy-dom@13.3.8",
+    "preact/test-utils": "https://esm.sh/preact@10.22.0/test-utils"
+  },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  },
+  "nodeModulesDir": "auto"
+}
