@@ -111,25 +111,32 @@ export class ConsumerManager {
 
     // Deliver events to consumer
     try {
-      const response = await fetch(consumer.callback, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          consumerId: consumer.id,
-          events: eventsToDeliver,
-        }),
-        signal: AbortSignal.timeout(30000), // 30 second timeout
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      try {
+        const response = await fetch(consumer.callback, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            consumerId: consumer.id,
+            events: eventsToDeliver,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        console.log(
+          `Delivered ${eventsToDeliver.length} events to consumer ${consumerId}`,
+        );
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      console.log(
-        `Delivered ${eventsToDeliver.length} events to consumer ${consumerId}`,
-      );
     } catch (error) {
       console.error(
         `Failed to deliver events to consumer ${consumerId}:`,
