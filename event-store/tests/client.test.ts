@@ -1,13 +1,17 @@
 import { assertEquals, assertRejects } from "$std/assert/mod.ts";
-import { describe, it, beforeAll, afterAll } from "$std/testing/bdd.ts";
-import { EventStoreClient, type EventStoreConfig, type Schema } from "../client.ts";
+import { afterAll, beforeAll, describe, it } from "$std/testing/bdd.ts";
+import {
+  EventStoreClient,
+  type EventStoreConfig,
+  type Schema,
+} from "../client.ts";
 import { TestSetup } from "./helpers/test-setup.ts";
 
 describe("EventStoreClient Integration", () => {
   let client: EventStoreClient;
   let serverProcess: Deno.ChildProcess;
   let testSetup: TestSetup;
-  
+
   // Use a random high port to avoid conflicts
   const testPort = 18000; // 9000-9999 range
 
@@ -60,7 +64,7 @@ describe("EventStoreClient Integration", () => {
   describe("getHealth", () => {
     it("should get health status", async () => {
       const health = await client.getHealth();
-      
+
       assertEquals(typeof health.status, "string");
       assertEquals(typeof health.consumers, "number");
       assertEquals(Array.isArray(health.runningDispatchers), true);
@@ -75,16 +79,16 @@ describe("EventStoreClient Integration", () => {
           eventType: "user.created",
           type: "object",
           $schema: "https://json-schema.org/draft/2020-12/schema",
-          properties: { 
+          properties: {
             id: { type: "string" },
-            name: { type: "string" }
+            name: { type: "string" },
           },
           required: ["id"],
         },
       ];
 
       await client.createTopic(uniqueTopicName, schemas);
-      
+
       // Verify topic was created by getting it
       const topic = await client.getTopic(uniqueTopicName);
       assertEquals(topic.name, uniqueTopicName);
@@ -106,10 +110,10 @@ describe("EventStoreClient Integration", () => {
 
       // Create topic first time
       await client.createTopic(uniqueTopicName, schemas);
-      
+
       // Try to create same topic again
       await assertRejects(
-        () => client.createTopic(uniqueTopicName, schemas)
+        () => client.createTopic(uniqueTopicName, schemas),
       );
     });
   });
@@ -117,7 +121,7 @@ describe("EventStoreClient Integration", () => {
   describe("getTopics", () => {
     it("should get all topics", async () => {
       const topics = await client.getTopics();
-      
+
       assertEquals(Array.isArray(topics), true);
       // Check that we have some topics (the exact names may vary due to test order)
       assertEquals(topics.length >= 0, true);
@@ -139,7 +143,7 @@ describe("EventStoreClient Integration", () => {
 
       await client.createTopic(uniqueTopicName, schemas);
       const topic = await client.getTopic(uniqueTopicName);
-      
+
       assertEquals(topic.name, uniqueTopicName);
       assertEquals(typeof topic.sequence, "number");
       assertEquals(Array.isArray(topic.schemas), true);
@@ -147,7 +151,7 @@ describe("EventStoreClient Integration", () => {
 
     it("should throw error for non-existent topic", async () => {
       await assertRejects(
-        () => client.getTopic("non-existent-topic")
+        () => client.getTopic("non-existent-topic"),
       );
     });
   });
@@ -160,20 +164,24 @@ describe("EventStoreClient Integration", () => {
           eventType: "user.created",
           type: "object",
           $schema: "https://json-schema.org/draft/2020-12/schema",
-          properties: { 
+          properties: {
             id: { type: "string" },
-            name: { type: "string" }
+            name: { type: "string" },
           },
           required: ["id"],
         },
       ];
 
       await client.createTopic(uniqueTopicName, schemas);
-      const eventId = await client.publishEvent(uniqueTopicName, "user.created", { 
-        id: "456", 
-        name: "Jane" 
-      });
-      
+      const eventId = await client.publishEvent(
+        uniqueTopicName,
+        "user.created",
+        {
+          id: "456",
+          name: "Jane",
+        },
+      );
+
       assertEquals(typeof eventId, "string");
       assertEquals(eventId.length > 0, true);
     });
@@ -187,19 +195,22 @@ describe("EventStoreClient Integration", () => {
           eventType: "user.created",
           type: "object",
           $schema: "https://json-schema.org/draft/2020-12/schema",
-          properties: { 
+          properties: {
             id: { type: "string" },
-            name: { type: "string" }
+            name: { type: "string" },
           },
           required: ["id"],
         },
       ];
 
       await client.createTopic(uniqueTopicName, schemas);
-      await client.publishEvent(uniqueTopicName, "user.created", { id: "123", name: "John" });
-      
+      await client.publishEvent(uniqueTopicName, "user.created", {
+        id: "123",
+        name: "John",
+      });
+
       const events = await client.getEvents(uniqueTopicName);
-      
+
       assertEquals(Array.isArray(events), true);
       if (events.length > 0) {
         const event = events[0];
@@ -224,9 +235,9 @@ describe("EventStoreClient Integration", () => {
 
       await client.createTopic(uniqueTopicName, schemas);
       const events = await client.getEvents(uniqueTopicName, {
-        limit: 5
+        limit: 5,
       });
-      
+
       assertEquals(Array.isArray(events), true);
       assertEquals(events.length <= 5, true);
     });
@@ -252,7 +263,7 @@ describe("EventStoreClient Integration", () => {
       };
 
       const consumerId = await client.registerConsumer(registration);
-      
+
       assertEquals(typeof consumerId, "string");
       assertEquals(consumerId.length > 0, true);
     });
@@ -264,7 +275,7 @@ describe("EventStoreClient Integration", () => {
       };
 
       await assertRejects(
-        () => client.registerConsumer(registration)
+        () => client.registerConsumer(registration),
       );
     });
   });
@@ -272,7 +283,7 @@ describe("EventStoreClient Integration", () => {
   describe("getConsumers", () => {
     it("should get all consumers", async () => {
       const consumers = await client.getConsumers();
-      
+
       assertEquals(Array.isArray(consumers), true);
       if (consumers.length > 0) {
         const consumer = consumers[0];
@@ -297,20 +308,20 @@ describe("EventStoreClient Integration", () => {
       ];
 
       await client.createTopic(uniqueTopicName, schemas);
-      
+
       // First register a consumer
       const registration = {
         callback: "http://localhost:3000/webhook",
         topics: { [uniqueTopicName]: null },
       };
       const consumerId = await client.registerConsumer(registration);
-      
+
       // Then unregister it
       await client.unregisterConsumer(consumerId);
-      
+
       // Verify it's gone
       const consumers = await client.getConsumers();
-      const foundConsumer = consumers.find(c => c.id === consumerId);
+      const foundConsumer = consumers.find((c) => c.id === consumerId);
       assertEquals(foundConsumer, undefined);
     });
   });
@@ -325,7 +336,7 @@ describe("EventStoreClient Integration", () => {
   describe("error handling", () => {
     it("should handle non-existent topic", async () => {
       await assertRejects(
-        () => client.getTopic("definitely-non-existent-topic")
+        () => client.getTopic("definitely-non-existent-topic"),
       );
     });
 
@@ -343,13 +354,16 @@ describe("EventStoreClient Integration", () => {
 
       await client.createTopic(uniqueTopicName, schemas);
       await assertRejects(
-        () => client.publishEvent(uniqueTopicName, "invalid.event.type", { id: "123" })
+        () =>
+          client.publishEvent(uniqueTopicName, "invalid.event.type", {
+            id: "123",
+          }),
       );
     });
 
     it("should handle empty events array", async () => {
       await assertRejects(
-        () => client.publishEvents([])
+        () => client.publishEvents([]),
       );
     });
 
@@ -366,10 +380,10 @@ describe("EventStoreClient Integration", () => {
       ];
 
       await client.createTopic(uniqueTopicName, schemas);
-      
+
       // Test event with missing required fields
       await assertRejects(
-        () => client.publishEvent(uniqueTopicName, "user.created", {})
+        () => client.publishEvent(uniqueTopicName, "user.created", {}),
       );
     });
 
@@ -380,11 +394,11 @@ describe("EventStoreClient Integration", () => {
           // Missing eventType and $schema
           type: "object",
           properties: { id: { type: "string" } },
-        }
+        },
       ] as any;
-      
+
       await assertRejects(
-        () => client.createTopic("invalid-topic", invalidSchemas)
+        () => client.createTopic("invalid-topic", invalidSchemas),
       );
     });
 
@@ -401,10 +415,10 @@ describe("EventStoreClient Integration", () => {
       ];
 
       await client.createTopic(uniqueTopicName, schemas);
-      
+
       // Test publishing with null payload (should be rejected by server)
       await assertRejects(
-        () => client.publishEvent(uniqueTopicName, "user.created", null as any)
+        () => client.publishEvent(uniqueTopicName, "user.created", null as any),
       );
     });
 
@@ -421,18 +435,18 @@ describe("EventStoreClient Integration", () => {
       ];
 
       await client.createTopic(uniqueTopicName, schemas);
-      
+
       // Test registration with empty object (should be rejected by server)
       await assertRejects(
-        () => client.registerConsumer({} as any)
+        () => client.registerConsumer({} as any),
       );
     });
 
     it("should handle missing consumer ID in delete", async () => {
       // Test unregistering with empty/invalid consumer ID
       await assertRejects(
-        () => client.unregisterConsumer("")
+        () => client.unregisterConsumer(""),
       );
     });
   });
-}); 
+});
