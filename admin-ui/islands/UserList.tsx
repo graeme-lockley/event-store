@@ -86,6 +86,7 @@ export default function UserList() {
         <p class="mt-1 text-sm text-gray-500">{error}</p>
         <div class="mt-6">
           <button
+            type="button"
             onClick={loadUsers}
             class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
@@ -136,6 +137,7 @@ export default function UserList() {
                   <UpdatePassword username={user.username} />
                   {user.username !== "admin" && (
                     <button
+                      type="button"
                       onClick={() => deleteUser(user.username)}
                       class="text-red-600 hover:text-red-900"
                     >

@@ -137,7 +137,10 @@ export default function Consumers({ data }: PageProps<ConsumersData>) {
                               </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <button class="text-red-600 hover:text-red-900">
+                              <button
+                                type="button"
+                                class="text-red-600 hover:text-red-900"
+                              >
                                 Unregister
                               </button>
                             </td>

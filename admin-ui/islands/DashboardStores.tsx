@@ -165,6 +165,7 @@ export default function DashboardStores({ stores }: DashboardStoresProps) {
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => handleRefresh(store)}
                   disabled={storeData.isLoading}
                   class="inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"

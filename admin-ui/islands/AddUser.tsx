@@ -65,6 +65,7 @@ export default function AddUser() {
   return (
     <>
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
         class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
       >
@@ -92,6 +93,7 @@ export default function AddUser() {
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-medium text-gray-900">Add New User</h3>
                 <button
+                  type="button"
                   onClick={() => setIsOpen(false)}
                   class="text-gray-400 hover:text-gray-600"
                 >

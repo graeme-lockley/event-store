@@ -275,12 +275,14 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
         {/* Export Buttons */}
         <div class="mt-4 flex space-x-2">
           <button
+            type="button"
             onClick={() => exportEvents("json")}
             class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Export JSON
           </button>
           <button
+            type="button"
             onClick={() => exportEvents("csv")}
             class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
@@ -408,6 +410,7 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
+                            type="button"
                             onClick={() =>
                               setSelectedEvent(event)}
                             class="text-blue-600 hover:text-blue-900"
@@ -436,6 +439,7 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
                     </div>
                     <div class="flex space-x-2">
                       <button
+                        type="button"
                         onClick={() => handlePageChange(pagination.page - 1)}
                         disabled={pagination.page <= 1}
                         class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -446,6 +450,7 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
                         Page {pagination.page} of {totalPages}
                       </span>
                       <button
+                        type="button"
                         onClick={() => handlePageChange(pagination.page + 1)}
                         disabled={pagination.page >= totalPages}
                         class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -468,6 +473,7 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-medium text-gray-900">Event Details</h3>
                 <button
+                  type="button"
                   onClick={() => setSelectedEvent(null)}
                   class="text-gray-400 hover:text-gray-600"
                 >
