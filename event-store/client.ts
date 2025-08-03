@@ -55,8 +55,6 @@ export class EventStoreClient {
             ...options,
           });
 
-          clearTimeout(timeoutId);
-
           if (!response.ok) {
             const errorText = await response.text();
             const error: EventStoreError = new Error(
@@ -68,11 +66,12 @@ export class EventStoreClient {
 
           return await response.json();
         } catch (error) {
-          clearTimeout(timeoutId);
           if (error instanceof Error && error.name === 'AbortError') {
             throw new Error(`Request timeout after ${timeout}ms`);
           }
           throw error;
+        } finally {
+          clearTimeout(timeoutId);
         }
       } catch (error) {
         lastError = error as Error;
