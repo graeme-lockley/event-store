@@ -8,9 +8,6 @@ yarn-error.log*
 .deno_dir/
 deno.lock
 
-# Fresh
-fresh.gen.ts
-
 # Environment variables
 .env
 .env.local
