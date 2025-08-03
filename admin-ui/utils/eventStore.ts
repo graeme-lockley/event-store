@@ -1,8 +1,16 @@
 // Import the Event Store client library
-import { EventStoreClient as BaseEventStoreClient, type EventStoreConfig, type Topic, type Schema, type Event, type Consumer, type HealthStatus } from "../../event-store/client.ts";
+import {
+  type Consumer,
+  type Event,
+  EventStoreClient as BaseEventStoreClient,
+  type EventStoreConfig,
+  type HealthStatus,
+  type Schema,
+  type Topic,
+} from "../../event-store/client.ts";
 
 // Re-export types
-export type { EventStoreConfig, Topic, Schema, Event, Consumer, HealthStatus };
+export type { Consumer, Event, EventStoreConfig, HealthStatus, Schema, Topic };
 
 // Legacy interface for backward compatibility
 export interface LegacyEventStoreConfig {
@@ -12,7 +20,9 @@ export interface LegacyEventStoreConfig {
 }
 
 // Adapter to convert legacy config to new client config
-export function createEventStoreClient(config: LegacyEventStoreConfig): BaseEventStoreClient {
+export function createEventStoreClient(
+  config: LegacyEventStoreConfig,
+): BaseEventStoreClient {
   return new BaseEventStoreClient({
     baseUrl: `${config.url}:${config.port}`,
     timeout: 30000,
@@ -22,7 +32,9 @@ export function createEventStoreClient(config: LegacyEventStoreConfig): BaseEven
 }
 
 // Test-optimized client creation with shorter timeouts
-export function createTestEventStoreClient(config: LegacyEventStoreConfig): BaseEventStoreClient {
+export function createTestEventStoreClient(
+  config: LegacyEventStoreConfig,
+): BaseEventStoreClient {
   return new BaseEventStoreClient({
     baseUrl: `${config.url}:${config.port}`,
     timeout: 5000, // 5 seconds for tests
@@ -66,4 +78,4 @@ export function aggregateTopicStats(events: Event[]) {
     totalSize += JSON.stringify(event).length;
   }
   return { perDay, perWeek, perMonth, totalSize };
-} 
+}

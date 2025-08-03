@@ -1,5 +1,5 @@
 import { assertEquals } from "$std/assert/mod.ts";
-import { describe, it, beforeEach, afterEach } from "$std/testing/bdd.ts";
+import { afterEach, beforeEach, describe, it } from "$std/testing/bdd.ts";
 import { AuthService, MemoryUserStorage } from "../../../utils/auth.ts";
 
 const ADMIN_USER = "admin";
@@ -37,7 +37,10 @@ describe("AuthService", () => {
     });
 
     it("should reject invalid credentials", async () => {
-      const result = await authService.authenticate(ADMIN_USER, `wrong${ADMIN_PASS}`);
+      const result = await authService.authenticate(
+        ADMIN_USER,
+        `wrong${ADMIN_PASS}`,
+      );
       assertEquals(result, false);
     });
 
@@ -63,14 +66,17 @@ describe("AuthService", () => {
     it("should add new user", async () => {
       const result = await authService.addUser(TEST_USER, TEST_PASS);
       assertEquals(result, true);
-      
+
       const hasUser = await authService.hasUser(TEST_USER);
       assertEquals(hasUser, true);
     });
 
     it("should allow authentication for added user", async () => {
       await authService.addUser(TEST_USER, TEST_PASS);
-      const canAuthenticate = await authService.authenticate(TEST_USER, TEST_PASS);
+      const canAuthenticate = await authService.authenticate(
+        TEST_USER,
+        TEST_PASS,
+      );
       assertEquals(canAuthenticate, true);
     });
 
@@ -94,7 +100,7 @@ describe("AuthService", () => {
     it("should not affect other users when removing user", async () => {
       await authService.addUser(TEST_USER, TEST_PASS);
       await authService.addUser("otheruser", "otherpass");
-      
+
       await authService.removeUser(TEST_USER);
 
       // Other user should still exist
@@ -117,13 +123,13 @@ describe("AuthService", () => {
     it("should maintain separate state for different instances", async () => {
       const storage1 = new MemoryUserStorage();
       const storage2 = new MemoryUserStorage();
-      
+
       await storage1.saveUsers([{
         username: "user1",
         passwordHash: "hash1",
         createdAt: new Date().toISOString(),
       }]);
-      
+
       await storage2.saveUsers([{
         username: "user2",
         passwordHash: "hash2",
@@ -132,7 +138,7 @@ describe("AuthService", () => {
 
       const users1 = await storage1.loadUsers();
       const users2 = await storage2.loadUsers();
-      
+
       assertEquals(users1.length, 1);
       assertEquals(users2.length, 1);
       assertEquals(users1[0].username, "user1");
@@ -145,9 +151,9 @@ describe("AuthService", () => {
         passwordHash: "hash",
         createdAt: new Date().toISOString(),
       }]);
-      
+
       assertEquals(memoryStorage.getUsers().length, 1);
-      
+
       memoryStorage.reset();
       assertEquals(memoryStorage.getUsers().length, 0);
     });
@@ -157,21 +163,24 @@ describe("AuthService", () => {
     it("should handle file-based storage correctly", async () => {
       // Test with file-based storage (default)
       const fileAuthService = AuthService.getInstance();
-      
+
       // Add a test user
       const result = await fileAuthService.addUser("fileuser", "filepass");
       assertEquals(result, true);
-      
+
       // Verify user exists
       const hasUser = await fileAuthService.hasUser("fileuser");
       assertEquals(hasUser, true);
-      
+
       // Test authentication
-      const canAuth = await fileAuthService.authenticate("fileuser", "filepass");
+      const canAuth = await fileAuthService.authenticate(
+        "fileuser",
+        "filepass",
+      );
       assertEquals(canAuth, true);
-      
+
       // Clean up
       await fileAuthService.removeUser("fileuser");
     });
   });
-}); 
+});

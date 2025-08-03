@@ -1,5 +1,5 @@
 import { Handlers } from "$fresh/server.ts";
-import { getStores, addStore } from "../../utils/storeConfig.ts";
+import { addStore, getStores } from "../../utils/storeConfig.ts";
 
 export const handler: Handlers = {
   async GET() {
@@ -19,21 +19,24 @@ export const handler: Handlers = {
   async POST(req) {
     try {
       const body = await req.json();
-      
+
       if (!body.name || !body.url) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: "Name and URL are required" 
-        }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Name and URL are required",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
 
       const store = {
         name: body.name,
         url: body.url,
-        port: body.port || 8000
+        port: body.port || 8000,
       };
 
       try {
@@ -43,24 +46,34 @@ export const handler: Handlers = {
           headers: { "Content-Type": "application/json" },
         });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: errorMessage 
-        }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: errorMessage,
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: errorMessage 
-      }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: errorMessage,
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
   },
-}; 
+};

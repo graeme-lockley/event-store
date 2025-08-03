@@ -1,7 +1,7 @@
 import { PageProps } from "$fresh/server.ts";
 import Layout from "../components/Layout.tsx";
 import StoreTopics from "../islands/StoreTopics.tsx";
-import { getStores, EventStoreConfig } from "../utils/storeConfig.ts";
+import { EventStoreConfig, getStores } from "../utils/storeConfig.ts";
 
 interface TopicsData {
   stores: EventStoreConfig[];
@@ -31,4 +31,4 @@ export default function Topics({ data }: PageProps<TopicsData>) {
       </div>
     </Layout>
   );
-} 
+}

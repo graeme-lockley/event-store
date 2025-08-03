@@ -1,4 +1,4 @@
-import { useState, useEffect } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { Event } from "../utils/eventStore.ts";
 
 interface EventBrowserProps {
@@ -70,7 +70,9 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
 
   const loadTopics = async (storeName: string) => {
     try {
-      const res = await fetch(`/api/store-topics?store=${encodeURIComponent(storeName)}`);
+      const res = await fetch(
+        `/api/store-topics?store=${encodeURIComponent(storeName)}`,
+      );
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const { topics, error } = await res.json();
       if (error) throw new Error(error);
@@ -82,7 +84,7 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
   };
 
   const loadEvents = async () => {
-    setEventData(prev => ({ ...prev, isLoading: true, error: null }));
+    setEventData((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
       const params = new URLSearchParams({
@@ -100,15 +102,15 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
       const res = await fetch(`/api/events?${params.toString()}`);
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const { events, total, eventTypes: types } = await res.json();
-      
+
       setEventData({
         events,
         totalEvents: total,
         isLoading: false,
         error: null,
       });
-      
-      setPagination(prev => ({ ...prev, total }));
+
+      setPagination((prev) => ({ ...prev, total }));
       setEventTypes(types || []);
     } catch (error) {
       setEventData({
@@ -121,16 +123,16 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
   };
 
   const handleFilterChange = (key: keyof EventFilters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setPagination((prev) => ({ ...prev, page: 1 })); // Reset to first page
   };
 
   const handlePageChange = (page: number) => {
-    setPagination(prev => ({ ...prev, page }));
+    setPagination((prev) => ({ ...prev, page }));
   };
 
   const handlePageSizeChange = (pageSize: number) => {
-    setPagination(prev => ({ ...prev, page: 1, pageSize }));
+    setPagination((prev) => ({ ...prev, page: 1, pageSize }));
   };
 
   const exportEvents = async (format: "json" | "csv") => {
@@ -173,28 +175,36 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Store */}
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Store</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Store
+            </label>
             <select
               value={filters.store}
-              onChange={(e) => handleFilterChange("store", e.currentTarget.value)}
+              onChange={(e) =>
+                handleFilterChange("store", e.currentTarget.value)}
               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {stores.map(store => (
-                <option key={store.name} value={store.name}>{store.name}</option>
+              {stores.map((store) => (
+                <option key={store.name} value={store.name}>
+                  {store.name}
+                </option>
               ))}
             </select>
           </div>
 
           {/* Topic */}
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Topic</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Topic
+            </label>
             <select
               value={filters.topic}
-              onChange={(e) => handleFilterChange("topic", e.currentTarget.value)}
+              onChange={(e) =>
+                handleFilterChange("topic", e.currentTarget.value)}
               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Topics</option>
-              {topics.map(topic => (
+              {topics.map((topic) => (
                 <option key={topic} value={topic}>{topic}</option>
               ))}
             </select>
@@ -202,14 +212,17 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
 
           {/* Event Type */}
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Event Type
+            </label>
             <select
               value={filters.eventType}
-              onChange={(e) => handleFilterChange("eventType", e.currentTarget.value)}
+              onChange={(e) =>
+                handleFilterChange("eventType", e.currentTarget.value)}
               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Types</option>
-              {eventTypes.map(type => (
+              {eventTypes.map((type) => (
                 <option key={type} value={type}>{type}</option>
               ))}
             </select>
@@ -217,33 +230,42 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
 
           {/* Date From */}
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Date From
+            </label>
             <input
               type="date"
               value={filters.dateFrom}
-              onChange={(e) => handleFilterChange("dateFrom", e.currentTarget.value)}
+              onChange={(e) =>
+                handleFilterChange("dateFrom", e.currentTarget.value)}
               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Date To */}
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Date To
+            </label>
             <input
               type="date"
               value={filters.dateTo}
-              onChange={(e) => handleFilterChange("dateTo", e.currentTarget.value)}
+              onChange={(e) =>
+                handleFilterChange("dateTo", e.currentTarget.value)}
               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Search */}
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Search Payload</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Search Payload
+            </label>
             <input
               type="text"
               value={filters.search}
-              onChange={(e) => handleFilterChange("search", e.currentTarget.value)}
+              onChange={(e) =>
+                handleFilterChange("search", e.currentTarget.value)}
               placeholder="Search in event payload..."
               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -278,7 +300,8 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
               <span class="text-sm text-gray-500">Page size:</span>
               <select
                 value={pagination.pageSize}
-                onChange={(e) => handlePageSizeChange(Number(e.currentTarget.value))}
+                onChange={(e) =>
+                  handlePageSizeChange(Number(e.currentTarget.value))}
                 class="border border-gray-300 rounded-md px-2 py-1 text-sm"
               >
                 <option value={10}>10</option>
@@ -290,96 +313,151 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
           </div>
         </div>
 
-        {eventData.isLoading ? (
-          <div class="p-6 text-center">
-            <div class="animate-spin mx-auto h-8 w-8 text-gray-400" />
-            <p class="mt-2 text-sm text-gray-500">Loading events...</p>
-          </div>
-        ) : eventData.error ? (
-          <div class="p-6 text-center">
-            <svg class="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900">Error Loading Events</h3>
-            <p class="mt-1 text-sm text-gray-500">{eventData.error}</p>
-          </div>
-        ) : eventData.events.length === 0 ? (
-          <div class="p-6 text-center">
-            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-            </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900">No events found</h3>
-            <p class="mt-1 text-sm text-gray-500">Try adjusting your filters.</p>
-          </div>
-        ) : (
-          <>
-            <div class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                  <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event ID</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                  {eventData.events.map((event) => (
-                    <tr key={event.id} class="hover:bg-gray-50">
-                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{event.id}</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{event.topic || "N/A"}</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{event.type}</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(event.timestamp).toLocaleString()}
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => setSelectedEvent(event)}
-                          class="text-blue-600 hover:text-blue-900"
-                        >
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {eventData.isLoading
+          ? (
+            <div class="p-6 text-center">
+              <div class="animate-spin mx-auto h-8 w-8 text-gray-400" />
+              <p class="mt-2 text-sm text-gray-500">Loading events...</p>
             </div>
+          )
+          : eventData.error
+          ? (
+            <div class="p-6 text-center">
+              <svg
+                class="mx-auto h-12 w-12 text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                >
+                </path>
+              </svg>
+              <h3 class="mt-2 text-sm font-medium text-gray-900">
+                Error Loading Events
+              </h3>
+              <p class="mt-1 text-sm text-gray-500">{eventData.error}</p>
+            </div>
+          )
+          : eventData.events.length === 0
+          ? (
+            <div class="p-6 text-center">
+              <svg
+                class="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                >
+                </path>
+              </svg>
+              <h3 class="mt-2 text-sm font-medium text-gray-900">
+                No events found
+              </h3>
+              <p class="mt-1 text-sm text-gray-500">
+                Try adjusting your filters.
+              </p>
+            </div>
+          )
+          : (
+            <>
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Event ID
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Topic
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Timestamp
+                      </th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    {eventData.events.map((event) => (
+                      <tr key={event.id} class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {event.id}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {event.topic || "N/A"}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {event.type}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(event.timestamp).toLocaleString()}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() =>
+                              setSelectedEvent(event)}
+                            class="text-blue-600 hover:text-blue-900"
+                          >
+                            View Details
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div class="px-6 py-4 border-t border-gray-200">
-                <div class="flex items-center justify-between">
-                  <div class="text-sm text-gray-700">
-                    Showing {((pagination.page - 1) * pagination.pageSize) + 1} to{" "}
-                    {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{" "}
-                    {pagination.total} results
-                  </div>
-                  <div class="flex space-x-2">
-                    <button
-                      onClick={() => handlePageChange(pagination.page - 1)}
-                      disabled={pagination.page <= 1}
-                      class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Previous
-                    </button>
-                    <span class="px-3 py-2 text-sm text-gray-700">
-                      Page {pagination.page} of {totalPages}
-                    </span>
-                    <button
-                      onClick={() => handlePageChange(pagination.page + 1)}
-                      disabled={pagination.page >= totalPages}
-                      class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div class="px-6 py-4 border-t border-gray-200">
+                  <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                      Showing{" "}
+                      {((pagination.page - 1) * pagination.pageSize) + 1} to
+                      {" "}
+                      {Math.min(
+                        pagination.page * pagination.pageSize,
+                        pagination.total,
+                      )} of {pagination.total} results
+                    </div>
+                    <div class="flex space-x-2">
+                      <button
+                        onClick={() => handlePageChange(pagination.page - 1)}
+                        disabled={pagination.page <= 1}
+                        class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      <span class="px-3 py-2 text-sm text-gray-700">
+                        Page {pagination.page} of {totalPages}
+                      </span>
+                      <button
+                        onClick={() => handlePageChange(pagination.page + 1)}
+                        disabled={pagination.page >= totalPages}
+                        class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
       </div>
 
       {/* Event Details Modal */}
@@ -393,35 +471,60 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
                   onClick={() => setSelectedEvent(null)}
                   class="text-gray-400 hover:text-gray-600"
                 >
-                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  <svg
+                    class="h-6 w-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    >
+                    </path>
                   </svg>
                 </button>
               </div>
-              
+
               <div class="space-y-4">
                 <div>
-                  <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Event ID</h4>
+                  <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                    Event ID
+                  </h4>
                   <p class="mt-1 text-sm text-gray-900">{selectedEvent.id}</p>
                 </div>
-                
+
                 <div>
-                  <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Topic</h4>
-                  <p class="mt-1 text-sm text-gray-900">{selectedEvent.topic || "N/A"}</p>
+                  <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                    Topic
+                  </h4>
+                  <p class="mt-1 text-sm text-gray-900">
+                    {selectedEvent.topic || "N/A"}
+                  </p>
                 </div>
-                
+
                 <div>
-                  <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Type</h4>
+                  <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </h4>
                   <p class="mt-1 text-sm text-gray-900">{selectedEvent.type}</p>
                 </div>
-                
+
                 <div>
-                  <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Timestamp</h4>
-                  <p class="mt-1 text-sm text-gray-900">{new Date(selectedEvent.timestamp).toLocaleString()}</p>
+                  <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                    Timestamp
+                  </h4>
+                  <p class="mt-1 text-sm text-gray-900">
+                    {new Date(selectedEvent.timestamp).toLocaleString()}
+                  </p>
                 </div>
-                
+
                 <div>
-                  <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Payload</h4>
+                  <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                    Payload
+                  </h4>
                   <div class="mt-1 bg-gray-50 rounded border p-3">
                     <pre class="text-xs text-gray-700 overflow-x-auto">{JSON.stringify(selectedEvent.payload, null, 2)}</pre>
                   </div>
@@ -433,4 +536,4 @@ export default function EventBrowser({ stores }: EventBrowserProps) {
       )}
     </div>
   );
-} 
+}

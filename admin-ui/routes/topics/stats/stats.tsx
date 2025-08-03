@@ -13,9 +13,11 @@ export default async function TopicStatsPage(req: PageProps) {
   return (
     <Layout title={`Topic Statistics - ${topic}`}>
       <div class="max-w-3xl mx-auto py-8">
-        <h1 class="text-2xl font-bold mb-4">Topic Statistics: <span class="text-blue-700">{topic}</span></h1>
+        <h1 class="text-2xl font-bold mb-4">
+          Topic Statistics: <span class="text-blue-700">{topic}</span>
+        </h1>
         <TopicStats store={storeName} topic={topic} />
       </div>
     </Layout>
   );
-} 
+}

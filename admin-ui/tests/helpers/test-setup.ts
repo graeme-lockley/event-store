@@ -18,7 +18,7 @@ function createHooksContext() {
   function TestComponent() {
     return <div>Test</div>;
   }
-  
+
   // Render it to initialize hooks context
   render(<TestComponent />, { container });
 }
@@ -26,4 +26,4 @@ function createHooksContext() {
 // Call this to set up hooks context
 createHooksContext();
 
-export { render, container }; 
+export { container, render };

@@ -13,20 +13,26 @@ export default function TopicStats({ store, topic }: TopicStatsProps) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`/api/topic-stats?store=${encodeURIComponent(store)}&topic=${encodeURIComponent(topic)}`)
-      .then(res => res.json())
-      .then(data => {
+    fetch(
+      `/api/topic-stats?store=${encodeURIComponent(store)}&topic=${
+        encodeURIComponent(topic)
+      }`,
+    )
+      .then((res) => res.json())
+      .then((data) => {
         if (data.error) setError(data.error);
         else setStats(data);
         setLoading(false);
       })
-      .catch(e => {
+      .catch((e) => {
         setError(e.message);
         setLoading(false);
       });
   }, [store, topic]);
 
-  if (loading) return <div class="p-4 text-gray-500">Loading topic statistics...</div>;
+  if (loading) {
+    return <div class="p-4 text-gray-500">Loading topic statistics...</div>;
+  }
   if (error) return <div class="p-4 text-red-600">Error: {error}</div>;
   if (!stats) return null;
 
@@ -43,7 +49,9 @@ export default function TopicStats({ store, topic }: TopicStatsProps) {
         </div>
         <div class="bg-white rounded shadow p-4 flex-1 min-w-[180px]">
           <div class="text-xs text-gray-500">Storage Usage</div>
-          <div class="text-2xl font-bold">{(stats.storageBytes/1024).toFixed(1)} KB</div>
+          <div class="text-2xl font-bold">
+            {(stats.storageBytes / 1024).toFixed(1)} KB
+          </div>
         </div>
       </div>
       <div class="bg-white rounded shadow p-4">
@@ -90,4 +98,4 @@ export default function TopicStats({ store, topic }: TopicStatsProps) {
       </div>
     </div>
   );
-} 
+}

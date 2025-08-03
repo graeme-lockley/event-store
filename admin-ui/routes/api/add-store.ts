@@ -13,7 +13,7 @@ export const handler: Handlers = {
           {
             status: 400,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
 
@@ -21,11 +21,13 @@ export const handler: Handlers = {
       const portNum = parseInt(port.toString());
       if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
         return new Response(
-          JSON.stringify({ error: "Port must be a valid number between 1 and 65535" }),
+          JSON.stringify({
+            error: "Port must be a valid number between 1 and 65535",
+          }),
           {
             status: 400,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
 
@@ -38,7 +40,7 @@ export const handler: Handlers = {
           {
             status: 400,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
 
@@ -50,7 +52,7 @@ export const handler: Handlers = {
           {
             status: 409,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
 
@@ -68,20 +70,22 @@ export const handler: Handlers = {
         {
           status: 201,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     } catch (error) {
       console.error("Add store error:", error);
-      
+
       return new Response(
-        JSON.stringify({ 
-          error: error instanceof Error ? error.message : "Unknown error occurred" 
+        JSON.stringify({
+          error: error instanceof Error
+            ? error.message
+            : "Unknown error occurred",
         }),
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   },
-}; 
+};

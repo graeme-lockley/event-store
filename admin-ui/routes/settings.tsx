@@ -55,22 +55,26 @@ export default function Settings({ data }: PageProps<SettingsData>) {
               </h3>
               <AddUser />
             </div>
-            
+
             <div class="space-y-4">
               {/* Current User Password Update */}
               <div class="border border-gray-200 rounded-lg p-4">
                 <div class="flex items-center justify-between">
                   <div>
-                    <h4 class="text-sm font-medium text-gray-900">Current User: admin</h4>
+                    <h4 class="text-sm font-medium text-gray-900">
+                      Current User: admin
+                    </h4>
                     <p class="text-sm text-gray-500">Update your password</p>
                   </div>
                   <UpdatePassword username="admin" />
                 </div>
               </div>
-              
+
               {/* User List */}
               <div>
-                <h4 class="text-sm font-medium text-gray-900 mb-3">All Users</h4>
+                <h4 class="text-sm font-medium text-gray-900 mb-3">
+                  All Users
+                </h4>
                 <UserList />
               </div>
             </div>
@@ -83,10 +87,12 @@ export default function Settings({ data }: PageProps<SettingsData>) {
             <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
               System Information
             </h3>
-            
+
             <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
               <div>
-                <dt class="text-sm font-medium text-gray-500">Admin UI Version</dt>
+                <dt class="text-sm font-medium text-gray-500">
+                  Admin UI Version
+                </dt>
                 <dd class="mt-1 text-sm text-gray-900">1.0.0</dd>
               </div>
               <div>
@@ -107,4 +113,4 @@ export default function Settings({ data }: PageProps<SettingsData>) {
       </div>
     </Layout>
   );
-} 
+}

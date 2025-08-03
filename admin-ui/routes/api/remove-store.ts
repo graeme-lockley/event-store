@@ -1,5 +1,5 @@
 import { Handlers } from "$fresh/server.ts";
-import { removeStore, getStoreByName } from "../../utils/storeConfig.ts";
+import { getStoreByName, removeStore } from "../../utils/storeConfig.ts";
 
 export const handler: Handlers = {
   async POST(req) {
@@ -13,7 +13,7 @@ export const handler: Handlers = {
           {
             status: 400,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
 
@@ -25,18 +25,20 @@ export const handler: Handlers = {
           {
             status: 404,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
 
       // Validate that the store matches the provided URL and port
       if (existingStore.url !== url || existingStore.port !== port) {
         return new Response(
-          JSON.stringify({ error: `Store configuration mismatch for "${name}"` }),
+          JSON.stringify({
+            error: `Store configuration mismatch for "${name}"`,
+          }),
           {
             status: 400,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
 
@@ -44,14 +46,14 @@ export const handler: Handlers = {
 
       // Remove the store from configuration
       const wasRemoved = await removeStore(name);
-      
+
       if (!wasRemoved) {
         return new Response(
           JSON.stringify({ error: `Failed to remove store "${name}"` }),
           {
             status: 500,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
 
@@ -64,20 +66,22 @@ export const handler: Handlers = {
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     } catch (error) {
       console.error("Remove store error:", error);
-      
+
       return new Response(
-        JSON.stringify({ 
-          error: error instanceof Error ? error.message : "Unknown error occurred" 
+        JSON.stringify({
+          error: error instanceof Error
+            ? error.message
+            : "Unknown error occurred",
         }),
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   },
-}; 
+};

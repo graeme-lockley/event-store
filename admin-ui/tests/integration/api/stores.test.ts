@@ -1,5 +1,5 @@
 import { assertEquals } from "$std/assert/mod.ts";
-import { describe, it, beforeAll, afterAll } from "$std/testing/bdd.ts";
+import { afterAll, beforeAll, describe, it } from "$std/testing/bdd.ts";
 import { startIntegrationServers } from "../../helpers/integration_server.ts";
 import { type LegacyEventStoreConfig } from "../../../utils/eventStore.ts";
 
@@ -13,7 +13,10 @@ async function getStores(baseUrl: string): Promise<LegacyEventStoreConfig[]> {
   return data;
 }
 
-async function addStore(baseUrl: string, store: LegacyEventStoreConfig): Promise<boolean> {
+async function addStore(
+  baseUrl: string,
+  store: LegacyEventStoreConfig,
+): Promise<boolean> {
   const response = await fetch(`${baseUrl}/api/stores`, {
     method: "POST",
     headers: {
@@ -30,10 +33,16 @@ async function addStore(baseUrl: string, store: LegacyEventStoreConfig): Promise
   }
 }
 
-async function deleteStore(baseUrl: string, storeName: string): Promise<boolean> {
-  const response = await fetch(`${baseUrl}/api/stores/${encodeURIComponent(storeName)}`, {
-    method: "DELETE",
-  });
+async function deleteStore(
+  baseUrl: string,
+  storeName: string,
+): Promise<boolean> {
+  const response = await fetch(
+    `${baseUrl}/api/stores/${encodeURIComponent(storeName)}`,
+    {
+      method: "DELETE",
+    },
+  );
 
   const result = await response.json();
   if (response.status === 200) {
@@ -59,7 +68,7 @@ describe("Stores API", () => {
   describe("GET /api/stores", () => {
     it("should return list of stores", async () => {
       const stores = await getStores(baseUrl);
-    
+
       assertEquals(stores.length, 2);
     });
   });
@@ -72,9 +81,9 @@ describe("Stores API", () => {
       const newStore: LegacyEventStoreConfig = {
         name: storeName,
         url: servers.eventStore.url,
-        port: 18000
+        port: 18000,
       };
-  
+
       assertEquals(await addStore(baseUrl, newStore), true);
     });
 
@@ -82,7 +91,7 @@ describe("Stores API", () => {
       const duplicateStore: LegacyEventStoreConfig = {
         name: storeName, // Same name as above
         url: servers.eventStore.url,
-        port: 18001
+        port: 18001,
       };
 
       assertEquals(await addStore(baseUrl, duplicateStore), false);
@@ -92,7 +101,7 @@ describe("Stores API", () => {
       const duplicateStore: LegacyEventStoreConfig = {
         name: storeOtherName,
         url: servers.eventStore.url,
-        port: 18000
+        port: 18000,
       };
 
       assertEquals(await addStore(baseUrl, duplicateStore), false);
@@ -109,11 +118,14 @@ describe("Stores API", () => {
       assertEquals(await deleteStore(baseUrl, storeName), false);
 
       // Add the store
-      assertEquals(await addStore(baseUrl, {
-        name: storeName,
-        url: servers.eventStore.url,
-        port: 18001
-      }), true);
+      assertEquals(
+        await addStore(baseUrl, {
+          name: storeName,
+          url: servers.eventStore.url,
+          port: 18001,
+        }),
+        true,
+      );
 
       assertEquals(stores.length + 1, (await getStores(baseUrl)).length);
 
@@ -121,10 +133,10 @@ describe("Stores API", () => {
       assertEquals(await deleteStore(baseUrl, storeName), true);
 
       // Check that the store is deleted
-      assertEquals(stores, (await getStores(baseUrl)));
+      assertEquals(stores, await getStores(baseUrl));
 
       // Attempt to delete should fail as this store doesn't exist
       assertEquals(await deleteStore(baseUrl, storeName), false);
     });
   });
-}); 
+});

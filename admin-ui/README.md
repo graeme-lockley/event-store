@@ -1,6 +1,7 @@
 # Event Store Admin UI
 
-A modern, clean admin interface for managing Event Store instances built with Deno Fresh.
+A modern, clean admin interface for managing Event Store instances built with
+Deno Fresh.
 
 ## Features
 
@@ -42,7 +43,8 @@ A modern, clean admin interface for managing Event Store instances built with De
 
 ### Adding Event Store Instances
 
-Edit the stores configuration in the route handlers (e.g., `routes/dashboard.tsx`):
+Edit the stores configuration in the route handlers (e.g.,
+`routes/dashboard.tsx`):
 
 ```typescript
 const stores: EventStoreConfig[] = [
@@ -88,6 +90,7 @@ The admin UI connects to Event Store instances via their REST API:
 ## Styling
 
 Built with Tailwind CSS for a clean, modern design with:
+
 - Black and white base theme
 - Blue accent colors
 - Responsive layout

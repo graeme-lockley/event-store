@@ -4,25 +4,25 @@ export const TEST_CONFIG = {
   eventStoreUrl: "http://localhost:8000",
   testUser: {
     username: "testuser",
-    password: "testpass"
+    password: "testpass",
   },
   adminUser: {
     username: "admin",
-    password: "admin123"
-  }
+    password: "admin123",
+  },
 };
 
 export const TEST_STORES = [
   {
     name: "Local Event Store",
     url: "http://localhost:8000",
-    port: 8000
+    port: 8000,
   },
   {
     name: "Test Event Store",
     url: "http://localhost:8001",
-    port: 8001
-  }
+    port: 8001,
+  },
 ];
 
 export const TEST_TOPICS = [
@@ -33,11 +33,11 @@ export const TEST_TOPICS = [
         type: "user.created",
         properties: {
           id: { type: "string" },
-          name: { type: "string" }
+          name: { type: "string" },
         },
-        required: ["id", "name"]
-      }
-    ]
+        required: ["id", "name"],
+      },
+    ],
   },
   {
     name: "audit-events",
@@ -46,12 +46,12 @@ export const TEST_TOPICS = [
         type: "audit.log",
         properties: {
           action: { type: "string" },
-          timestamp: { type: "string" }
+          timestamp: { type: "string" },
         },
-        required: ["action", "timestamp"]
-      }
-    ]
-  }
+        required: ["action", "timestamp"],
+      },
+    ],
+  },
 ];
 
 export const TEST_EVENTS = [
@@ -60,23 +60,26 @@ export const TEST_EVENTS = [
     type: "user.created",
     payload: {
       id: "123",
-      name: "Test User"
-    }
+      name: "Test User",
+    },
   },
   {
     topic: "audit-events",
     type: "audit.log",
     payload: {
       action: "user.login",
-      timestamp: new Date().toISOString()
-    }
-  }
+      timestamp: new Date().toISOString(),
+    },
+  },
 ];
 
 // Test utilities
-export async function waitForServer(url: string, timeout = 5000): Promise<boolean> {
+export async function waitForServer(
+  url: string,
+  timeout = 5000,
+): Promise<boolean> {
   const startTime = Date.now();
-  
+
   while (Date.now() - startTime < timeout) {
     try {
       const response = await fetch(url);
@@ -86,14 +89,16 @@ export async function waitForServer(url: string, timeout = 5000): Promise<boolea
     } catch (error) {
       // Server not ready yet
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 100));
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  
+
   return false;
 }
 
-export async function createTestStore(store: typeof TEST_STORES[0]): Promise<boolean> {
+export async function createTestStore(
+  store: typeof TEST_STORES[0],
+): Promise<boolean> {
   try {
     const response = await fetch(`${TEST_CONFIG.baseUrl}/api/stores`, {
       method: "POST",
@@ -102,7 +107,7 @@ export async function createTestStore(store: typeof TEST_STORES[0]): Promise<boo
       },
       body: JSON.stringify(store),
     });
-    
+
     return response.ok;
   } catch (error) {
     return false;
@@ -111,10 +116,13 @@ export async function createTestStore(store: typeof TEST_STORES[0]): Promise<boo
 
 export async function removeTestStore(storeName: string): Promise<boolean> {
   try {
-    const response = await fetch(`${TEST_CONFIG.baseUrl}/api/stores/${encodeURIComponent(storeName)}`, {
-      method: "DELETE",
-    });
-    
+    const response = await fetch(
+      `${TEST_CONFIG.baseUrl}/api/stores/${encodeURIComponent(storeName)}`,
+      {
+        method: "DELETE",
+      },
+    );
+
     return response.ok;
   } catch (error) {
     return false;
@@ -126,9 +134,9 @@ export async function cleanupTestData(): Promise<void> {
   for (const store of TEST_STORES) {
     await removeTestStore(store.name);
   }
-  
+
   // Add small delay to ensure cleanup completes
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 100));
 }
 
 export function generateTestId(): string {
@@ -144,11 +152,14 @@ export function createMockEventStoreResponse(data: any): Response {
   });
 }
 
-export function createMockErrorResponse(status: number, message: string): Response {
+export function createMockErrorResponse(
+  status: number,
+  message: string,
+): Response {
   return new Response(JSON.stringify({ error: message }), {
     status,
     headers: {
       "Content-Type": "application/json",
     },
   });
-} 
+}

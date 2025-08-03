@@ -40,7 +40,7 @@ async function waitForHealth(url: string, timeout = 10000): Promise<boolean> {
       // Ignore errors
     }
 
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
   }
 
   return false;
@@ -54,15 +54,18 @@ export async function startEventStore(): Promise<TestServer> {
   // Start Event Store server with environment variables
   const process = new Deno.Command("deno", {
     args: [
-      "run", "-A", "--unstable", "../event-store/mod.ts"
+      "run",
+      "-A",
+      "--unstable",
+      "../event-store/mod.ts",
     ],
     env: {
       "PORT": String(TEST_EVENT_STORE_PORT),
       "DATA_DIR": TEST_EVENT_STORE_DATA,
-      "CONFIG_DIR": TEST_EVENT_STORE_CONFIG
+      "CONFIG_DIR": TEST_EVENT_STORE_CONFIG,
     },
     stdout: "null",
-    stderr: "null"
+    stderr: "null",
   }).spawn();
 
   // Use test-optimized EventStoreClient for faster startup detection
@@ -92,7 +95,7 @@ export async function startEventStore(): Promise<TestServer> {
       await process.status;
       await cleanDir(TEST_EVENT_STORE_DATA);
       await cleanDir(TEST_EVENT_STORE_CONFIG);
-    }
+    },
   };
 }
 
@@ -100,16 +103,18 @@ export async function startAdminUI(): Promise<TestServer> {
   // Start Admin UI server with environment variables
   const process = new Deno.Command("deno", {
     args: [
-      "run", "-A", "main.ts"
+      "run",
+      "-A",
+      "main.ts",
     ],
     cwd: ".",
     env: {
       "PORT": String(TEST_ADMIN_UI_PORT),
       "DATA_DIR": TEST_ADMIN_UI_DATA,
-      "DEBUG": "1"
+      "DEBUG": "1",
     },
     stdout: "piped",
-    stderr: "piped"
+    stderr: "piped",
   }).spawn();
 
   const url = `http://localhost:${TEST_ADMIN_UI_PORT}/api/stores`;
@@ -118,7 +123,9 @@ export async function startAdminUI(): Promise<TestServer> {
     // Try to get error output
     try {
       const stderr = await process.stderr.getReader().read();
-      const stderrText = stderr.value ? new TextDecoder().decode(stderr.value) : "";
+      const stderrText = stderr.value
+        ? new TextDecoder().decode(stderr.value)
+        : "";
       console.error("Test server failed to start. Stderr:", stderrText);
     } catch (e) {
       console.error("Could not read stderr:", e);
@@ -142,7 +149,7 @@ export async function startAdminUI(): Promise<TestServer> {
       }
 
       await cleanDir(TEST_ADMIN_UI_DATA);
-    }
+    },
   };
 }
 
@@ -160,6 +167,6 @@ export async function startIntegrationServers() {
     stop: async () => {
       await adminUI.stop();
       await eventStore.stop();
-    }
+    },
   };
-} 
+}

@@ -29,4 +29,4 @@ export default function Events({ data }: PageProps<EventsData>) {
       </div>
     </Layout>
   );
-} 
+}

@@ -1,11 +1,15 @@
 import { assertEquals, assertExists } from "$std/assert/mod.ts";
 import { describe, it } from "$std/testing/bdd.ts";
-import { createEventStoreClient, type LegacyEventStoreConfig, aggregateTopicStats } from "../../../utils/eventStore.ts";
+import {
+  aggregateTopicStats,
+  createEventStoreClient,
+  type LegacyEventStoreConfig,
+} from "../../../utils/eventStore.ts";
 
 const EVENT_STORE_CLIENT_CONFIG: LegacyEventStoreConfig = {
   name: "Test Store",
   url: "http://localhost",
-  port: 8000
+  port: 8000,
 };
 
 describe("EventStoreClient", () => {
@@ -19,11 +23,36 @@ describe("EventStoreClient", () => {
   describe("aggregateTopicStats", () => {
     it("should aggregate perDay, perWeek, perMonth, and totalSize correctly", () => {
       const events = [
-        { id: "1", timestamp: "2024-01-01T10:00:00Z", type: "test", payload: {} },
-        { id: "2", timestamp: "2024-01-01T11:00:00Z", type: "test", payload: {} },
-        { id: "3", timestamp: "2024-01-02T10:00:00Z", type: "test", payload: {} },
-        { id: "4", timestamp: "2024-01-15T10:00:00Z", type: "test", payload: {} }, // Changed to Jan 15 (different week)
-        { id: "5", timestamp: "2024-02-01T10:00:00Z", type: "test", payload: {} },
+        {
+          id: "1",
+          timestamp: "2024-01-01T10:00:00Z",
+          type: "test",
+          payload: {},
+        },
+        {
+          id: "2",
+          timestamp: "2024-01-01T11:00:00Z",
+          type: "test",
+          payload: {},
+        },
+        {
+          id: "3",
+          timestamp: "2024-01-02T10:00:00Z",
+          type: "test",
+          payload: {},
+        },
+        {
+          id: "4",
+          timestamp: "2024-01-15T10:00:00Z",
+          type: "test",
+          payload: {},
+        }, // Changed to Jan 15 (different week)
+        {
+          id: "5",
+          timestamp: "2024-02-01T10:00:00Z",
+          type: "test",
+          payload: {},
+        },
       ];
 
       const result = aggregateTopicStats(events);
@@ -53,4 +82,4 @@ describe("EventStoreClient", () => {
       assertEquals(result.totalSize, 0);
     });
   });
-}); 
+});

@@ -1,5 +1,5 @@
 import { assertEquals } from "$std/assert/mod.ts";
-import { describe, it, beforeAll, afterAll } from "$std/testing/bdd.ts";
+import { afterAll, beforeAll, describe, it } from "$std/testing/bdd.ts";
 import { startIntegrationServers } from "../../helpers/integration_server.ts";
 
 describe("Test Connection API", () => {
@@ -22,7 +22,7 @@ describe("Test Connection API", () => {
       const testData = {
         name: "Test Store",
         url: servers.eventStore.url,
-        port: 18000
+        port: 18000,
       };
 
       const response = await fetch(`${baseUrl}/api/test-connection`, {
@@ -34,7 +34,7 @@ describe("Test Connection API", () => {
       });
 
       assertEquals(response.status, 200);
-      
+
       const data = await response.json();
       assertEquals(typeof data.success, "boolean");
       assertEquals(typeof data.message, "string");
@@ -44,7 +44,7 @@ describe("Test Connection API", () => {
       const testData = {
         name: "Invalid Store",
         url: "http://localhost:9999", // Non-existent port
-        port: 9999
+        port: 9999,
       };
 
       const response = await fetch(`${baseUrl}/api/test-connection`, {
@@ -56,7 +56,7 @@ describe("Test Connection API", () => {
       });
 
       assertEquals(response.status, 200);
-      
+
       const data = await response.json();
       assertEquals(data.success, false);
       assertEquals(typeof data.message, "string");
@@ -77,7 +77,7 @@ describe("Test Connection API", () => {
       });
 
       assertEquals(response.status, 400);
-      
+
       const data = await response.json();
       assertEquals(data.success, false);
       assertEquals(typeof data.error, "string");
@@ -93,7 +93,7 @@ describe("Test Connection API", () => {
       });
 
       assertEquals(response.status, 400);
-      
+
       const data = await response.json();
       assertEquals(data.success, false);
       assertEquals(typeof data.error, "string");
@@ -103,7 +103,7 @@ describe("Test Connection API", () => {
       const testData = {
         name: "Test Store",
         url: servers.eventStore.url,
-        port: 18000
+        port: 18000,
       };
 
       const response = await fetch(`${baseUrl}/api/test-connection`, {
@@ -112,10 +112,10 @@ describe("Test Connection API", () => {
       });
 
       assertEquals(response.status, 400);
-      
+
       const data = await response.json();
       assertEquals(data.success, false);
       assertEquals(typeof data.error, "string");
     });
   });
-}); 
+});

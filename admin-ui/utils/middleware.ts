@@ -6,7 +6,7 @@ export function withAuth(handler: Handlers): Handlers {
     ...handler,
     async GET(req, ctx) {
       const url = new URL(req.url);
-      
+
       // Skip auth for login page
       if (url.pathname === "/login") {
         const result = await handler.GET?.(req, ctx);
@@ -14,7 +14,7 @@ export function withAuth(handler: Handlers): Handlers {
       }
 
       const authCookie = req.headers.get("cookie")?.match(/auth=([^;]+)/)?.[1];
-      
+
       if (!authCookie) {
         return new Response("", {
           status: 302,
@@ -37,7 +37,7 @@ export function withAuth(handler: Handlers): Handlers {
 
     async POST(req, ctx) {
       const url = new URL(req.url);
-      
+
       // Skip auth for login page
       if (url.pathname === "/login") {
         const result = await handler.POST?.(req, ctx);
@@ -45,7 +45,7 @@ export function withAuth(handler: Handlers): Handlers {
       }
 
       const authCookie = req.headers.get("cookie")?.match(/auth=([^;]+)/)?.[1];
-      
+
       if (!authCookie) {
         return new Response("", {
           status: 302,
@@ -66,4 +66,4 @@ export function withAuth(handler: Handlers): Handlers {
       return result || new Response("Not Found", { status: 404 });
     },
   };
-} 
+}

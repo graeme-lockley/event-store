@@ -12,7 +12,7 @@ export const handler: Handlers<LoginData> = {
     const password = form.get("password") as string;
 
     const authService = AuthService.getInstance();
-    
+
     if (await authService.authenticate(username, password)) {
       const headers = new Headers();
       headers.set("Set-Cookie", `auth=${username}; Path=/; HttpOnly`);
@@ -39,7 +39,7 @@ export default function Login({ data }: PageProps<LoginData>) {
             Sign in to your account
           </p>
         </div>
-        
+
         <form class="mt-8 space-y-6" method="POST">
           <div class="rounded-md shadow-sm -space-y-px">
             <div>
@@ -84,4 +84,4 @@ export default function Login({ data }: PageProps<LoginData>) {
       </div>
     </div>
   );
-} 
+}

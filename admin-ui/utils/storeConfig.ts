@@ -56,17 +56,17 @@ export async function getStores(): Promise<EventStoreConfig[]> {
 // Add a new store
 export async function addStore(store: EventStoreConfig): Promise<void> {
   const stores = await loadStores();
-  
+
   // Check if store with same name already exists
-  if (stores.some(s => s.name === store.name)) {
+  if (stores.some((s) => s.name === store.name)) {
     throw new Error(`Store with name "${store.name}" already exists`);
   }
-  
+
   // Check if store with same URL and port already exists
-  if (stores.some(s => s.url === store.url && s.port === store.port)) {
+  if (stores.some((s) => s.url === store.url && s.port === store.port)) {
     throw new Error(`Store with URL ${store.url}:${store.port} already exists`);
   }
-  
+
   stores.push(store);
   await saveStores(stores);
 }
@@ -75,24 +75,26 @@ export async function addStore(store: EventStoreConfig): Promise<void> {
 export async function removeStore(name: string): Promise<boolean> {
   const stores = await loadStores();
   const initialLength = stores.length;
-  
+
   if (Deno.env.get("DEBUG")) {
-    console.log(`🗑️ RemoveStore: name="${name}", initialLength=${initialLength}`);
-    console.log(`🗑️ Available stores:`, stores.map(s => `"${s.name}"`));
+    console.log(
+      `🗑️ RemoveStore: name="${name}", initialLength=${initialLength}`,
+    );
+    console.log(`🗑️ Available stores:`, stores.map((s) => `"${s.name}"`));
   }
-  
-  const filteredStores = stores.filter(store => {
+
+  const filteredStores = stores.filter((store) => {
     const matches = store.name !== name;
     if (Deno.env.get("DEBUG")) {
       console.log(`🗑️ Comparing "${store.name}" !== "${name}" = ${matches}`);
     }
     return matches;
   });
-  
+
   if (Deno.env.get("DEBUG")) {
     console.log(`🗑️ Filtered length: ${filteredStores.length}`);
   }
-  
+
   if (filteredStores.length < initialLength) {
     await saveStores(filteredStores);
     if (Deno.env.get("DEBUG")) {
@@ -100,7 +102,7 @@ export async function removeStore(name: string): Promise<boolean> {
     }
     return true;
   }
-  
+
   if (Deno.env.get("DEBUG")) {
     console.log(`❌ Store "${name}" not found`);
   }
@@ -108,32 +110,42 @@ export async function removeStore(name: string): Promise<boolean> {
 }
 
 // Update a store
-export async function updateStore(name: string, updates: Partial<EventStoreConfig>): Promise<boolean> {
+export async function updateStore(
+  name: string,
+  updates: Partial<EventStoreConfig>,
+): Promise<boolean> {
   const stores = await loadStores();
-  const storeIndex = stores.findIndex(store => store.name === name);
-  
+  const storeIndex = stores.findIndex((store) => store.name === name);
+
   if (storeIndex === -1) {
     return false;
   }
-  
+
   // Check for conflicts with other stores
   const otherStores = stores.filter((_, index) => index !== storeIndex);
-  
-  if (updates.name && otherStores.some(s => s.name === updates.name)) {
+
+  if (updates.name && otherStores.some((s) => s.name === updates.name)) {
     throw new Error(`Store with name "${updates.name}" already exists`);
   }
-  
-  if (updates.url && updates.port && otherStores.some(s => s.url === updates.url && s.port === updates.port)) {
-    throw new Error(`Store with URL ${updates.url}:${updates.port} already exists`);
+
+  if (
+    updates.url && updates.port &&
+    otherStores.some((s) => s.url === updates.url && s.port === updates.port)
+  ) {
+    throw new Error(
+      `Store with URL ${updates.url}:${updates.port} already exists`,
+    );
   }
-  
+
   stores[storeIndex] = { ...stores[storeIndex], ...updates };
   await saveStores(stores);
   return true;
 }
 
 // Get store by name
-export async function getStoreByName(name: string): Promise<EventStoreConfig | undefined> {
+export async function getStoreByName(
+  name: string,
+): Promise<EventStoreConfig | undefined> {
   const stores = await loadStores();
-  return stores.find(store => store.name === name);
-} 
+  return stores.find((store) => store.name === name);
+}

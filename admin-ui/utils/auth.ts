@@ -29,7 +29,10 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 // Simple password comparison function
-async function comparePassword(password: string, hash: string): Promise<boolean> {
+async function comparePassword(
+  password: string,
+  hash: string,
+): Promise<boolean> {
   const passwordHash = await hashPassword(password);
   return passwordHash === hash;
 }
@@ -54,7 +57,10 @@ class FileUserStorage implements UserStorage {
       return Array.isArray(users) ? users : [];
     } catch (error) {
       // File doesn't exist or is invalid, return default admin user
-      console.log(`No users file found in AuthService, creating default ${ADMIN_USER} user:`, error);
+      console.log(
+        `No users file found in AuthService, creating default ${ADMIN_USER} user:`,
+        error,
+      );
       const defaultUser: StoredUser = {
         username: ADMIN_USER,
         passwordHash: await hashPassword(DEFAULT_ADMIN_PASS),
@@ -69,7 +75,7 @@ class FileUserStorage implements UserStorage {
     try {
       await this.ensureDataDirectory();
       const fileContent = JSON.stringify(users, null, 2);
-      
+
       // Atomic file operation: write to temp file first, then rename
       const tempFile = this.USERS_FILE + ".tmp";
       await Deno.writeTextFile(tempFile, fileContent);
@@ -127,9 +133,9 @@ export class AuthService {
   async authenticate(username: string, password: string): Promise<boolean> {
     try {
       const users = await this.storage.loadUsers();
-      const user = users.find(u => u.username === username);
+      const user = users.find((u) => u.username === username);
       if (!user) return false;
-      
+
       return await comparePassword(password, user.passwordHash);
     } catch (error) {
       console.error("Authentication error:", error);
@@ -140,7 +146,7 @@ export class AuthService {
   async hasUser(username: string): Promise<boolean> {
     try {
       const users = await this.storage.loadUsers();
-      return users.some(user => user.username === username);
+      return users.some((user) => user.username === username);
     } catch (error) {
       console.error("Error checking user existence:", error);
       return false;
@@ -151,9 +157,9 @@ export class AuthService {
   async addUser(username: string, password: string): Promise<boolean> {
     try {
       const users = await this.storage.loadUsers();
-      
+
       // Check if user already exists
-      if (users.some(u => u.username === username)) {
+      if (users.some((u) => u.username === username)) {
         return false;
       }
 
@@ -181,8 +187,8 @@ export class AuthService {
       }
 
       const users = await this.storage.loadUsers();
-      const filteredUsers = users.filter(u => u.username !== username);
-      
+      const filteredUsers = users.filter((u) => u.username !== username);
+
       if (filteredUsers.length === users.length) {
         return false; // User not found
       }

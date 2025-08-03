@@ -1,5 +1,5 @@
 import { assertEquals } from "$std/assert/mod.ts";
-import { describe, it, beforeAll, afterAll } from "$std/testing/bdd.ts";
+import { afterAll, beforeAll, describe, it } from "$std/testing/bdd.ts";
 import { startIntegrationServers } from "../helpers/integration_server.ts";
 import { EventStoreClient } from "../../../event-store/client.ts";
 
@@ -11,22 +11,20 @@ const TEST_TOPIC = {
       type: "object",
       $schema: "https://json-schema.org/draft/2020-12/schema",
       properties: {
-        message: { type: "string" }
+        message: { type: "string" },
       },
-      required: ["message"]
-    }
-  ]
+      required: ["message"],
+    },
+  ],
 };
 
-const TEST_EVENT = 
-  {
-    topic: TEST_TOPIC.name,
-    type: "test.event",
-    payload: {
-      message: "Hello from integration test!"
-    }
-  };
-
+const TEST_EVENT = {
+  topic: TEST_TOPIC.name,
+  type: "test.event",
+  payload: {
+    message: "Hello from integration test!",
+  },
+};
 
 describe("Event Store API Integration", () => {
   let servers: Awaited<ReturnType<typeof startIntegrationServers>>;
@@ -36,7 +34,7 @@ describe("Event Store API Integration", () => {
   beforeAll(async () => {
     servers = await startIntegrationServers();
     eventStoreUrl = servers.eventStore.url;
-    
+
     // Example: Using EventStoreClient directly in integration tests
     eventStoreClient = new EventStoreClient({
       baseUrl: eventStoreUrl,
@@ -53,9 +51,9 @@ describe("Event Store API Integration", () => {
   describe("Health Check", () => {
     it("should return health status", async () => {
       const response = await fetch(`${eventStoreUrl}/health`);
-      
+
       assertEquals(response.status, 200);
-      
+
       const data = await response.json();
       assertEquals(typeof data.status, "string");
     });
@@ -63,7 +61,7 @@ describe("Event Store API Integration", () => {
     it("should work with EventStoreClient health check", async () => {
       // Example: Using EventStoreClient for health checks
       const health = await eventStoreClient.getHealth();
-      
+
       assertEquals(typeof health.status, "string");
       assertEquals(typeof health.consumers, "number");
       assertEquals(Array.isArray(health.runningDispatchers), true);
@@ -73,9 +71,9 @@ describe("Event Store API Integration", () => {
   describe("Topics", () => {
     it("should return empty topics list initially", async () => {
       const response = await fetch(`${eventStoreUrl}/topics`);
-      
+
       assertEquals(response.status, 200);
-      
+
       const data = await response.json();
       assertEquals(Array.isArray(data.topics), true);
       assertEquals(data.topics.length, 0);
@@ -91,16 +89,16 @@ describe("Event Store API Integration", () => {
       });
 
       assertEquals(response.status, 201);
-      
+
       const data = await response.json();
       assertEquals(typeof data.message, "string");
     });
 
     it("should return the created topic", async () => {
       const response = await fetch(`${eventStoreUrl}/topics`);
-      
+
       assertEquals(response.status, 200);
-      
+
       const data = await response.json();
       assertEquals(Array.isArray(data.topics), true);
       assertEquals(data.topics.length, 1);
@@ -112,7 +110,7 @@ describe("Event Store API Integration", () => {
       const topics = await eventStoreClient.getTopics();
       assertEquals(Array.isArray(topics), true);
       assertEquals(topics.length >= 1, true); // Should have the topic we created
-      
+
       const topic = await eventStoreClient.getTopic(TEST_TOPIC.name);
       assertEquals(topic.name, TEST_TOPIC.name);
       assertEquals(Array.isArray(topic.schemas), true);
@@ -130,7 +128,7 @@ describe("Event Store API Integration", () => {
       });
 
       assertEquals(response.status, 201);
-      
+
       const data = await response.json();
       assertEquals(Array.isArray(data.eventIds), true);
       assertEquals(data.eventIds.length, 1);
@@ -138,9 +136,9 @@ describe("Event Store API Integration", () => {
 
     it("should retrieve events from topic", async () => {
       const response = await fetch(`${eventStoreUrl}/topics/test-topic/events`);
-      
+
       assertEquals(response.status, 200);
-      
+
       const data = await response.json();
       assertEquals(Array.isArray(data.events), true);
       assertEquals(data.events.length, 1);
@@ -153,15 +151,15 @@ describe("Event Store API Integration", () => {
       const eventId = await eventStoreClient.publishEvent(
         TEST_TOPIC.name,
         "test.event",
-        { message: "Hello from EventStoreClient!" }
+        { message: "Hello from EventStoreClient!" },
       );
-      
+
       assertEquals(typeof eventId, "string");
       assertEquals(eventId.length > 0, true);
-      
+
       const events = await eventStoreClient.getEvents(TEST_TOPIC.name);
       assertEquals(Array.isArray(events), true);
       assertEquals(events.length >= 1, true);
     });
   });
-}); 
+});
