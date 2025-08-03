@@ -8,11 +8,15 @@ export class TopicManager {
   private validator = new SchemaValidator();
   private initialized = false;
 
-  constructor() {
+  private constructor() {
     this.configDir = Deno.env.get("CONFIG_DIR") || "config";
     this.dataDir = Deno.env.get("DATA_DIR") || "data";
-    // Defer async initialization to avoid constructor issues
-    this.initializeAsync();
+  }
+
+  static async create(): Promise<TopicManager> {
+    const instance = new TopicManager();
+    await instance.initializeAsync();
+    return instance;
   }
 
   private async initializeAsync(): Promise<void> {

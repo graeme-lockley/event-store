@@ -346,5 +346,93 @@ describe("EventStoreClient Integration", () => {
         () => client.publishEvent(uniqueTopicName, "invalid.event.type", { id: "123" })
       );
     });
+
+    it("should handle empty events array", async () => {
+      await assertRejects(
+        () => client.publishEvents([])
+      );
+    });
+
+    it("should handle invalid event format", async () => {
+      const uniqueTopicName = `invalid-format-topic-${Date.now()}`;
+      const schemas: Schema[] = [
+        {
+          eventType: "user.created",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+      ];
+
+      await client.createTopic(uniqueTopicName, schemas);
+      
+      // Test event with missing required fields
+      await assertRejects(
+        () => client.publishEvent(uniqueTopicName, "user.created", {})
+      );
+    });
+
+    it("should handle invalid topic creation with missing required fields", async () => {
+      // Test creating topic with invalid schema structure (missing required fields)
+      const invalidSchemas = [
+        {
+          // Missing eventType and $schema
+          type: "object",
+          properties: { id: { type: "string" } },
+        }
+      ] as any;
+      
+      await assertRejects(
+        () => client.createTopic("invalid-topic", invalidSchemas)
+      );
+    });
+
+    it("should handle invalid event publishing with null payload", async () => {
+      const uniqueTopicName = `invalid-payload-topic-${Date.now()}`;
+      const schemas: Schema[] = [
+        {
+          eventType: "user.created",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+      ];
+
+      await client.createTopic(uniqueTopicName, schemas);
+      
+      // Test publishing with null payload (should be rejected by server)
+      await assertRejects(
+        () => client.publishEvent(uniqueTopicName, "user.created", null as any)
+      );
+    });
+
+    it("should handle invalid consumer registration with empty object", async () => {
+      const uniqueTopicName = `invalid-consumer-topic-${Date.now()}`;
+      const schemas: Schema[] = [
+        {
+          eventType: "user.created",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+      ];
+
+      await client.createTopic(uniqueTopicName, schemas);
+      
+      // Test registration with empty object (should be rejected by server)
+      await assertRejects(
+        () => client.registerConsumer({} as any)
+      );
+    });
+
+    it("should handle missing consumer ID in delete", async () => {
+      // Test unregistering with empty/invalid consumer ID
+      await assertRejects(
+        () => client.unregisterConsumer("")
+      );
+    });
   });
 }); 

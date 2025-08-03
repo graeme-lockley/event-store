@@ -204,7 +204,7 @@ export class EventStoreClient {
         await this.getHealth();
         // If we get here, server is ready
         return;
-      } catch (error) {
+      } catch (_error) {
         // Server not ready yet, wait and try again
         await new Promise(resolve => setTimeout(resolve, pollInterval));
       }

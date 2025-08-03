@@ -1,4 +1,4 @@
-import { assertEquals, assertExists } from "$std/assert/mod.ts";
+import { assertEquals } from "$std/assert/mod.ts";
 import {
   afterAll,
   afterEach,
@@ -17,7 +17,7 @@ describe("TopicManager", () => {
     testSetup = new TestSetup();
     await testSetup.setup();
 
-    topicManager = new TopicManager();
+    topicManager = await TopicManager.create();
   });
 
   afterEach(async () => {
@@ -613,7 +613,7 @@ describe("TopicManager", () => {
       // Create a new TopicManager instance to trigger loadExistingSchemas
       // This should handle the error gracefully
       // The environment variables should still be set from testSetup
-      const newTopicManager = new TopicManager();
+      const newTopicManager = await TopicManager.create();
 
       // The new manager should still work for other operations
       const exists = await newTopicManager.topicExists("non-existent-topic");

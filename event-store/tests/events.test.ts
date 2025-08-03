@@ -19,7 +19,7 @@ describe("EventManager", () => {
     testSetup = new TestSetup();
     await testSetup.setup();
 
-    topicManager = new TopicManager();
+    topicManager = await TopicManager.create();
     eventManager = new EventManager(topicManager);
   });
 

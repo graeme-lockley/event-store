@@ -1,4 +1,4 @@
-import { assertEquals, assertExists } from "$std/assert/mod.ts";
+import { assertEquals } from "$std/assert/mod.ts";
 import {
   afterAll,
   afterEach,
@@ -23,7 +23,7 @@ describe("Dispatcher", () => {
     testSetup = new TestSetup();
     await testSetup.setup();
 
-    topicManager = new TopicManager();
+    topicManager = await TopicManager.create();
     eventManager = new EventManager(topicManager);
     consumerManager = new ConsumerManager(eventManager);
     dispatcher = new Dispatcher(consumerManager, eventManager);
