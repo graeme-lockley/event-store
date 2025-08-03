@@ -43,9 +43,6 @@ describe("Event Store API", () => {
     // Start server with AbortController for proper cleanup
     controller = new AbortController();
     const _listener = app.listen({ port: testPort, signal: controller.signal });
-
-    // Wait for server to start
-    await new Promise((resolve) => setTimeout(resolve, 100));
   });
 
   afterAll(async () => {
@@ -56,9 +53,6 @@ describe("Event Store API", () => {
     if (controller) {
       controller.abort();
     }
-
-    // Wait a bit for cleanup
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Clean up test directories
     await testSetup.cleanup();
