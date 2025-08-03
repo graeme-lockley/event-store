@@ -33,10 +33,10 @@ describe("EventStoreClient", () => {
       assertEquals(result.perDay["2024-01-15"], 1);
       assertEquals(result.perDay["2024-02-01"], 1);
 
-      // Based on actual output from the function
-      assertEquals(result.perWeek["2023-12-30"], 3); // Jan 1, 2, and 15, 2024
-      assertEquals(result.perWeek["2024-01-13"], 1); // Jan 15, 2024
-      assertEquals(result.perWeek["2024-01-27"], 1); // Feb 1, 2024
+      // Week boundaries using UTC calculation
+      assertEquals(result.perWeek["2023-12-31"], 3); // Jan 1, 2, and 15, 2024 (all Mondays/Tuesdays)
+      assertEquals(result.perWeek["2024-01-14"], 1); // Jan 15, 2024 (Monday)
+      assertEquals(result.perWeek["2024-01-28"], 1); // Feb 1, 2024 (Thursday)
 
       assertEquals(result.perMonth["2024-01"], 4);
       assertEquals(result.perMonth["2024-02"], 1);

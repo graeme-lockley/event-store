@@ -41,9 +41,11 @@ export function aggregateTopicStats(events: Event[]) {
   }
   function getWeekKey(date: Date) {
     const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
+    // Use UTC methods consistently for timezone-agnostic calculation
+    d.setUTCHours(0, 0, 0, 0);
     // Set to previous Sunday
-    d.setDate(d.getDate() - d.getDay());
+    const dayOfWeek = d.getUTCDay();
+    d.setUTCDate(d.getUTCDate() - dayOfWeek);
     return d.toISOString().slice(0, 10);
   }
   function getMonthKey(date: Date) {
