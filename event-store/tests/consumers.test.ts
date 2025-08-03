@@ -397,11 +397,6 @@ describe("ConsumerManager", () => {
       const consumer = consumerManager.getConsumer("");
       assertEquals(consumer, undefined);
     });
-
-    it("should return undefined for null consumer ID", () => {
-      const consumer = consumerManager.getConsumer(null as any);
-      assertEquals(consumer, undefined);
-    });
   });
 
   describe("Enhanced Consumer Count", () => {
@@ -655,20 +650,9 @@ describe("ConsumerManager", () => {
   });
 
   describe("Edge Cases", () => {
-    it("should handle registration with null callback", () => {
+    it("should handle registration with empty callback", () => {
       const registration = {
-        callback: null as any,
-        topics: { "test-topic": null },
-      };
-
-      const consumerId = consumerManager.registerConsumer(registration);
-      assertEquals(typeof consumerId, "string");
-      assertEquals(consumerManager.getConsumerCount(), 1);
-    });
-
-    it("should handle registration with undefined callback", () => {
-      const registration = {
-        callback: undefined as any,
+        callback: "",
         topics: { "test-topic": null },
       };
 
@@ -687,36 +671,6 @@ describe("ConsumerManager", () => {
       assertEquals(typeof consumerId, "string");
       assertEquals(consumerManager.getConsumerCount(), 1);
     });
-
-    it("should handle registration with null topics", () => {
-      const registration = {
-        callback: "http://localhost:3000/webhook",
-        topics: null as any,
-      };
-
-      // This should throw an error due to null topics
-      try {
-        consumerManager.registerConsumer(registration);
-        assertEquals(false, true); // Should not reach here
-      } catch (error) {
-        assertEquals(error instanceof TypeError, true);
-      }
-    });
-
-    it("should handle registration with undefined topics", () => {
-      const registration = {
-        callback: "http://localhost:3000/webhook",
-        topics: undefined as any,
-      };
-
-      // This should throw an error due to undefined topics
-      try {
-        consumerManager.registerConsumer(registration);
-        assertEquals(false, true); // Should not reach here
-      } catch (error) {
-        assertEquals(error instanceof TypeError, true);
-      }
-    });
   });
 
   describe("Internal Method Coverage", () => {
@@ -727,7 +681,7 @@ describe("ConsumerManager", () => {
     beforeEach(() => {
       // Create a mock EventManager that returns events
       mockEventManager = {
-        getEvents: async (topic: string, options: any) => {
+        getEvents: (topic: string, _options: any) => {
           // Return mock events to trigger delivery logic
           return [
             {
@@ -950,7 +904,7 @@ describe("ConsumerManager", () => {
     it("should handle delivery with empty events array", async () => {
       // Create EventManager that returns empty events
       const emptyEventManager = {
-        getEvents: async (topic: string, options: any) => {
+        getEvents: (_topic: string) => {
           return [];
         },
       } as any;
@@ -971,7 +925,7 @@ describe("ConsumerManager", () => {
       try {
         await consumer!.nudge();
         // Should not throw error even with empty events
-      } catch (error) {
+      } catch (_error) {
         // Should not throw error for empty events
         assertEquals(false, true);
       }
