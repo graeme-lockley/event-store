@@ -2,7 +2,12 @@
 
 ## 📘 Overview
 
-The Event Store is a lightweight, file-backed, API-driven message recording and delivery system. It allows clients to define **topics**, register **event schemas**, **publish events**, and **register consumers** who receive events through **callback URLs**. The system ensures schema validation, durable storage, and **asynchronous event dispatching**, with consumers being **ephemeral** and automatically removed upon failure.
+The Event Store is a lightweight, file-backed, API-driven message recording and
+delivery system. It allows clients to define **topics**, register **event
+schemas**, **publish events**, and **register consumers** who receive events
+through **callback URLs**. The system ensures schema validation, durable
+storage, and **asynchronous event dispatching**, with consumers being
+**ephemeral** and automatically removed upon failure.
 
 ---
 
@@ -53,7 +58,8 @@ data/
 ```
 
 - Each file contains a complete serialized JSON event.
-- Grouping by 1,000-event folders avoids performance issues with large flat directories.
+- Grouping by 1,000-event folders avoids performance issues with large flat
+  directories.
 
 ### 3. **Globally Unique Event IDs**
 
@@ -65,7 +71,8 @@ data/
 ### 4. **Topic-Based Partitioning and Configuration**
 
 - Topics must be explicitly created before use.
-- Each topic has an associated configuration file stored in `config/` as `<topic>.json`.
+- Each topic has an associated configuration file stored in `config/` as
+  `<topic>.json`.
 - Example: `config/user-events.json`
 - The configuration file contains:
   - Topic name
@@ -107,13 +114,17 @@ Example:
 - Each consumer is represented as an object that encapsulates:
   - Registration details
   - State tracking per topic
-  - A `nudge()` method, which is triggered whenever an event is published to a relevant topic, prompting the consumer to check whether it is up-to-date and initiate delivery if necessary. In this way, consumers can be brought up-to-date near instantaneously.
+  - A `nudge()` method, which is triggered whenever an event is published to a
+    relevant topic, prompting the consumer to check whether it is up-to-date and
+    initiate delivery if necessary. In this way, consumers can be brought
+    up-to-date near instantaneously.
 
 ### 7. **Asynchronous Dispatching**
 
 - Events are dispatched to registered consumers **out of band** from publishing.
 - Each topic has a dedicated **dispatcher** running in the background.
-- Consumers are removed automatically if their callback returns an error or fails to respond.
+- Consumers are removed automatically if their callback returns an error or
+  fails to respond.
 
 ---
 
@@ -145,10 +156,10 @@ event-store/
 
 ```ts
 type Event = {
-  id: string;             // Generated as <topic>-<sequence>
-  timestamp: string;      // ISO8601
-  type: string;           // e.g. "user.created"
-  payload: any;           // Valid JSON
+  id: string; // Generated as <topic>-<sequence>
+  timestamp: string; // ISO8601
+  type: string; // e.g. "user.created"
+  payload: any; // Valid JSON
 };
 ```
 
@@ -156,10 +167,10 @@ type Event = {
 
 ```ts
 type Consumer = {
-  id: string;                              // UUID
-  callback: string;                        // URL
-  topics: Record<string, string | null>;   // topic → lastEventId
-  nudge(): Promise<void>;                 // Triggered when a new event is published
+  id: string; // UUID
+  callback: string; // URL
+  topics: Record<string, string | null>; // topic → lastEventId
+  nudge(): Promise<void>; // Triggered when a new event is published
 };
 ```
 
@@ -186,13 +197,15 @@ Create a new topic and register associated schemas.
 ```json
 {
   "name": "user-events",
-  "schemas": [{ /* JSON Schema 1 */ }, { /* Schema 2 */ }]
+  "schemas": [{/* JSON Schema 1 */}, {/* Schema 2 */}]
 }
 ```
 
 ### `POST /events`
 
-Publish one or more events across one or more topics in a single request. Each event must conform to its topic’s schema. If any event fails validation or references an unknown topic, the entire batch is rejected.
+Publish one or more events across one or more topics in a single request. Each
+event must conform to its topic’s schema. If any event fails validation or
+references an unknown topic, the entire batch is rejected.
 
 **Request:**
 
@@ -244,7 +257,8 @@ Register a new consumer.
 
 ### `GET /topics/:topic/events`
 
-Retrieve events from a topic since a specific event ID. Optional query params: `sinceEventId`, `date`, `limit`
+Retrieve events from a topic since a specific event ID. Optional query params:
+`sinceEventId`, `date`, `limit`
 
 ---
 
@@ -281,5 +295,9 @@ Retrieve events from a topic since a specific event ID. Optional query params: `
 
 ## 📌 Summary
 
-This event store provides a minimalist, file-backed, schema-validated, asynchronous message bus with no dependencies outside of the Deno runtime. Each event is uniquely identified and stored as its own file in a structured directory layout to facilitate efficient retrieval and scalability. The system is ideal for simple pipelines, event replay scenarios, and auditability use cases.
-
+This event store provides a minimalist, file-backed, schema-validated,
+asynchronous message bus with no dependencies outside of the Deno runtime. Each
+event is uniquely identified and stored as its own file in a structured
+directory layout to facilitate efficient retrieval and scalability. The system
+is ideal for simple pipelines, event replay scenarios, and auditability use
+cases.

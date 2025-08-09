@@ -1,6 +1,7 @@
 # 🚀 Event Store Deployment Guide
 
-This guide covers deploying the complete Event Store system with both the backend and admin UI.
+This guide covers deploying the complete Event Store system with both the
+backend and admin UI.
 
 ## 📋 System Overview
 
@@ -25,6 +26,7 @@ deno task start
 ```
 
 The Event Store will start on port 8000 with the following features:
+
 - File-backed storage in `data/` directory
 - REST API for all operations
 - JSON Schema validation
@@ -39,6 +41,7 @@ deno task start
 ```
 
 The Admin UI will start on port 8001 with:
+
 - Modern Fresh-based interface
 - Multi-store support
 - Authentication system
@@ -64,7 +67,8 @@ export CONFIG_DIR="./config"  # Topic configuration directory
 
 ### Admin UI Configuration
 
-The Admin UI automatically manages store configurations in `data/stores.json`. The default configuration includes:
+The Admin UI automatically manages store configurations in `data/stores.json`.
+The default configuration includes:
 
 ```json
 [
@@ -73,7 +77,8 @@ The Admin UI automatically manages store configurations in `data/stores.json`. T
 ]
 ```
 
-You can modify store configurations through the Admin UI interface or by editing the `data/stores.json` file directly.
+You can modify store configurations through the Admin UI interface or by editing
+the `data/stores.json` file directly.
 
 ### Authentication
 
@@ -89,7 +94,8 @@ Default credentials are managed in `data/users.json`:
 ]
 ```
 
-The default login is `admin` / `admin`. Users are stored with SHA-256 hashed passwords for security.
+The default login is `admin` / `admin`. Users are stored with SHA-256 hashed
+passwords for security.
 
 ## 📊 Testing the Deployment
 
@@ -106,6 +112,7 @@ deno task test
 ```
 
 This will test:
+
 - Event Store API functionality
 - Admin UI components and routes
 - Authentication flow
@@ -120,6 +127,7 @@ curl http://localhost:8000/health
 ```
 
 Response:
+
 ```json
 {
   "status": "healthy",
@@ -163,11 +171,13 @@ event-store/
 ## 🔐 Security Considerations
 
 ### Event Store
+
 - No built-in authentication (intended for internal networks)
 - File system permissions control access
 - Schema validation prevents invalid events
 
 ### Admin UI
+
 - Simple username/password authentication
 - HTTP-only cookies
 - Protected routes with middleware
@@ -258,7 +268,8 @@ tar -xzf admin-ui-backup-20250115.tar.gz
 
 1. **Multiple Event Store Instances**:
    - Run multiple Event Store instances on different ports
-   - Configure Admin UI to connect to all instances via the store management interface
+   - Configure Admin UI to connect to all instances via the store management
+     interface
    - Use load balancer for API requests
 
 2. **Admin UI Scaling**:
@@ -314,6 +325,7 @@ tar -xzf admin-ui-backup-20250115.tar.gz
 ## 📞 Support
 
 For issues and questions:
+
 1. Check the logs for error messages
 2. Verify network connectivity
 3. Test individual components
@@ -321,4 +333,4 @@ For issues and questions:
 
 ## 📝 License
 
-This project is open source and available under the MIT License. 
+This project is open source and available under the MIT License.

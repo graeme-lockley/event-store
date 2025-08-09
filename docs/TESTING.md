@@ -2,7 +2,8 @@
 
 ## 📋 Overview
 
-This document outlines the comprehensive testing strategy for the Event Store Admin UI, ensuring code quality, reliability, and maintainability.
+This document outlines the comprehensive testing strategy for the Event Store
+Admin UI, ensuring code quality, reliability, and maintainability.
 
 ---
 
@@ -21,24 +22,28 @@ This document outlines the comprehensive testing strategy for the Event Store Ad
 ### Test Types
 
 #### 1. **Unit Tests** (`tests/unit/`)
+
 - **Purpose**: Test individual functions and components in isolation
 - **Coverage**: Utils, helpers, pure functions, service logic
 - **Tools**: Deno testing, standard library assertions
 - **Speed**: Fast execution (< 1 second per test)
 
 #### 2. **Integration Tests** (`tests/integration/`)
+
 - **Purpose**: Test API endpoints and data flow
 - **Coverage**: Route handlers, API responses, Event Store integration
 - **Tools**: Deno testing, HTTP client testing
 - **Speed**: Medium execution (1-5 seconds per test)
 
 #### 3. **Component Tests**
+
 - **Purpose**: Test Preact components and islands
 - **Coverage**: Component rendering, props, events
 - **Tools**: Preact testing utilities, DOM testing
 - **Speed**: Fast execution (< 1 second per test)
 
 #### 4. **E2E Tests**
+
 - **Purpose**: Test complete user workflows
 - **Coverage**: Full application flows, user interactions
 - **Tools**: Playwright, browser automation
@@ -71,18 +76,22 @@ tests/
 ## 🛠️ Testing Tools & Dependencies
 
 ### Core Testing Framework
+
 - **Deno Testing**: Built-in testing framework
 - **Standard Library**: Assertions, mocking, HTTP testing
 
 ### Component Testing
+
 - **Preact Testing**: Component rendering and interaction
 - **DOM Testing**: Browser-like environment for components
 
 ### E2E Testing
+
 - **Playwright**: Browser automation and testing
 - **Visual Regression**: Screenshot comparison
 
 ### Test Utilities
+
 - **Integration Server**: Real Event Store and Admin UI servers for testing
 - **Test Helpers**: Common testing utilities
 - **Fixtures**: Reusable test data
@@ -115,12 +124,15 @@ deno task test:ci
 ## 📊 Test Coverage Requirements
 
 ### Current Coverage
+
 - **Unit Tests**: Authentication service, Event Store client
-- **Integration Tests**: Store management API, connection testing, Event Store integration
+- **Integration Tests**: Store management API, connection testing, Event Store
+  integration
 - **Component Tests**: Component rendering and interaction testing
 - **E2E Tests**: Full user workflow testing
 
 ### Coverage Exclusions
+
 - Generated files (`fresh.gen.ts`)
 - Static assets
 - Configuration files
@@ -131,6 +143,7 @@ deno task test:ci
 ## 🧩 Testing Patterns
 
 ### Unit Test Pattern
+
 ```typescript
 import { assertEquals, assertExists } from "$std/assert/mod.ts";
 import { describe, it } from "$std/testing/bdd.ts";
@@ -149,9 +162,10 @@ describe("Utility Function", () => {
 ```
 
 ### Integration Test Pattern
+
 ```typescript
 import { assertEquals } from "$std/assert/mod.ts";
-import { describe, it, beforeAll, afterAll } from "$std/testing/bdd.ts";
+import { afterAll, beforeAll, describe, it } from "$std/testing/bdd.ts";
 import { startIntegrationServers } from "../../helpers/integration_server.ts";
 
 describe("API Endpoint", () => {
@@ -170,7 +184,7 @@ describe("API Endpoint", () => {
   it("should return correct response", async () => {
     const response = await fetch(`${baseUrl}/api/test`);
     assertEquals(response.status, 200);
-    
+
     const data = await response.json();
     assertEquals(data.success, true);
   });
@@ -178,6 +192,7 @@ describe("API Endpoint", () => {
 ```
 
 ### Component Test Pattern
+
 ```typescript
 import { assertEquals } from "$std/assert/mod.ts";
 import { describe, it } from "$std/testing/bdd.ts";
@@ -193,6 +208,7 @@ describe("Component", () => {
 ```
 
 ### E2E Test Pattern
+
 ```typescript
 import { assertEquals } from "$std/assert/mod.ts";
 import { describe, it } from "$std/testing/bdd.ts";
@@ -213,28 +229,31 @@ describe("User Workflow", () => {
 ## 🔧 Test Configuration
 
 ### Environment Setup
+
 ```typescript
 // tests/helpers/integration_server.ts
 export const TEST_CONFIG = {
   adminUIPort: 18002,
   eventStorePort: 18000,
-  testDataDir: "./test-data"
+  testDataDir: "./test-data",
 };
 ```
 
 ### Test Data
+
 ```typescript
 // tests/fixtures/stores.ts
 export const mockStores = [
   {
     name: "Test Store",
     url: "http://localhost:8000",
-    port: 8000
-  }
+    port: 8000,
+  },
 ];
 ```
 
 ### Test Helpers
+
 ```typescript
 // tests/helpers/integration_server.ts
 export async function startIntegrationServers() {
@@ -256,16 +275,19 @@ export async function cleanupTestData() {
 ## 🎭 Testing Strategy
 
 ### Integration Testing
+
 - **Real Event Store**: Use actual Event Store server for integration tests
 - **Real Admin UI**: Use actual Admin UI server for API testing
 - **Isolated Data**: Each test uses isolated data directories
 
 ### Unit Testing
+
 - **Service Isolation**: Test services with mock storage
 - **Pure Functions**: Test utility functions in isolation
 - **Error Handling**: Test error scenarios and edge cases
 
 ### Component Testing
+
 - **Props**: Mock component props for testing
 - **Events**: Mock user interactions and events
 - **Context**: Mock Fresh context and state
@@ -275,12 +297,14 @@ export async function cleanupTestData() {
 ## 🔄 Test Data Management
 
 ### Test Data Strategy
+
 - **Isolation**: Each test uses isolated data directories
 - **Cleanup**: Automatic cleanup after tests via integration server
 - **Fixtures**: Reusable test data sets
 - **Factories**: Dynamic test data generation
 
 ### Data Cleanup
+
 ```typescript
 // tests/helpers/integration_server.ts
 export async function cleanupTestData() {
@@ -295,6 +319,7 @@ export async function cleanupTestData() {
 ## 📈 Continuous Integration
 
 ### CI Pipeline
+
 1. **Lint**: Code style and quality checks
 2. **Type Check**: TypeScript compilation
 3. **Unit Tests**: Fast unit test execution
@@ -304,6 +329,7 @@ export async function cleanupTestData() {
 7. **Deploy**: Deploy if all tests pass
 
 ### Pre-commit Hooks
+
 - Run unit tests
 - Check code formatting
 - Verify TypeScript types
@@ -314,12 +340,14 @@ export async function cleanupTestData() {
 ## 🐛 Debugging Tests
 
 ### Common Issues
+
 - **Async/Await**: Proper async test handling
 - **Timing**: Race conditions in tests
 - **Isolation**: Test data conflicts
 - **Environment**: Missing environment variables
 
 ### Debug Commands
+
 ```bash
 # Debug specific test
 deno test --allow-all --inspect-brk tests/unit/specific_test.ts
@@ -336,12 +364,14 @@ deno test --allow-all --fail-fast
 ## 📚 Test Documentation
 
 ### Test Naming Conventions
+
 - **Unit Tests**: `functionName.test.ts`
 - **Integration Tests**: `endpointName.integration.test.ts`
 - **E2E Tests**: `workflowName.e2e.test.ts`
 - **Component Tests**: `ComponentName.component.test.ts`
 
 ### Test Descriptions
+
 - Use descriptive test names
 - Explain the "why" not just the "what"
 - Group related tests with `describe` blocks
@@ -352,24 +382,28 @@ deno test --allow-all --fail-fast
 ## 🎯 Implementation Priority
 
 ### Phase 1: Foundation ✅ (Completed)
+
 1. ✅ Set up testing infrastructure
 2. ✅ Create test helpers and utilities
 3. ✅ Add unit tests for utility functions
 4. ✅ Configure CI/CD pipeline
 
 ### Phase 2: Core Features ✅ (Completed)
+
 1. ✅ Add integration tests for API endpoints
 2. ✅ Test authentication flows
 3. ✅ Test store management features
 4. 🔄 Add component tests for islands (In Progress)
 
 ### Phase 3: E2E Testing
+
 1. Implement E2E test framework
 2. Test complete user workflows
 3. Add visual regression tests
 4. Performance testing
 
 ### Phase 4: Advanced Testing
+
 1. Add stress testing
 2. Security testing
 3. Accessibility testing
@@ -380,16 +414,19 @@ deno test --allow-all --fail-fast
 ## 📊 Success Metrics
 
 ### Quality Metrics
+
 - **Test Coverage**: Unit and integration tests implemented
 - **Test Reliability**: Stable test execution
 - **Test Speed**: < 2 seconds for full suite
 - **Bug Detection**: Catch bugs before production
 
 ### Process Metrics
+
 - **Test Maintenance**: Low maintenance overhead
 - **Test Documentation**: Well-documented test patterns
 - **CI/CD Success**: Automated testing pipeline
 
 ---
 
-*This testing strategy ensures the Event Store Admin UI is robust, reliable, and maintainable.* 
+_This testing strategy ensures the Event Store Admin UI is robust, reliable, and
+maintainable._

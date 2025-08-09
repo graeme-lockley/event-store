@@ -23,8 +23,10 @@ export interface LegacyEventStoreConfig {
 export function createEventStoreClient(
   config: LegacyEventStoreConfig,
 ): BaseEventStoreClient {
+  const explicitBaseUrl = `${config.url}:${config.port}`;
+  const baseUrl = Deno.env.get("EVENT_STORE_BASE_URL") ?? explicitBaseUrl;
   return new BaseEventStoreClient({
-    baseUrl: `${config.url}:${config.port}`,
+    baseUrl,
     timeout: 30000,
     retries: 30,
     retryDelay: 100,
@@ -35,8 +37,10 @@ export function createEventStoreClient(
 export function createTestEventStoreClient(
   config: LegacyEventStoreConfig,
 ): BaseEventStoreClient {
+  const explicitBaseUrl = `${config.url}:${config.port}`;
+  const baseUrl = Deno.env.get("EVENT_STORE_BASE_URL") ?? explicitBaseUrl;
   return new BaseEventStoreClient({
-    baseUrl: `${config.url}:${config.port}`,
+    baseUrl,
     timeout: 5000, // 5 seconds for tests
     retries: 1, // Only 1 retry for tests
     retryDelay: 100, // 100ms delay for tests

@@ -1,16 +1,22 @@
 # 🚀 Event Store
 
-A lightweight, file-backed, API-driven message recording and delivery system with TypeScript client library for easy integration and a modern web-based admin interface.
+A lightweight, file-backed, API-driven message recording and delivery system
+with TypeScript client library for easy integration and a modern web-based admin
+interface.
 
 ## ✨ Features
 
 - **📦 TypeScript Client Library** - Easy integration with type safety
 - **📁 File-backed Storage** - No database required, events stored as JSON files
-- **🔍 JSON Schema Validation** - Validate events against schemas at publish time
-- **⚡ Asynchronous Event Dispatching** - Background delivery to webhook consumers
+- **🔍 JSON Schema Validation** - Validate events against schemas at publish
+  time
+- **⚡ Asynchronous Event Dispatching** - Background delivery to webhook
+  consumers
 - **🌐 RESTful HTTP API** - Standard HTTP endpoints for all operations
-- **🔄 Webhook-based Delivery** - Automatic retry logic for consumer delivery
-- **🧪 Embedded Testing Support** - Built-in testing utilities for reliable integration tests
+- **🔄 Webhook-based Delivery** - Automatic retry logic with backoff for
+  consumer delivery
+- **🧪 Embedded Testing Support** - Built-in testing utilities for reliable
+  integration tests
 - **📊 Health Monitoring** - Real-time health status and metrics
 - **🖥️ Web Admin Interface** - Modern web UI for managing Event Store instances
 
@@ -50,6 +56,7 @@ The Event Store provides a simple yet powerful event-driven architecture:
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - [Deno](https://deno.land/) 1.40+
 
 ### 1. Start the Event Store Server
@@ -59,7 +66,7 @@ The Event Store provides a simple yet powerful event-driven architecture:
 git clone https://github.com/graeme-lockley/event-store.git
 cd event-store
 
-# Start the Event Store server
+# Start the Event Store server (reads PORT, DATA_DIR, CONFIG_DIR, MAX_BODY_BYTES, RATE_LIMIT_PER_MINUTE)
 cd event-store
 deno run -A mod.ts
 ```
@@ -70,7 +77,10 @@ The server will start on `http://localhost:8000` by default.
 
 ```typescript
 // Import the client library
-import { EventStoreClient, type EventStoreConfig } from "https://raw.githubusercontent.com/graeme-lockley/event-store/main/event-store/client.ts";
+import {
+  EventStoreClient,
+  type EventStoreConfig,
+} from "https://raw.githubusercontent.com/graeme-lockley/event-store/main/event-store/client.ts";
 
 // Create client configuration
 const config: EventStoreConfig = {
@@ -80,7 +90,7 @@ const config: EventStoreConfig = {
   retryDelay: 1000,
 };
 
-// Initialize client
+// Initialize client (baseUrl required; falls back to EVENT_STORE_BASE_URL or location.origin)
 const client = new EventStoreClient(config);
 
 // Create a topic with schema validation
@@ -92,23 +102,23 @@ await client.createTopic("user-events", [
     properties: {
       id: { type: "string" },
       name: { type: "string" },
-      email: { type: "string" }
+      email: { type: "string" },
     },
-    required: ["id", "name", "email"]
-  }
+    required: ["id", "name", "email"],
+  },
 ]);
 
 // Publish an event
 const eventId = await client.publishEvent(
   "user-events",
   "user.created",
-  { id: "123", name: "Alice", email: "alice@example.com" }
+  { id: "123", name: "Alice", email: "alice@example.com" },
 );
 
 // Register a consumer
 const consumerId = await client.registerConsumer({
   callback: "https://your-service.com/webhook",
-  topics: { "user-events": null }
+  topics: { "user-events": null },
 });
 
 console.log(`Event published: ${eventId}`);
@@ -149,7 +159,7 @@ The Admin UI provides a modern web interface for managing Event Store instances:
 2. Click "Add Store" to add a new Event Store instance
 3. Enter the store details:
    - **Name**: A friendly name for the store
-   - **URL**: The Event Store server URL (e.g., `http://localhost:8000`)
+   - **URL**: The Event Store server URL (e.g., `http://localhost`)
    - **Port**: The Event Store server port (default: 8000)
 4. Click "Test Connection" to verify the connection
 5. Click "Add Store" to save the configuration
@@ -206,7 +216,10 @@ DEBUG=1 deno run -A main.ts
 The client library is available as a remote import from GitHub:
 
 ```typescript
-import { EventStoreClient, type EventStoreConfig } from "https://raw.githubusercontent.com/graeme-lockley/event-store/main/event-store/client.ts";
+import {
+  EventStoreClient,
+  type EventStoreConfig,
+} from "https://raw.githubusercontent.com/graeme-lockley/event-store/main/event-store/client.ts";
 ```
 
 ### Basic Usage
@@ -235,6 +248,7 @@ console.log(`Available topics: ${topics.join(", ")}`);
 ### Available Methods
 
 #### Topic Management
+
 ```typescript
 // Create topic with schemas
 await client.createTopic("user-events", [/* schemas */]);
@@ -247,15 +261,21 @@ const topic = await client.getTopic("user-events");
 ```
 
 #### Event Publishing
+
 ```typescript
 // Publish single event
-const eventId = await client.publishEvent("user-events", "user.created", payload);
+const eventId = await client.publishEvent(
+  "user-events",
+  "user.created",
+  payload,
+);
 
 // Publish multiple events
 const eventIds = await client.publishEvents([/* event array */]);
 ```
 
 #### Event Retrieval
+
 ```typescript
 // Get all events from topic
 const events = await client.getEvents("user-events");
@@ -264,16 +284,17 @@ const events = await client.getEvents("user-events");
 const events = await client.getEvents("user-events", {
   sinceEventId: "user-events-5",
   limit: 10,
-  date: "2025-01-15"
+  date: "2025-01-15",
 });
 ```
 
 #### Consumer Management
+
 ```typescript
 // Register consumer
 const consumerId = await client.registerConsumer({
   callback: "https://your-service.com/webhook",
-  topics: { "user-events": null }
+  topics: { "user-events": null },
 });
 
 // List consumers
@@ -321,7 +342,7 @@ describe("Event Store Integration", () => {
       retries: 1,
       retryDelay: 100,
     });
-    
+
     await client.waitForServer();
   });
 
@@ -333,13 +354,13 @@ describe("Event Store Integration", () => {
 
   it("should publish and retrieve events", async () => {
     await client.createTopic("test-topic", [/* schemas */]);
-    
+
     const eventId = await client.publishEvent(
       "test-topic",
       "test.event",
-      { message: "Hello World" }
+      { message: "Hello World" },
     );
-    
+
     const events = await client.getEvents("test-topic");
     assertEquals(events.length, 1);
     assertEquals(events[0].id, eventId);
@@ -365,8 +386,10 @@ deno test --allow-all
 ## 📚 Documentation
 
 - **[API Documentation](docs/API.md)** - Complete REST API reference
-- **[Event Store Usage Guide](docs/event-store-usage.md)** - Comprehensive usage guide with client library examples
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment instructions
+- **[Event Store Usage Guide](docs/event-store-usage.md)** - Comprehensive usage
+  guide with client library examples
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment
+  instructions
 - **[Testing Guide](docs/TESTING.md)** - Testing strategies and best practices
 
 ## 🔧 Configuration
@@ -374,18 +397,21 @@ deno test --allow-all
 ### Environment Variables
 
 #### Event Store Server
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `8000` | Server port |
-| `DATA_DIR` | `./data` | Directory for event storage |
+
+| Variable     | Default    | Description                       |
+| ------------ | ---------- | --------------------------------- |
+| `PORT`       | `8000`     | Server port                       |
+| `DATA_DIR`   | `./data`   | Directory for event storage       |
 | `CONFIG_DIR` | `./config` | Directory for configuration files |
 
 #### Admin UI
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `8000` | Admin UI port |
-| `DATA_DIR` | `./data` | Directory for admin data |
-| `DEBUG` | `false` | Enable debug mode |
+
+| Variable               | Default  | Description                                                       |
+| ---------------------- | -------- | ----------------------------------------------------------------- |
+| `PORT`                 | `8000`   | Admin UI port                                                     |
+| `DATA_DIR`             | `./data` | Directory for admin data                                          |
+| `DEBUG`                | `false`  | Enable debug mode                                                 |
+| `EVENT_STORE_BASE_URL` | unset    | Optional override to force a single base URL for EventStoreClient |
 
 ### Custom Configuration
 
@@ -430,14 +456,14 @@ await client.createTopic("user-events", [/* schemas */]);
 // 2. Register consumer
 const consumerId = await client.registerConsumer({
   callback: "https://your-service.com/webhook",
-  topics: { "user-events": null }
+  topics: { "user-events": null },
 });
 
 // 3. Publish events
 const eventId = await client.publishEvent(
   "user-events",
   "user.created",
-  { id: "123", name: "Alice" }
+  { id: "123", name: "Alice" },
 );
 ```
 
@@ -449,7 +475,7 @@ const events = await client.getEvents("user-events");
 
 // Get events since a specific point
 const events = await client.getEvents("user-events", {
-  sinceEventId: "user-events-100"
+  sinceEventId: "user-events-100",
 });
 ```
 
@@ -458,7 +484,7 @@ const events = await client.getEvents("user-events", {
 ```typescript
 // Get events from a specific date
 const events = await client.getEvents("audit-events", {
-  date: "2025-01-15"
+  date: "2025-01-15",
 });
 ```
 
@@ -487,7 +513,8 @@ try {
 ## 🔒 Reliability
 
 - **Schema validation** - All events validated against schemas
-- **Consumer health monitoring** - Automatic consumer removal on failure
+- **Consumer delivery retry** - Exponential backoff and eventual unregister on
+  repeated failures
 - **Event durability** - Events stored as individual JSON files
 - **Webhook retry logic** - Automatic retry for failed deliveries
 
@@ -529,16 +556,21 @@ deno run -A main.ts
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
+for details.
 
 ## 🙏 Acknowledgments
 
-- Built with [Deno](https://deno.land/) - A modern runtime for JavaScript and TypeScript
-- Admin UI built with [Fresh](https://fresh.deno.dev/) - The next-gen web framework
+- Built with [Deno](https://deno.land/) - A modern runtime for JavaScript and
+  TypeScript
+- Admin UI built with [Fresh](https://fresh.deno.dev/) - The next-gen web
+  framework
 - File-based storage for simplicity and reliability
 - JSON Schema for robust event validation
 - RESTful API design for easy integration
 
 ---
 
-**Ready to build event-driven applications?** Start with the [Event Store Usage Guide](docs/event-store-usage.md) for comprehensive examples and best practices! 🚀
+**Ready to build event-driven applications?** Start with the
+[Event Store Usage Guide](docs/event-store-usage.md) for comprehensive examples
+and best practices! 🚀

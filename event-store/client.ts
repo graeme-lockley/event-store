@@ -19,8 +19,22 @@ export class EventStoreClient {
   private config: Required<EventStoreConfig>;
 
   constructor(config: EventStoreConfig) {
+    const maybeDeno = (globalThis as any).Deno;
+    const envBaseUrl: string | undefined = maybeDeno?.env?.get?.(
+      "EVENT_STORE_BASE_URL",
+    );
+    const browserOrigin: string | undefined = (globalThis as any)?.location
+      ?.origin;
+
+    const rawBaseUrl = config?.baseUrl ?? envBaseUrl ?? browserOrigin;
+    if (!rawBaseUrl || typeof rawBaseUrl !== "string") {
+      throw new Error(
+        "EventStoreClient: baseUrl is required. Provide config.baseUrl or set EVENT_STORE_BASE_URL.",
+      );
+    }
+
     this.config = {
-      baseUrl: config.baseUrl.replace(/\/$/, ""), // Remove trailing slash
+      baseUrl: rawBaseUrl.replace(/\/$/, ""), // Remove trailing slash
       timeout: config.timeout ?? 30000,
       retries: config.retries ?? 3,
       retryDelay: config.retryDelay ?? 1000,
