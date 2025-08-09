@@ -34,7 +34,12 @@ export function createRouter(
       const body = await ctx.request.body().value as TopicCreation;
 
       if (!body.name || !body.schemas || !Array.isArray(body.schemas)) {
-        sendError(ctx, 400, "Invalid request body. Required: name, schemas array", "INVALID_REQUEST");
+        sendError(
+          ctx,
+          400,
+          "Invalid request body. Required: name, schemas array",
+          "INVALID_REQUEST",
+        );
         return;
       }
 
@@ -44,7 +49,9 @@ export function createRouter(
       dispatcher.startDispatcher(body.name);
 
       ctx.response.status = 201;
-      ctx.response.body = { message: `Topic '${body.name}' created successfully` };
+      ctx.response.body = {
+        message: `Topic '${body.name}' created successfully`,
+      };
     } catch (error: unknown) {
       sendError(
         ctx,
@@ -61,7 +68,12 @@ export function createRouter(
       const body = await ctx.request.body().value as EventRequest[];
 
       if (!Array.isArray(body) || body.length === 0) {
-        sendError(ctx, 400, "Request body must be a non-empty array of events", "INVALID_REQUEST");
+        sendError(
+          ctx,
+          400,
+          "Request body must be a non-empty array of events",
+          "INVALID_REQUEST",
+        );
         return;
       }
 
@@ -71,7 +83,12 @@ export function createRouter(
           !eventRequest.topic || !eventRequest.type ||
           eventRequest.payload === undefined
         ) {
-          sendError(ctx, 400, "Each event must have topic, type, and payload", "INVALID_EVENT");
+          sendError(
+            ctx,
+            400,
+            "Each event must have topic, type, and payload",
+            "INVALID_EVENT",
+          );
           return;
         }
       }
@@ -153,47 +170,50 @@ export function createRouter(
   });
 
   // GET /topics/:topic/events - Retrieve events from a topic
-  router.get("/topics/:topic/events", async (ctx: RouterContext<"/topics/:topic/events">) => {
-    try {
-      const topic = ctx.params.topic;
+  router.get(
+    "/topics/:topic/events",
+    async (ctx: RouterContext<"/topics/:topic/events">) => {
+      try {
+        const topic = ctx.params.topic;
 
-      if (!topic || !(await topicManager.topicExists(topic))) {
-        sendError(ctx, 404, `Topic '${topic}' not found`, "TOPIC_NOT_FOUND");
-        return;
-      }
-
-      // Parse query parameters
-      const query: EventsQuery = {};
-      const url = new URL(ctx.request.url);
-
-      if (url.searchParams.has("sinceEventId")) {
-        query.sinceEventId = url.searchParams.get("sinceEventId")!;
-      }
-
-      if (url.searchParams.has("date")) {
-        query.date = url.searchParams.get("date")!;
-      }
-
-      if (url.searchParams.has("limit")) {
-        const limit = parseInt(url.searchParams.get("limit")!);
-        if (!isNaN(limit) && limit > 0) {
-          query.limit = limit;
+        if (!topic || !(await topicManager.topicExists(topic))) {
+          sendError(ctx, 404, `Topic '${topic}' not found`, "TOPIC_NOT_FOUND");
+          return;
         }
+
+        // Parse query parameters
+        const query: EventsQuery = {};
+        const url = new URL(ctx.request.url);
+
+        if (url.searchParams.has("sinceEventId")) {
+          query.sinceEventId = url.searchParams.get("sinceEventId")!;
+        }
+
+        if (url.searchParams.has("date")) {
+          query.date = url.searchParams.get("date")!;
+        }
+
+        if (url.searchParams.has("limit")) {
+          const limit = parseInt(url.searchParams.get("limit")!);
+          if (!isNaN(limit) && limit > 0) {
+            query.limit = limit;
+          }
+        }
+
+        const events = await eventManager.getEvents(topic, query);
+
+        ctx.response.status = 200;
+        ctx.response.body = { events };
+      } catch (error: unknown) {
+        sendError(
+          ctx,
+          500,
+          error instanceof Error ? error.message : String(error),
+          "EVENTS_FETCH_FAILED",
+        );
       }
-
-      const events = await eventManager.getEvents(topic, query);
-
-      ctx.response.status = 200;
-      ctx.response.body = { events };
-    } catch (error: unknown) {
-      sendError(
-        ctx,
-        500,
-        error instanceof Error ? error.message : String(error),
-        "EVENTS_FETCH_FAILED",
-      );
-    }
-  });
+    },
+  );
 
   // GET /topics - List all topics
   router.get("/topics", async (ctx: Context) => {
@@ -262,32 +282,42 @@ export function createRouter(
   });
 
   // DELETE /consumers/:id - Unregister a consumer
-  router.delete("/consumers/:id", async (ctx: RouterContext<"/consumers/:id">) => {
-    try {
-      const consumerId = ctx.params.id;
+  router.delete(
+    "/consumers/:id",
+    async (ctx: RouterContext<"/consumers/:id">) => {
+      try {
+        const consumerId = ctx.params.id;
 
-      if (!consumerId) {
-        sendError(ctx, 400, "Consumer ID is required", "INVALID_REQUEST");
-        return;
+        if (!consumerId) {
+          sendError(ctx, 400, "Consumer ID is required", "INVALID_REQUEST");
+          return;
+        }
+
+        const removed = consumerManager.unregisterConsumer(consumerId);
+
+        if (removed) {
+          ctx.response.status = 200;
+          ctx.response.body = {
+            message: `Consumer ${consumerId} unregistered`,
+          };
+        } else {
+          sendError(
+            ctx,
+            404,
+            `Consumer ${consumerId} not found`,
+            "CONSUMER_NOT_FOUND",
+          );
+        }
+      } catch (error: unknown) {
+        sendError(
+          ctx,
+          500,
+          error instanceof Error ? error.message : String(error),
+          "CONSUMER_DELETE_FAILED",
+        );
       }
-
-      const removed = consumerManager.unregisterConsumer(consumerId);
-
-      if (removed) {
-        ctx.response.status = 200;
-        ctx.response.body = { message: `Consumer ${consumerId} unregistered` };
-      } else {
-        sendError(ctx, 404, `Consumer ${consumerId} not found`, "CONSUMER_NOT_FOUND");
-      }
-    } catch (error: unknown) {
-      sendError(
-        ctx,
-        500,
-        error instanceof Error ? error.message : String(error),
-        "CONSUMER_DELETE_FAILED",
-      );
-    }
-  });
+    },
+  );
 
   // Health check endpoint
   router.get("/health", (ctx: Context) => {

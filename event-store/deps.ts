@@ -1,6 +1,9 @@
 // Centralized dependencies for the Event Store
 export { Application, Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
-export type { Context, RouterContext } from "https://deno.land/x/oak@v12.6.1/mod.ts";
+export type {
+  Context,
+  RouterContext,
+} from "https://deno.land/x/oak@v12.6.1/mod.ts";
 // Simple UUID generation function
 export function uuidv4(): string {
   return crypto.randomUUID();

@@ -16,7 +16,8 @@ export class SchemaValidator {
     schemas.forEach((schema) => {
       const key = `${topic}:${schema.eventType}`;
       // Remove $schema field and ensure type is set to object
-      const { $schema, eventType, type: _ignored, ...schemaWithoutMeta } = schema;
+      const { $schema, eventType, type: _ignored, ...schemaWithoutMeta } =
+        schema;
       const validSchema = {
         type: "object" as const,
         ...schemaWithoutMeta,
@@ -28,7 +29,11 @@ export class SchemaValidator {
   /**
    * Validate an event against its topic's schemas
    */
-  validateEvent(topic: string, eventType: string, payload: JSONObject): boolean {
+  validateEvent(
+    topic: string,
+    eventType: string,
+    payload: JSONObject,
+  ): boolean {
     const key = `${topic}:${eventType}`;
     const validator = this.validators.get(key);
 

@@ -5,7 +5,13 @@
 // CORE ENTITY TYPES
 // ============================================================================
 
-export type JSONValue = string | number | boolean | null | JSONValue[] | JSONObject;
+export type JSONValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JSONValue[]
+  | JSONObject;
 export type JSONObject = { [key: string]: JSONValue };
 
 export interface Event {

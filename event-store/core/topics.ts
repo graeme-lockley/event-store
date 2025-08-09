@@ -169,7 +169,11 @@ export class TopicManager {
   /**
    * Validate event against topic schemas
    */
-  validateEvent(topic: string, eventType: string, payload: JSONObject): boolean {
+  validateEvent(
+    topic: string,
+    eventType: string,
+    payload: JSONObject,
+  ): boolean {
     return this.validator.validateEvent(topic, eventType, payload);
   }
 

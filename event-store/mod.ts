@@ -36,11 +36,16 @@ app.use(async (ctx, next) => {
 // Basic body size limit for POST endpoints
 app.use(async (ctx, next) => {
   if (ctx.request.hasBody && ctx.request.method === "POST") {
-    const contentLength = Number(ctx.request.headers.get("content-length") || "0");
+    const contentLength = Number(
+      ctx.request.headers.get("content-length") || "0",
+    );
     const maxBytes = Number(Deno.env.get("MAX_BODY_BYTES") || "1048576"); // 1MB default
     if (contentLength > maxBytes) {
       ctx.response.status = 413;
-      ctx.response.body = { error: "Payload too large", code: "PAYLOAD_TOO_LARGE" };
+      ctx.response.body = {
+        error: "Payload too large",
+        code: "PAYLOAD_TOO_LARGE",
+      };
       return;
     }
   }
@@ -64,7 +69,10 @@ app.use(async (ctx, next) => {
   rateBuckets.set(key, bucket);
   if (bucket.count > RATE_LIMIT) {
     ctx.response.status = 429;
-    ctx.response.headers.set("Retry-After", Math.ceil((bucket.resetAt - now) / 1000).toString());
+    ctx.response.headers.set(
+      "Retry-After",
+      Math.ceil((bucket.resetAt - now) / 1000).toString(),
+    );
     ctx.response.body = { error: "Too many requests", code: "RATE_LIMITED" };
     return;
   }
