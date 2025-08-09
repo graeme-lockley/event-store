@@ -1,5 +1,5 @@
 import { ensureDir, join } from "../deps.ts";
-import { Schema, TopicConfig } from "../types.ts";
+import { JSONObject, Schema, TopicConfig } from "../types.ts";
 import { SchemaValidator } from "../utils/validate.ts";
 
 export class TopicManager {
@@ -165,7 +165,7 @@ export class TopicManager {
   /**
    * Validate event against topic schemas
    */
-  validateEvent(topic: string, eventType: string, payload: any): boolean {
+  validateEvent(topic: string, eventType: string, payload: JSONObject): boolean {
     return this.validator.validateEvent(topic, eventType, payload);
   }
 

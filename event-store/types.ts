@@ -5,24 +5,27 @@
 // CORE ENTITY TYPES
 // ============================================================================
 
+export type JSONValue = string | number | boolean | null | JSONValue[] | JSONObject;
+export type JSONObject = { [key: string]: JSONValue };
+
 export interface Event {
   id: string; // Generated as <topic>-<sequence>
   timestamp: string; // ISO8601
   type: string; // e.g. "user.created"
-  payload: any; // Valid JSON
+  payload: JSONObject; // Valid JSON object payload
 }
 
 export interface EventRequest {
   topic: string;
   type: string;
-  payload: any;
+  payload: unknown;
 }
 
 export interface Schema {
   eventType: string;
   type: string;
   $schema: string;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   required: string[];
   [key: string]: any;
 }

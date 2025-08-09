@@ -1,22 +1,24 @@
 import { addKeywords, Ajv } from "../deps.ts";
+import type { ValidateFunction } from "https://esm.sh/ajv@8.17.1";
+import type { JSONObject, Schema } from "../types.ts";
 
 // Initialize Ajv with keywords
 const ajv = new Ajv({ allErrors: true });
 addKeywords(ajv);
 
 export class SchemaValidator {
-  private validators = new Map<string, any>();
+  private validators = new Map<string, ValidateFunction<unknown>>();
 
   /**
    * Register schemas for a topic
    */
-  registerSchemas(topic: string, schemas: any[]): void {
+  registerSchemas(topic: string, schemas: Schema[]): void {
     schemas.forEach((schema) => {
       const key = `${topic}:${schema.eventType}`;
       // Remove $schema field and ensure type is set to object
-      const { $schema, eventType, ...schemaWithoutMeta } = schema;
+      const { $schema, eventType, type: _ignored, ...schemaWithoutMeta } = schema;
       const validSchema = {
-        type: "object",
+        type: "object" as const,
         ...schemaWithoutMeta,
       };
       this.validators.set(key, ajv.compile(validSchema));
@@ -26,7 +28,7 @@ export class SchemaValidator {
   /**
    * Validate an event against its topic's schemas
    */
-  validateEvent(topic: string, eventType: string, payload: any): boolean {
+  validateEvent(topic: string, eventType: string, payload: JSONObject): boolean {
     const key = `${topic}:${eventType}`;
     const validator = this.validators.get(key);
 
@@ -39,7 +41,7 @@ export class SchemaValidator {
     const isValid = validator(payload);
 
     if (!isValid) {
-      const errors = validator.errors?.map((e: any) =>
+      const errors = validator.errors?.map((e) =>
         `${e.instancePath} ${e.message}`
       ).join(", ");
       throw new Error(`Validation failed: ${errors}`);

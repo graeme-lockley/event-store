@@ -1,5 +1,5 @@
 import { dirname, ensureDir, join, walk } from "../deps.ts";
-import { Event, EventRequest, EventsQuery } from "../types.ts";
+import { Event, EventRequest, EventsQuery, JSONObject } from "../types.ts";
 import { TopicManager } from "./topics.ts";
 
 export class EventManager {
@@ -21,10 +21,11 @@ export class EventManager {
     }
 
     // Validate event against schema
+    const payloadObject = this.ensureJSONObject(eventRequest.payload);
     this.topicManager.validateEvent(
       eventRequest.topic,
       eventRequest.type,
-      eventRequest.payload,
+      payloadObject,
     );
 
     // Get next event ID
@@ -35,7 +36,7 @@ export class EventManager {
       id: eventId,
       timestamp: new Date().toISOString(),
       type: eventRequest.type,
-      payload: eventRequest.payload,
+      payload: payloadObject,
     };
 
     // Determine file path
@@ -66,10 +67,11 @@ export class EventManager {
         throw new Error(`Topic '${eventRequest.topic}' not found`);
       }
 
+      const payloadObject = this.ensureJSONObject(eventRequest.payload);
       this.topicManager.validateEvent(
         eventRequest.topic,
         eventRequest.type,
-        eventRequest.payload,
+        payloadObject,
       );
     }
 
@@ -96,7 +98,7 @@ export class EventManager {
       id: eventId,
       timestamp: new Date().toISOString(),
       type: eventRequest.type,
-      payload: eventRequest.payload,
+      payload: this.ensureJSONObject(eventRequest.payload),
     };
 
     // Determine file path
@@ -109,6 +111,16 @@ export class EventManager {
     await Deno.writeTextFile(filePath, JSON.stringify(event, null, 2));
 
     return eventId;
+  }
+
+  /**
+   * Ensure provided value is a plain JSON object (and not null/array)
+   */
+  private ensureJSONObject(value: unknown): JSONObject {
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      return value as JSONObject;
+    }
+    throw new Error("Event payload must be a JSON object");
   }
 
   /**
