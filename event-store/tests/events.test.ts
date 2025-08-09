@@ -1,4 +1,4 @@
-import { assertEquals } from "$std/assert/mod.ts";
+import { assertEquals, assertRejects } from "$std/assert/mod.ts";
 import {
   afterAll,
   afterEach,
@@ -576,10 +576,8 @@ describe("EventManager", () => {
   });
 
   describe("Edge Cases", () => {
-    it("should handle empty events array", async () => {
-      const eventIds = await eventManager.storeEvents([]);
-      assertEquals(Array.isArray(eventIds), true);
-      assertEquals(eventIds.length, 0);
+    it("should reject empty events array", async () => {
+      await assertRejects(() => eventManager.storeEvents([]));
     });
 
     it("should handle invalid event files gracefully", async () => {

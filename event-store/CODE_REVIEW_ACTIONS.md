@@ -2,6 +2,22 @@
 
 This document lists prioritized actions to address defects, inconsistencies, design quality, coding style, and improvements in the `./event-store` package. Each item includes clear instructions and acceptance criteria.
 
+### Current status
+- [x] 1) Fix server startup (TopicManager instantiation)
+- [x] 2) Remove redundant dispatcher pre-check (avoid double I/O)
+- [x] 4) Tighten router param typing; remove `any` casts
+- [x] 5) Unify behavior for empty event batches
+- [x] 6) Avoid double validation in `storeEvents`
+- [x] 7) Replace UUID generator with crypto-secure function
+- [x] 9) Improve event retrieval performance (date-filter traversal)
+- [~] 12) Standardize API error responses and startup logs (startup logs done; error structure not yet standardized)
+- [ ] 8) Strengthen JSON typing and AJV validator types
+- [ ] 10) Add basic concurrency control for sequence updates
+- [ ] 11) Harden `registerConsumer` validation
+- [ ] 13) Add cancellation support to client event streaming
+- [ ] 14) Add payload size limits and basic rate limiting
+- [ ] 15) Testing additions and updates
+
 ### 1) Fix server startup (TopicManager instantiation)
 - **Files**: `event-store/mod.ts`, `event-store/core/topics.ts`
 - **Steps**:
@@ -10,6 +26,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
 - **Acceptance**:
   - `deno run -A mod.ts` compiles and starts without constructor access errors.
   - Client integration test boots server successfully.
+ - **Status**: Completed
 
 ### 2) Remove redundant dispatcher pre-check (avoid double I/O)
 - **Files**: `event-store/core/dispatcher.ts`
@@ -21,6 +38,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
 - **Acceptance**:
   - Deliveries still occur when events are published.
   - Fewer filesystem reads per interval (measurable via logs or simple benchmark).
+ - **Status**: Completed
 
 ### 3) Add retry/backoff instead of unregistering consumers on first failure
 - **Files**: `event-store/core/consumers.ts`
@@ -31,6 +49,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
 - **Acceptance**:
   - Intermittent delivery failures no longer remove consumers permanently.
   - After transient errors, deliveries resume automatically.
+ - **Status**: Pending
 
 ### 4) Tighten router param typing; remove `any` casts
 - **Files**: `event-store/api/routes.ts`
@@ -40,6 +59,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
 - **Acceptance**:
   - No TypeScript `any` casts for route params.
   - Type checks pass; behavior unchanged.
+ - **Status**: Completed
 
 ### 5) Unify behavior for empty event batches
 - **Files**: `event-store/core/events.ts`, tests as needed
@@ -49,6 +69,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
   - Update or add tests to reflect the unified behavior.
 - **Acceptance**:
   - Internal and API behavior match for empty arrays (both reject).
+ - **Status**: Completed
 
 ### 6) Avoid double validation in `storeEvents`
 - **Files**: `event-store/core/events.ts`
@@ -57,6 +78,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
   - Extract a `storeEventUnsafe` that assumes validation is done, and call it in a second pass to persist events.
 - **Acceptance**:
   - Validation is executed once per event; logic still rejects invalid batches.
+ - **Status**: Completed
 
 ### 7) Replace UUID generator with crypto-secure function
 - **Files**: `event-store/deps.ts`, `event-store/core/consumers.ts`
@@ -65,6 +87,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
   - Ensure consumers use the updated function; no behavior change expected beyond randomness quality.
 - **Acceptance**:
   - IDs generated are UUIDv4 and cryptographically strong.
+ - **Status**: Completed
 
 ### 8) Strengthen JSON typing and AJV validator types
 - **Files**: `event-store/types.ts`, `event-store/utils/validate.ts`
@@ -75,6 +98,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
   - In `SchemaValidator`, type the validators map as `Map<string, ValidateFunction>` and type inputs as `Schema[]` and `unknown | JSONValue`.
 - **Acceptance**:
   - Fewer `any` usages; compile-time type-safety improved.
+ - **Status**: Pending
 
 ### 9) Improve event retrieval performance
 - **Files**: `event-store/core/events.ts`
@@ -84,6 +108,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
   - Optionally group events into chunk files to reduce file-count overhead.
 - **Acceptance**:
   - `getEvents` performance improves noticeably for large topics, especially with date filters.
+ - **Status**: Completed (restricted traversal when `date` is provided)
 
 ### 10) Add basic concurrency control for sequence updates
 - **Files**: `event-store/core/topics.ts`
@@ -92,6 +117,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
   - Optionally implement optimistic concurrency (verify sequence before write) or atomic write via temp file + rename.
 - **Acceptance**:
   - Parallel publishes to the same topic do not produce duplicate or skipped sequence numbers in tests.
+ - **Status**: Pending
 
 ### 11) Harden `registerConsumer` validation
 - **Files**: `event-store/core/consumers.ts`, `event-store/api/routes.ts` (ensure parity)
@@ -101,6 +127,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
   - Optionally add an (opt-in) callback health probe at registration.
 - **Acceptance**:
   - Invalid registrations are rejected with clear errors.
+ - **Status**: Pending
 
 ### 12) Standardize API error responses and startup logs
 - **Files**: `event-store/api/routes.ts`, `event-store/mod.ts`
@@ -109,6 +136,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
   - In `mod.ts`, log all endpoints including `GET /topics` and `GET /topics/:topic`, and briefly note environment variables (`PORT`, `DATA_DIR`, `CONFIG_DIR`).
 - **Acceptance**:
   - Errors look uniform; startup logs enumerate all endpoints.
+ - **Status**: Partially completed (startup logs updated; error response standardization pending)
 
 ### 13) Add cancellation support to client event streaming
 - **Files**: `event-store/client.ts`
@@ -117,6 +145,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
   - Break the polling loop when `signal.aborted` is true and handle cleanup.
 - **Acceptance**:
   - Streaming can be cancelled by callers without lingering loops.
+ - **Status**: Pending
 
 ### 14) Add payload size limits and basic rate limiting
 - **Files**: `event-store/mod.ts` (middleware), `event-store/api/routes.ts`
@@ -125,6 +154,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
   - Optionally add a simple in-memory rate limiter keyed by IP/route; make limits configurable.
 - **Acceptance**:
   - Oversized requests and abusive rates are handled gracefully with 4xx responses.
+ - **Status**: Pending
 
 ### 15) Testing additions and updates
 - **Files**: `event-store/tests/*`
@@ -138,6 +168,7 @@ This document lists prioritized actions to address defects, inconsistencies, des
   - Update tests if changing empty-batch semantics.
 - **Acceptance**:
   - All new tests pass; existing suites remain green.
+ - **Status**: Pending
 
 ## Quick wins (do first)
 - Fix `TopicManager.create()` usage in `mod.ts`.

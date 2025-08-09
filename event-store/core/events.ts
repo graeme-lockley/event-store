@@ -54,6 +54,10 @@ export class EventManager {
    * Store multiple events in a batch
    */
   async storeEvents(eventRequests: EventRequest[]): Promise<string[]> {
+    if (!Array.isArray(eventRequests) || eventRequests.length === 0) {
+      throw new Error("Events must be a non-empty array");
+    }
+
     const eventIds: string[] = [];
 
     // Validate all events first
@@ -69,13 +73,42 @@ export class EventManager {
       );
     }
 
-    // Store all events
+    // Store all events (validation already performed)
     for (const eventRequest of eventRequests) {
-      const eventId = await this.storeEvent(eventRequest);
+      const eventId = await this.storeEventWithoutValidation(eventRequest);
       eventIds.push(eventId);
     }
 
     return eventIds;
+  }
+
+  /**
+   * Store a single event without re-validating (assumes prior validation)
+   */
+  private async storeEventWithoutValidation(
+    eventRequest: EventRequest,
+  ): Promise<string> {
+    // Get next event ID
+    const eventId = await this.topicManager.getNextEventId(eventRequest.topic);
+
+    // Create event object
+    const event: Event = {
+      id: eventId,
+      timestamp: new Date().toISOString(),
+      type: eventRequest.type,
+      payload: eventRequest.payload,
+    };
+
+    // Determine file path
+    const filePath = this.getEventFilePath(eventRequest.topic, eventId);
+
+    // Ensure directory exists
+    await ensureDir(dirname(filePath));
+
+    // Write event to file
+    await Deno.writeTextFile(filePath, JSON.stringify(event, null, 2));
+
+    return eventId;
   }
 
   /**
@@ -138,10 +171,12 @@ export class EventManager {
    */
   async getEvents(topic: string, query: EventsQuery = {}): Promise<Event[]> {
     const events: Event[] = [];
-    const topicDir = join(this.dataDir, topic);
+    const topicDir = query.date
+      ? join(this.dataDir, topic, query.date)
+      : join(this.dataDir, topic);
 
     try {
-      // Walk through all event files in the topic directory
+      // Walk through all event files in the chosen directory (topic or date-specific)
       for await (
         const entry of walk(topicDir, {
           includeDirs: false,
