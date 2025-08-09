@@ -250,11 +250,15 @@ export class EventStoreClient {
   async *streamEvents(topic: string, options?: {
     sinceEventId?: string;
     pollInterval?: number;
+    signal?: AbortSignal;
   }): AsyncGenerator<Event> {
     let lastEventId = options?.sinceEventId;
     const pollInterval = options?.pollInterval ?? 1000;
 
     while (true) {
+      if (options?.signal?.aborted) {
+        break;
+      }
       try {
         const events = await this.getEvents(topic, {
           sinceEventId: lastEventId,

@@ -33,6 +33,44 @@ app.use(async (ctx, next) => {
   console.log(`${ctx.request.method} ${ctx.request.url.pathname} - ${ms}ms`);
 });
 
+// Basic body size limit for POST endpoints
+app.use(async (ctx, next) => {
+  if (ctx.request.hasBody && ctx.request.method === "POST") {
+    const contentLength = Number(ctx.request.headers.get("content-length") || "0");
+    const maxBytes = Number(Deno.env.get("MAX_BODY_BYTES") || "1048576"); // 1MB default
+    if (contentLength > maxBytes) {
+      ctx.response.status = 413;
+      ctx.response.body = { error: "Payload too large", code: "PAYLOAD_TOO_LARGE" };
+      return;
+    }
+  }
+  await next();
+});
+
+// Simple in-memory rate limiter (per IP per route)
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = Number(Deno.env.get("RATE_LIMIT_PER_MINUTE") || "600");
+app.use(async (ctx, next) => {
+  const ip = ctx.request.ip ?? "unknown";
+  const key = `${ip}:${ctx.request.url.pathname}`;
+  const now = Date.now();
+  const minute = 60_000;
+  const bucket = rateBuckets.get(key) || { count: 0, resetAt: now + minute };
+  if (now > bucket.resetAt) {
+    bucket.count = 0;
+    bucket.resetAt = now + minute;
+  }
+  bucket.count += 1;
+  rateBuckets.set(key, bucket);
+  if (bucket.count > RATE_LIMIT) {
+    ctx.response.status = 429;
+    ctx.response.headers.set("Retry-After", Math.ceil((bucket.resetAt - now) / 1000).toString());
+    ctx.response.body = { error: "Too many requests", code: "RATE_LIMITED" };
+    return;
+  }
+  await next();
+});
+
 // Use router
 app.use(router.routes());
 app.use(router.allowedMethods());

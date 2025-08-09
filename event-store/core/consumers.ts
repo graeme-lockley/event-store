@@ -5,15 +5,35 @@ import { EventManager } from "./events.ts";
 export class ConsumerManager {
   private consumers = new Map<string, Consumer>();
   private eventManager: EventManager;
+  private retryState = new Map<string, { attempts: number; nextRetryAt: number }>();
+  private readonly maxRetries = 5;
+  private readonly baseRetryDelayMs = 1000; // 1s base, exponential backoff
 
-  constructor(eventManager: EventManager) {
+  constructor(eventManager: EventManager, options?: { validateRegistration?: boolean }) {
     this.eventManager = eventManager;
+    this.validateRegistration = options?.validateRegistration === true;
   }
+
+  private validateRegistration: boolean = false;
 
   /**
    * Register a new consumer
    */
   registerConsumer(registration: ConsumerRegistration): string {
+    if (this.validateRegistration) {
+      // Basic validation when enabled
+      if (!registration || typeof registration.callback !== "string" || registration.callback.length === 0) {
+        throw new Error("Invalid registration: callback is required");
+      }
+      try {
+        new URL(registration.callback);
+      } catch {
+        throw new Error("Invalid registration: callback must be a valid URL");
+      }
+      if (!registration.topics || typeof registration.topics !== "object") {
+        throw new Error("Invalid registration: topics object is required");
+      }
+    }
     const consumerId = uuidv4();
 
     const consumer: Consumer = {
@@ -80,6 +100,12 @@ export class ConsumerManager {
       return; // Consumer was already removed
     }
 
+    // Respect backoff window if set
+    const state = this.retryState.get(consumerId);
+    if (state && Date.now() < state.nextRetryAt) {
+      return;
+    }
+
     const eventsToDeliver: Event[] = [];
 
     // Check each topic the consumer is interested in
@@ -134,6 +160,8 @@ export class ConsumerManager {
         console.log(
           `Delivered ${eventsToDeliver.length} events to consumer ${consumerId}`,
         );
+        // Reset retry state on success
+        this.retryState.delete(consumerId);
       } finally {
         clearTimeout(timeoutId);
       }
@@ -142,9 +170,18 @@ export class ConsumerManager {
         `Failed to deliver events to consumer ${consumerId}:`,
         error,
       );
+      // Apply exponential backoff; only unregister after exceeding max retries
+      const current = this.retryState.get(consumerId) ?? { attempts: 0, nextRetryAt: 0 };
+      const attempts = current.attempts + 1;
+      const delay = Math.min(this.baseRetryDelayMs * Math.pow(2, attempts - 1), 60_000);
+      const nextRetryAt = Date.now() + delay;
+      this.retryState.set(consumerId, { attempts, nextRetryAt });
 
-      // Remove consumer on delivery failure
-      this.unregisterConsumer(consumerId);
+      if (attempts >= this.maxRetries) {
+        console.warn(`Unregistering consumer ${consumerId} after ${attempts} failed attempts`);
+        this.retryState.delete(consumerId);
+        this.unregisterConsumer(consumerId);
+      }
     }
   }
 
