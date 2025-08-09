@@ -18,16 +18,23 @@ export function createRouter(
 ): Router {
   const router = new Router();
 
+  const sendError = (
+    ctx: Context,
+    status: number,
+    message: string,
+    code?: string,
+  ) => {
+    ctx.response.status = status;
+    ctx.response.body = code ? { error: message, code } : { error: message };
+  };
+
   // POST /topics - Create a new topic and register associated schemas
   router.post("/topics", async (ctx: Context) => {
     try {
       const body = await ctx.request.body().value as TopicCreation;
 
       if (!body.name || !body.schemas || !Array.isArray(body.schemas)) {
-        ctx.response.status = 400;
-        ctx.response.body = {
-          error: "Invalid request body. Required: name, schemas array",
-        };
+        sendError(ctx, 400, "Invalid request body. Required: name, schemas array", "INVALID_REQUEST");
         return;
       }
 
@@ -37,14 +44,14 @@ export function createRouter(
       dispatcher.startDispatcher(body.name);
 
       ctx.response.status = 201;
-      ctx.response.body = {
-        message: `Topic '${body.name}' created successfully`,
-      };
+      ctx.response.body = { message: `Topic '${body.name}' created successfully` };
     } catch (error: unknown) {
-      ctx.response.status = 400;
-      ctx.response.body = {
-        error: error instanceof Error ? error.message : String(error),
-      };
+      sendError(
+        ctx,
+        400,
+        error instanceof Error ? error.message : String(error),
+        "TOPIC_CREATION_FAILED",
+      );
     }
   });
 
@@ -54,10 +61,7 @@ export function createRouter(
       const body = await ctx.request.body().value as EventRequest[];
 
       if (!Array.isArray(body) || body.length === 0) {
-        ctx.response.status = 400;
-        ctx.response.body = {
-          error: "Request body must be a non-empty array of events",
-        };
+        sendError(ctx, 400, "Request body must be a non-empty array of events", "INVALID_REQUEST");
         return;
       }
 
@@ -67,10 +71,7 @@ export function createRouter(
           !eventRequest.topic || !eventRequest.type ||
           eventRequest.payload === undefined
         ) {
-          ctx.response.status = 400;
-          ctx.response.body = {
-            error: "Each event must have topic, type, and payload",
-          };
+          sendError(ctx, 400, "Each event must have topic, type, and payload", "INVALID_EVENT");
           return;
         }
       }
@@ -87,10 +88,12 @@ export function createRouter(
       ctx.response.status = 201;
       ctx.response.body = { eventIds };
     } catch (error: unknown) {
-      ctx.response.status = 400;
-      ctx.response.body = {
-        error: error instanceof Error ? error.message : String(error),
-      };
+      sendError(
+        ctx,
+        400,
+        error instanceof Error ? error.message : String(error),
+        "EVENT_PUBLISH_FAILED",
+      );
     }
   });
 
@@ -102,19 +105,28 @@ export function createRouter(
       if (
         !body.callback || !body.topics || Object.keys(body.topics).length === 0
       ) {
-        ctx.response.status = 400;
-        ctx.response.body = {
-          error:
-            "Invalid request body. Required: callback URL and topics object",
-        };
+        sendError(
+          ctx,
+          400,
+          "Invalid request body. Required: callback URL and topics object",
+          "INVALID_REQUEST",
+        );
+        return;
+      }
+
+      // Validate callback is a proper URL
+      try {
+        // Will throw for invalid URL
+        new URL(body.callback);
+      } catch {
+        sendError(ctx, 400, "Invalid callback URL", "INVALID_CALLBACK");
         return;
       }
 
       // Validate that all topics exist
       for (const topic of Object.keys(body.topics)) {
         if (!(await topicManager.topicExists(topic))) {
-          ctx.response.status = 400;
-          ctx.response.body = { error: `Topic '${topic}' not found` };
+          sendError(ctx, 400, `Topic '${topic}' not found`, "TOPIC_NOT_FOUND");
           return;
         }
       }
@@ -131,10 +143,12 @@ export function createRouter(
       ctx.response.status = 201;
       ctx.response.body = { consumerId };
     } catch (error: unknown) {
-      ctx.response.status = 400;
-      ctx.response.body = {
-        error: error instanceof Error ? error.message : String(error),
-      };
+      sendError(
+        ctx,
+        400,
+        error instanceof Error ? error.message : String(error),
+        "CONSUMER_REGISTRATION_FAILED",
+      );
     }
   });
 
@@ -144,8 +158,7 @@ export function createRouter(
       const topic = ctx.params.topic;
 
       if (!topic || !(await topicManager.topicExists(topic))) {
-        ctx.response.status = 404;
-        ctx.response.body = { error: `Topic '${topic}' not found` };
+        sendError(ctx, 404, `Topic '${topic}' not found`, "TOPIC_NOT_FOUND");
         return;
       }
 
@@ -173,10 +186,12 @@ export function createRouter(
       ctx.response.status = 200;
       ctx.response.body = { events };
     } catch (error: unknown) {
-      ctx.response.status = 500;
-      ctx.response.body = {
-        error: error instanceof Error ? error.message : String(error),
-      };
+      sendError(
+        ctx,
+        500,
+        error instanceof Error ? error.message : String(error),
+        "EVENTS_FETCH_FAILED",
+      );
     }
   });
 
@@ -187,10 +202,12 @@ export function createRouter(
       ctx.response.status = 200;
       ctx.response.body = { topics };
     } catch (error: unknown) {
-      ctx.response.status = 500;
-      ctx.response.body = {
-        error: error instanceof Error ? error.message : String(error),
-      };
+      sendError(
+        ctx,
+        500,
+        error instanceof Error ? error.message : String(error),
+        "TOPICS_LIST_FAILED",
+      );
     }
   });
 
@@ -200,8 +217,7 @@ export function createRouter(
       const topic = ctx.params.topic;
 
       if (!topic || !(await topicManager.topicExists(topic))) {
-        ctx.response.status = 404;
-        ctx.response.body = { error: `Topic '${topic}' not found` };
+        sendError(ctx, 404, `Topic '${topic}' not found`, "TOPIC_NOT_FOUND");
         return;
       }
 
@@ -214,10 +230,12 @@ export function createRouter(
         schemas: config.schemas,
       };
     } catch (error: unknown) {
-      ctx.response.status = 500;
-      ctx.response.body = {
-        error: error instanceof Error ? error.message : String(error),
-      };
+      sendError(
+        ctx,
+        500,
+        error instanceof Error ? error.message : String(error),
+        "TOPIC_FETCH_FAILED",
+      );
     }
   });
 
@@ -234,10 +252,12 @@ export function createRouter(
       ctx.response.status = 200;
       ctx.response.body = { consumers: consumerInfo };
     } catch (error: unknown) {
-      ctx.response.status = 500;
-      ctx.response.body = {
-        error: error instanceof Error ? error.message : String(error),
-      };
+      sendError(
+        ctx,
+        500,
+        error instanceof Error ? error.message : String(error),
+        "CONSUMERS_LIST_FAILED",
+      );
     }
   });
 
@@ -247,8 +267,7 @@ export function createRouter(
       const consumerId = ctx.params.id;
 
       if (!consumerId) {
-        ctx.response.status = 400;
-        ctx.response.body = { error: "Consumer ID is required" };
+        sendError(ctx, 400, "Consumer ID is required", "INVALID_REQUEST");
         return;
       }
 
@@ -258,14 +277,15 @@ export function createRouter(
         ctx.response.status = 200;
         ctx.response.body = { message: `Consumer ${consumerId} unregistered` };
       } else {
-        ctx.response.status = 404;
-        ctx.response.body = { error: `Consumer ${consumerId} not found` };
+        sendError(ctx, 404, `Consumer ${consumerId} not found`, "CONSUMER_NOT_FOUND");
       }
     } catch (error: unknown) {
-      ctx.response.status = 500;
-      ctx.response.body = {
-        error: error instanceof Error ? error.message : String(error),
-      };
+      sendError(
+        ctx,
+        500,
+        error instanceof Error ? error.message : String(error),
+        "CONSUMER_DELETE_FAILED",
+      );
     }
   });
 
