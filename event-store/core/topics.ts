@@ -7,6 +7,7 @@ export class TopicManager {
   private dataDir: string;
   private validator = new SchemaValidator();
   private initialized = false;
+  private topicMutexes = new Map<string, AsyncMutex>();
 
   private constructor() {
     this.configDir = Deno.env.get("CONFIG_DIR") || "config";
@@ -139,13 +140,16 @@ export class TopicManager {
    */
   async getNextEventId(name: string): Promise<string> {
     await this.ensureInitialized();
-    const config = await this.loadTopicConfig(name);
-    const nextSequence = config.sequence + 1;
-
-    // Update the sequence
-    await this.updateSequence(name, nextSequence);
-
-    return `${name}-${nextSequence}`;
+    const mutex = this.getMutex(name);
+    const release = await mutex.acquire();
+    try {
+      const config = await this.loadTopicConfig(name);
+      const nextSequence = config.sequence + 1;
+      await this.updateSequence(name, nextSequence);
+      return `${name}-${nextSequence}`;
+    } finally {
+      release();
+    }
   }
 
   /**
@@ -220,4 +224,39 @@ export class TopicManager {
 
     return topics;
   }
+
+  private getMutex(name: string): AsyncMutex {
+    let mutex = this.topicMutexes.get(name);
+    if (!mutex) {
+      mutex = new AsyncMutex();
+      this.topicMutexes.set(name, mutex);
+    }
+    return mutex;
+  }
 }
+
+class AsyncMutex {
+  private queue: Array<() => void> = [];
+  private locked = false;
+
+  async acquire(): Promise<() => void> {
+    return new Promise<() => void>((resolve) => {
+      const release = () => {
+        const next = this.queue.shift();
+        if (next) {
+          next();
+        } else {
+          this.locked = false;
+        }
+      };
+      if (this.locked) {
+        this.queue.push(() => resolve(release));
+      } else {
+        this.locked = true;
+        resolve(release);
+      }
+    });
+  }
+}
+
+//
