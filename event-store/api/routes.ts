@@ -1,4 +1,4 @@
-import { Context, Router } from "../deps.ts";
+import { Context, Router, RouterContext } from "../deps.ts";
 import { TopicManager } from "../core/topics.ts";
 import { EventManager } from "../core/events.ts";
 import { ConsumerManager } from "../core/consumers.ts";
@@ -139,9 +139,9 @@ export function createRouter(
   });
 
   // GET /topics/:topic/events - Retrieve events from a topic
-  router.get("/topics/:topic/events", async (ctx: Context) => {
+  router.get("/topics/:topic/events", async (ctx: RouterContext<"/topics/:topic/events">) => {
     try {
-      const topic = (ctx as any).params?.topic;
+      const topic = ctx.params.topic;
 
       if (!topic || !(await topicManager.topicExists(topic))) {
         ctx.response.status = 404;
@@ -195,9 +195,9 @@ export function createRouter(
   });
 
   // GET /topics/:topic - Get detailed information about a specific topic
-  router.get("/topics/:topic", async (ctx: Context) => {
+  router.get("/topics/:topic", async (ctx: RouterContext<"/topics/:topic">) => {
     try {
-      const topic = (ctx as any).params?.topic;
+      const topic = ctx.params.topic;
 
       if (!topic || !(await topicManager.topicExists(topic))) {
         ctx.response.status = 404;
@@ -242,9 +242,9 @@ export function createRouter(
   });
 
   // DELETE /consumers/:id - Unregister a consumer
-  router.delete("/consumers/:id", async (ctx: Context) => {
+  router.delete("/consumers/:id", async (ctx: RouterContext<"/consumers/:id">) => {
     try {
-      const consumerId = (ctx as any).params?.id;
+      const consumerId = ctx.params.id;
 
       if (!consumerId) {
         ctx.response.status = 400;

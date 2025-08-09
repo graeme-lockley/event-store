@@ -56,34 +56,9 @@ export class Dispatcher {
    */
   private async checkAndDeliverEvents(topic: string): Promise<void> {
     try {
-      // Get consumers for this topic
-      const consumers = this.consumerManager.getConsumersForTopic(topic);
-
-      if (consumers.length === 0) {
-        return; // No consumers for this topic
-      }
-
-      // Check if there are any new events for any consumer
-      let hasNewEvents = false;
-
-      for (const consumer of consumers) {
-        const lastEventId = consumer.topics[topic];
-
-        // Get events since the last consumed event
-        const events = await this.eventManager.getEvents(topic, {
-          sinceEventId: lastEventId || undefined,
-        });
-
-        if (events.length > 0) {
-          hasNewEvents = true;
-          break;
-        }
-      }
-
-      if (hasNewEvents) {
-        // Trigger delivery for all consumers of this topic
-        await this.consumerManager.nudgeConsumersForTopic(topic);
-      }
+      // Always trigger delivery handling; consumers will fetch only what they need.
+      // This avoids double-reading events per interval.
+      await this.consumerManager.nudgeConsumersForTopic(topic);
     } catch (error) {
       console.error(`Error in dispatcher for topic ${topic}:`, error);
     }

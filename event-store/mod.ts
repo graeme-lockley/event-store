@@ -11,7 +11,7 @@ const dataDir = Deno.env.get("DATA_DIR") || "./data";
 const configDir = Deno.env.get("CONFIG_DIR") || "./config";
 
 // Initialize core components
-const topicManager = new TopicManager();
+const topicManager = await TopicManager.create();
 const eventManager = new EventManager(topicManager);
 const consumerManager = new ConsumerManager(eventManager);
 const dispatcher = new Dispatcher(consumerManager, eventManager);
@@ -52,12 +52,16 @@ Deno.addSignalListener("SIGTERM", shutdown);
 console.log(`🚀 Event Store starting on port ${port}`);
 console.log(`📁 Data directory: ${dataDir}`);
 console.log(`📁 Config directory: ${configDir}`);
-console.log(`📖 API Documentation:`);
+console.log(`📖 API Endpoints:`);
 console.log(`   POST /topics - Create a topic with schemas`);
+console.log(`   GET  /topics - List all topics`);
+console.log(`   GET  /topics/:topic - Get topic details`);
 console.log(`   POST /events - Publish events`);
 console.log(`   POST /consumers/register - Register a consumer`);
-console.log(`   GET /topics/:topic/events - Retrieve events`);
-console.log(`   GET /health - Health check`);
+console.log(`   GET  /topics/:topic/events - Retrieve events`);
+console.log(`   GET  /consumers - List consumers`);
+console.log(`   DELETE /consumers/:id - Unregister a consumer`);
+console.log(`   GET  /health - Health check`);
 console.log(`\n💡 Example usage:`);
 console.log(`   curl -X POST http://localhost:${port}/topics \\`);
 console.log(`     -H "Content-Type: application/json" \\`);
