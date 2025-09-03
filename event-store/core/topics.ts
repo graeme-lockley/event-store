@@ -1,5 +1,5 @@
 import { ensureDir, join } from "../deps.ts";
-import { JSONObject, Schema, TopicConfig } from "../types.ts";
+import { JSONObject, Schema, TopicConfig, Topic } from "../types.ts";
 import { SchemaValidator } from "../utils/validate.ts";
 
 export class TopicManager {
@@ -223,6 +223,32 @@ export class TopicManager {
     for await (const entry of Deno.readDir(this.configDir)) {
       if (entry.isFile && entry.name.endsWith(".json")) {
         topics.push(entry.name.replace(".json", ""));
+      }
+    }
+
+    return topics;
+  }
+
+  /**
+   * Get all topics with full details (name, sequence, schemas)
+   */
+  async getAllTopicsWithDetails(): Promise<Topic[]> {
+    await this.ensureInitialized();
+    const topics: Topic[] = [];
+
+    for await (const entry of Deno.readDir(this.configDir)) {
+      if (entry.isFile && entry.name.endsWith(".json")) {
+        try {
+          const topicName = entry.name.replace(".json", "");
+          const config = await this.loadTopicConfig(topicName);
+          topics.push({
+            name: config.name,
+            sequence: config.sequence,
+            schemas: config.schemas,
+          });
+        } catch (error) {
+          console.error(`Error loading topic config for '${entry.name}':`, error);
+        }
       }
     }
 

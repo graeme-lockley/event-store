@@ -218,7 +218,7 @@ export function createRouter(
   // GET /topics - List all topics
   router.get("/topics", async (ctx: Context) => {
     try {
-      const topics = await topicManager.getAllTopics();
+      const topics = await topicManager.getAllTopicsWithDetails();
       ctx.response.status = 200;
       ctx.response.body = { topics };
     } catch (error: unknown) {

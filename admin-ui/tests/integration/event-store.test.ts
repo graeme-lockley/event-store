@@ -102,7 +102,9 @@ describe("Event Store API Integration", () => {
       const data = await response.json();
       assertEquals(Array.isArray(data.topics), true);
       assertEquals(data.topics.length, 1);
-      assertEquals(data.topics[0], TEST_TOPIC.name);
+      assertEquals(data.topics[0].name, TEST_TOPIC.name);
+      assertEquals(Array.isArray(data.topics[0].schemas), true);
+      assertEquals(data.topics[0].schemas.length, TEST_TOPIC.schemas.length);
     });
 
     it("should work with EventStoreClient topic operations", async () => {
