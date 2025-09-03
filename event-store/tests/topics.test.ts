@@ -240,6 +240,69 @@ describe("TopicManager", () => {
       assertEquals(result, true);
     });
 
+    it("should validate event with date-time format", async () => {
+      const topicName = "test-topic-datetime";
+      const schemas = [{
+        eventType: "test.datetime",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          timestamp: { type: "string", format: "date-time" },
+          message: { type: "string" },
+        },
+        required: ["timestamp", "message"],
+      }];
+
+      await topicManager.createTopic(topicName, schemas);
+
+      const validPayload = { 
+        timestamp: "2025-01-15T10:30:00.000Z",
+        message: "Hello World" 
+      };
+      const result = topicManager.validateEvent(
+        topicName,
+        "test.datetime",
+        validPayload,
+      );
+      assertEquals(result, true);
+    });
+
+    it("should reject event with invalid date-time format", async () => {
+      const topicName = "test-topic-datetime-invalid";
+      const schemas = [{
+        eventType: "test.datetime",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          timestamp: { type: "string", format: "date-time" },
+          message: { type: "string" },
+        },
+        required: ["timestamp", "message"],
+      }];
+
+      await topicManager.createTopic(topicName, schemas);
+
+      const invalidPayload = { 
+        timestamp: "not-a-valid-date",
+        message: "Hello World" 
+      };
+      
+      try {
+        const result = topicManager.validateEvent(
+          topicName,
+          "test.datetime",
+          invalidPayload,
+        );
+        assertEquals(result, false);
+      } catch (error) {
+        // If validation throws an error, that's also acceptable
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
+        assertEquals(errorMessage.includes("Validation failed"), true);
+      }
+    });
+
     it("should reject invalid event", async () => {
       const topicName = "test-topic";
       const schemas = [{

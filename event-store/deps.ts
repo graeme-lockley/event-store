@@ -12,5 +12,6 @@ export { ensureDir, walk } from "https://deno.land/std@0.208.0/fs/mod.ts";
 export { dirname, join } from "https://deno.land/std@0.208.0/path/mod.ts";
 import Ajv from "https://esm.sh/ajv@8.17.1";
 import addKeywords from "https://esm.sh/ajv-keywords@5.1.0";
+import addFormats from "https://esm.sh/ajv-formats@3.0.1";
 
-export { addKeywords, Ajv };
+export { addKeywords, addFormats, Ajv };

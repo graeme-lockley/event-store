@@ -1,10 +1,11 @@
-import { addKeywords, Ajv } from "../deps.ts";
+import { addKeywords, addFormats, Ajv } from "../deps.ts";
 import type { ValidateFunction } from "https://esm.sh/ajv@8.17.1";
 import type { JSONObject, Schema } from "../types.ts";
 
-// Initialize Ajv with keywords
+// Initialize Ajv with keywords and formats
 const ajv = new Ajv({ allErrors: true });
 addKeywords(ajv);
+addFormats(ajv);
 
 export class SchemaValidator {
   private validators = new Map<string, ValidateFunction<unknown>>();
