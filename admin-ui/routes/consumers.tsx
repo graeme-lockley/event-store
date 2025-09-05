@@ -1,6 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import Layout from "../components/Layout.tsx";
-import { Consumer, EventStoreClient } from "../utils/eventStore.ts";
+import { Consumer, createEventStoreClient } from "../utils/eventStore.ts";
 import { withAuth } from "../utils/middleware.ts";
 import { EventStoreConfig, getStores } from "../utils/storeConfig.ts";
 
@@ -12,14 +12,14 @@ interface ConsumersData {
 }
 
 export const handler: Handlers<ConsumersData> = withAuth({
-  async GET(req, ctx) {
+  async GET(_req, ctx) {
     const stores = await getStores();
 
     const storeData = [];
 
     for (const storeConfig of stores) {
       try {
-        const client = new EventStoreClient(storeConfig);
+        const client = createEventStoreClient(storeConfig);
         const consumers = await client.getConsumers();
 
         storeData.push({

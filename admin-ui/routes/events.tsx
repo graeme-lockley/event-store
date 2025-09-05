@@ -1,6 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import Layout from "../components/Layout.tsx";
-import { Event, EventStoreClient } from "../utils/eventStore.ts";
+import { Event, createEventStoreClient } from "../utils/eventStore.ts";
 import { withAuth } from "../utils/middleware.ts";
 import { EventStoreConfig, getStores } from "../utils/storeConfig.ts";
 
@@ -27,7 +27,7 @@ export const handler: Handlers<EventsData> = withAuth({
 
     for (const storeConfig of stores) {
       try {
-        const client = new EventStoreClient(storeConfig);
+        const client = createEventStoreClient(storeConfig);
         const topics = await client.getTopics();
         let events: Event[] = [];
 
