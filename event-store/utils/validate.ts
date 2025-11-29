@@ -1,4 +1,4 @@
-import { addKeywords, addFormats, Ajv } from "../deps.ts";
+import { addFormats, addKeywords, Ajv } from "../deps.ts";
 import type { ValidateFunction } from "https://esm.sh/ajv@8.17.1";
 import type { JSONObject, Schema } from "../types.ts";
 

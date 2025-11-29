@@ -509,6 +509,121 @@ GET /topics/{topic}
 
 - `404` - Topic not found
 
+#### **Update Topic Schemas**
+
+```http
+PUT /topics/{topic}
+Content-Type: application/json
+```
+
+Update schemas for an existing topic. Schema updates are **additive only** - you can add new schemas or update existing ones (by `eventType`), but you cannot remove schemas.
+
+**Request Body:**
+
+```json
+{
+  "schemas": [
+    {
+      "eventType": "user.created",
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    {
+      "eventType": "user.updated",
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["id"]
+    }
+  ]
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "message": "Topic 'user-events' schemas updated successfully"
+}
+```
+
+**Error Responses:**
+
+- `400` - Invalid request body (missing schemas array)
+- `400` - Cannot remove schemas (missing eventTypes in request)
+- `400` - Schema validation error (missing required fields)
+- `404` - Topic not found
+
+**Important Notes:**
+
+- **Additive Constraint**: All existing `eventType`s must be present in the update request. You cannot remove schemas, only add or update them.
+- **Schema Updates**: Existing schemas are identified by their `eventType` and replaced with the new definition.
+- **Immediate Effect**: Schema updates are immediately effective for new events being published.
+- **Sequence Preservation**: The topic's sequence number is preserved during schema updates.
+
+**Example: Updating an Existing Schema**
+
+If a topic initially has a `user.created` schema with only `id` and `name` fields, you can update it to include an `email` field:
+
+```json
+{
+  "schemas": [
+    {
+      "eventType": "user.created",
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["id", "name", "email"]
+    }
+  ]
+}
+```
+
+**Example: Adding a New Schema**
+
+To add a new event type while keeping existing ones:
+
+```json
+{
+  "schemas": [
+    {
+      "eventType": "user.created",
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    {
+      "eventType": "user.deleted",
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "id": { "type": "string" },
+        "deletedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "deletedAt"]
+    }
+  ]
+}
+```
+
 ---
 
 ### **Event Publishing**

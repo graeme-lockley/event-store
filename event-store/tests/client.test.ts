@@ -28,9 +28,13 @@ describe("EventStoreClient Integration", () => {
     await testSetup.setup();
 
     // Start the Event Store server with test directories
+    // Get the event-store directory path relative to this test file
+    const testFileUrl = new URL(import.meta.url);
+    const eventStoreDir = new URL("../", testFileUrl).pathname;
+
     serverProcess = new Deno.Command("deno", {
       args: ["run", "-A", "mod.ts"],
-      cwd: Deno.cwd(),
+      cwd: eventStoreDir,
       env: {
         "PORT": testPort.toString(),
         "DATA_DIR": testSetup.getDataDir(),
@@ -446,6 +450,223 @@ describe("EventStoreClient Integration", () => {
       // Test unregistering with empty/invalid consumer ID
       await assertRejects(
         () => client.unregisterConsumer(""),
+      );
+    });
+  });
+
+  describe("updateTopicSchemas", () => {
+    it("should update existing schema via API", async () => {
+      const uniqueTopicName = `update-schema-${Date.now()}`;
+      const initialSchemas: Schema[] = [
+        {
+          eventType: "user.created",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" }, name: { type: "string" } },
+          required: ["id"],
+        },
+      ];
+
+      await client.createTopic(uniqueTopicName, initialSchemas);
+
+      // Update schema: add new property
+      const updatedSchemas: Schema[] = [
+        {
+          eventType: "user.created",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: {
+            id: { type: "string" },
+            name: { type: "string" },
+            email: { type: "string" },
+          },
+          required: ["id", "email"],
+        },
+      ];
+
+      await client.updateTopicSchemas(uniqueTopicName, updatedSchemas);
+
+      // Verify update via GET
+      const topic = await client.getTopic(uniqueTopicName);
+      assertEquals(topic.schemas.length, 1);
+      assertEquals(topic.schemas[0].eventType, "user.created");
+      const props = topic.schemas[0].properties as Record<string, unknown>;
+      assertEquals(props.email !== undefined, true);
+    });
+
+    it("should add new schema to topic via API", async () => {
+      const uniqueTopicName = `add-schema-${Date.now()}`;
+      const initialSchemas: Schema[] = [
+        {
+          eventType: "user.created",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+      ];
+
+      await client.createTopic(uniqueTopicName, initialSchemas);
+
+      // Add new schema while keeping existing
+      const updatedSchemas: Schema[] = [
+        {
+          eventType: "user.created",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+        {
+          eventType: "user.updated",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" }, name: { type: "string" } },
+          required: ["id"],
+        },
+      ];
+
+      await client.updateTopicSchemas(uniqueTopicName, updatedSchemas);
+
+      // Verify both schemas exist
+      const topic = await client.getTopic(uniqueTopicName);
+      assertEquals(topic.schemas.length, 2);
+      const eventTypes = topic.schemas.map((s) => s.eventType);
+      assertEquals(eventTypes.includes("user.created"), true);
+      assertEquals(eventTypes.includes("user.updated"), true);
+    });
+
+    it("should reject attempt to remove schema via API", async () => {
+      const uniqueTopicName = `remove-schema-${Date.now()}`;
+      const initialSchemas: Schema[] = [
+        {
+          eventType: "user.created",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+        {
+          eventType: "user.updated",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+      ];
+
+      await client.createTopic(uniqueTopicName, initialSchemas);
+
+      // Try to remove user.created
+      const updatedSchemas: Schema[] = [
+        {
+          eventType: "user.updated",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+      ];
+
+      await assertRejects(
+        () => client.updateTopicSchemas(uniqueTopicName, updatedSchemas),
+      );
+    });
+
+    it("should make updated schemas immediately effective for new events", async () => {
+      const uniqueTopicName = `immediate-schema-${Date.now()}`;
+      const initialSchemas: Schema[] = [
+        {
+          eventType: "user.created",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+      ];
+
+      await client.createTopic(uniqueTopicName, initialSchemas);
+
+      // Update schema to require email
+      const updatedSchemas: Schema[] = [
+        {
+          eventType: "user.created",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: {
+            id: { type: "string" },
+            email: { type: "string" },
+          },
+          required: ["id", "email"],
+        },
+      ];
+
+      await client.updateTopicSchemas(uniqueTopicName, updatedSchemas);
+
+      // Try to publish event without email (should fail)
+      await assertRejects(
+        () =>
+          client.publishEvent(uniqueTopicName, "user.created", {
+            id: "123",
+          }),
+      );
+
+      // Publish event with email (should succeed)
+      const eventId = await client.publishEvent(
+        uniqueTopicName,
+        "user.created",
+        { id: "123", email: "test@example.com" },
+      );
+      assertEquals(typeof eventId, "string");
+      assertEquals(eventId.length > 0, true);
+    });
+
+    it("should handle updating non-existent topic", async () => {
+      const updatedSchemas: Schema[] = [
+        {
+          eventType: "test.event",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+      ];
+
+      await assertRejects(
+        () =>
+          client.updateTopicSchemas(
+            "definitely-non-existent-topic",
+            updatedSchemas,
+          ),
+      );
+    });
+
+    it("should handle invalid schema format", async () => {
+      const uniqueTopicName = `invalid-schema-${Date.now()}`;
+      const initialSchemas: Schema[] = [
+        {
+          eventType: "user.created",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+      ];
+
+      await client.createTopic(uniqueTopicName, initialSchemas);
+
+      // Try to update with schema missing eventType
+      const invalidSchemas = [
+        {
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: { id: { type: "string" } },
+          required: ["id"],
+        },
+      ] as any;
+
+      await assertRejects(
+        () => client.updateTopicSchemas(uniqueTopicName, invalidSchemas),
       );
     });
   });

@@ -135,6 +135,13 @@ export class EventStoreClient {
     return this.request<Topic>(`/topics/${encodeURIComponent(name)}`);
   }
 
+  async updateTopicSchemas(name: string, schemas: Schema[]): Promise<void> {
+    await this.request(`/topics/${encodeURIComponent(name)}`, {
+      method: "PUT",
+      body: JSON.stringify({ schemas }),
+    });
+  }
+
   // Event management
   async publishEvents(events: EventRequest[]): Promise<string[]> {
     if (!Array.isArray(events) || events.length === 0) {

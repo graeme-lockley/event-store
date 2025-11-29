@@ -8,6 +8,7 @@ import {
   EventRequest,
   EventsQuery,
   TopicCreation,
+  TopicUpdate,
 } from "../types.ts";
 
 export function createRouter(
@@ -256,6 +257,57 @@ export function createRouter(
         error instanceof Error ? error.message : String(error),
         "TOPIC_FETCH_FAILED",
       );
+    }
+  });
+
+  // PUT /topics/:topic - Update schemas for an existing topic (additive only)
+  router.put("/topics/:topic", async (ctx: RouterContext<"/topics/:topic">) => {
+    try {
+      const topic = ctx.params.topic;
+
+      if (!topic || !(await topicManager.topicExists(topic))) {
+        sendError(ctx, 404, `Topic '${topic}' not found`, "TOPIC_NOT_FOUND");
+        return;
+      }
+
+      const body = await ctx.request.body().value as TopicUpdate;
+
+      if (!body.schemas || !Array.isArray(body.schemas)) {
+        sendError(
+          ctx,
+          400,
+          "Invalid request body. Required: schemas array",
+          "INVALID_REQUEST",
+        );
+        return;
+      }
+
+      await topicManager.updateSchemas(topic, body.schemas);
+
+      ctx.response.status = 200;
+      ctx.response.body = {
+        message: `Topic '${topic}' schemas updated successfully`,
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
+      // Check if it's a schema removal attempt
+      if (errorMessage.includes("Cannot remove schemas")) {
+        sendError(
+          ctx,
+          400,
+          errorMessage,
+          "SCHEMA_REMOVAL_NOT_ALLOWED",
+        );
+      } else {
+        sendError(
+          ctx,
+          400,
+          errorMessage,
+          "TOPIC_UPDATE_FAILED",
+        );
+      }
     }
   });
 

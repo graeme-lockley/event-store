@@ -92,6 +92,73 @@ Get detailed information about a specific topic
 }
 ```
 
+#### PUT /topics/{topic}
+
+Update schemas for an existing topic. Schema updates are **additive only** - you can add new schemas or update existing ones (by `eventType`), but you cannot remove schemas.
+
+**Request Body:**
+
+```json
+{
+  "schemas": [
+    {
+      "eventType": "string",
+      "type": "string",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "propertyName": {
+          "type": "string"
+        }
+      },
+      "required": ["propertyName"]
+    }
+  ]
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Topic '{topic}' schemas updated successfully"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "error": "Invalid request body. Required: schemas array",
+  "code": "INVALID_REQUEST"
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "error": "Cannot remove schemas. Missing eventTypes: event.type1, event.type2",
+  "code": "SCHEMA_REMOVAL_NOT_ALLOWED"
+}
+```
+
+**Error Response (404 Not Found):**
+
+```json
+{
+  "error": "Topic '{topic}' not found",
+  "code": "TOPIC_NOT_FOUND"
+}
+```
+
+**Important Notes:**
+
+- All existing `eventType`s must be present in the update request (additive constraint)
+- New schemas can be added alongside existing ones
+- Existing schemas are updated by matching `eventType`
+- Schema updates are immediately effective for new events
+- The topic's sequence number is preserved during schema updates
+
 ### Events
 
 #### POST /events
@@ -349,6 +416,38 @@ curl -X POST http://localhost:8000/consumers/register \
     "topics": {
       "user-events": null
     }
+  }'
+```
+
+### Update Topic Schemas
+
+```bash
+curl -X PUT http://localhost:8000/topics/user-events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schemas": [
+      {
+        "eventType": "user.created",
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "email": {"type": "string"}
+        },
+        "required": ["id", "name", "email"]
+      },
+      {
+        "eventType": "user.updated",
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"}
+        },
+        "required": ["id"]
+      }
+    ]
   }'
 ```
 

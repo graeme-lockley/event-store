@@ -255,9 +255,9 @@ describe("TopicManager", () => {
 
       await topicManager.createTopic(topicName, schemas);
 
-      const validPayload = { 
+      const validPayload = {
         timestamp: "2025-01-15T10:30:00.000Z",
-        message: "Hello World" 
+        message: "Hello World",
       };
       const result = topicManager.validateEvent(
         topicName,
@@ -282,11 +282,11 @@ describe("TopicManager", () => {
 
       await topicManager.createTopic(topicName, schemas);
 
-      const invalidPayload = { 
+      const invalidPayload = {
         timestamp: "not-a-valid-date",
-        message: "Hello World" 
+        message: "Hello World",
       };
-      
+
       try {
         const result = topicManager.validateEvent(
           topicName,
@@ -735,6 +735,418 @@ describe("TopicManager", () => {
 
       const eventId = await topicManager.getNextEventId(topicName);
       assertEquals(eventId, `${topicName}-1`);
+    });
+  });
+
+  describe("updateSchemas", () => {
+    it("should update existing schema with same eventType", async () => {
+      const topicName = "test-topic-update";
+      const initialSchemas = [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+        },
+        required: ["message"],
+      }];
+
+      await topicManager.createTopic(topicName, initialSchemas);
+
+      // Update schema: add new property
+      const updatedSchemas = [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+          count: { type: "number" },
+        },
+        required: ["message"],
+      }];
+
+      await topicManager.updateSchemas(topicName, updatedSchemas);
+
+      const config = await topicManager.loadTopicConfig(topicName);
+      assertEquals(config.schemas.length, 1);
+      assertEquals(config.schemas[0].eventType, "test.event");
+      // Verify new property exists
+      const props = config.schemas[0].properties as Record<string, unknown>;
+      assertEquals(props.count !== undefined, true);
+    });
+
+    it("should add new schema to topic", async () => {
+      const topicName = "test-topic-add";
+      const initialSchemas = [{
+        eventType: "test.event1",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+        },
+        required: ["message"],
+      }];
+
+      await topicManager.createTopic(topicName, initialSchemas);
+
+      // Add new schema while keeping existing
+      const updatedSchemas = [
+        {
+          eventType: "test.event1",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: {
+            message: { type: "string" },
+          },
+          required: ["message"],
+        },
+        {
+          eventType: "test.event2",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: {
+            value: { type: "number" },
+          },
+          required: ["value"],
+        },
+      ];
+
+      await topicManager.updateSchemas(topicName, updatedSchemas);
+
+      const config = await topicManager.loadTopicConfig(topicName);
+      assertEquals(config.schemas.length, 2);
+      const eventTypes = config.schemas.map((s) => s.eventType);
+      assertEquals(eventTypes.includes("test.event1"), true);
+      assertEquals(eventTypes.includes("test.event2"), true);
+    });
+
+    it("should reject attempt to remove a schema", async () => {
+      const topicName = "test-topic-remove";
+      const initialSchemas = [
+        {
+          eventType: "test.event1",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: {
+            message: { type: "string" },
+          },
+          required: ["message"],
+        },
+        {
+          eventType: "test.event2",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: {
+            value: { type: "number" },
+          },
+          required: ["value"],
+        },
+      ];
+
+      await topicManager.createTopic(topicName, initialSchemas);
+
+      // Try to remove test.event1
+      const updatedSchemas = [{
+        eventType: "test.event2",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          value: { type: "number" },
+        },
+        required: ["value"],
+      }];
+
+      try {
+        await topicManager.updateSchemas(topicName, updatedSchemas);
+        throw new Error("Should have thrown schema removal error");
+      } catch (error) {
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
+        assertEquals(
+          errorMessage.includes("Cannot remove schemas"),
+          true,
+        );
+        assertEquals(errorMessage.includes("test.event1"), true);
+      }
+    });
+
+    it("should reject updating with missing existing eventType", async () => {
+      const topicName = "test-topic-missing";
+      const initialSchemas = [
+        {
+          eventType: "test.event1",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: {
+            message: { type: "string" },
+          },
+          required: ["message"],
+        },
+        {
+          eventType: "test.event2",
+          type: "object",
+          $schema: "https://json-schema.org/draft/2020-12/schema",
+          properties: {
+            value: { type: "number" },
+          },
+          required: ["value"],
+        },
+      ];
+
+      await topicManager.createTopic(topicName, initialSchemas);
+
+      // Try to update with only new schema, missing both existing ones
+      const updatedSchemas = [{
+        eventType: "test.event3",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          new: { type: "string" },
+        },
+        required: ["new"],
+      }];
+
+      try {
+        await topicManager.updateSchemas(topicName, updatedSchemas);
+        throw new Error("Should have thrown schema removal error");
+      } catch (error) {
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
+        assertEquals(
+          errorMessage.includes("Cannot remove schemas"),
+          true,
+        );
+      }
+    });
+
+    it("should validate new schemas have required fields", async () => {
+      const topicName = "test-topic-validation";
+      const initialSchemas = [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+        },
+        required: ["message"],
+      }];
+
+      await topicManager.createTopic(topicName, initialSchemas);
+
+      // Try to update with schema missing eventType
+      const invalidSchemas = [{
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+        },
+        required: ["message"],
+      }] as any;
+
+      try {
+        await topicManager.updateSchemas(topicName, invalidSchemas);
+        throw new Error("Should have thrown validation error");
+      } catch (error) {
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
+        assertEquals(
+          errorMessage.includes("missing required 'eventType' field"),
+          true,
+        );
+      }
+    });
+
+    it("should validate new schemas have $schema field", async () => {
+      const topicName = "test-topic-validation-schema";
+      const initialSchemas = [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+        },
+        required: ["message"],
+      }];
+
+      await topicManager.createTopic(topicName, initialSchemas);
+
+      // Try to update with schema missing $schema
+      const invalidSchemas = [{
+        eventType: "test.event",
+        type: "object",
+        properties: {
+          message: { type: "string" },
+        },
+        required: ["message"],
+      }] as any;
+
+      try {
+        await topicManager.updateSchemas(topicName, invalidSchemas);
+        throw new Error("Should have thrown validation error");
+      } catch (error) {
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
+        assertEquals(
+          errorMessage.includes("missing required '$schema' field"),
+          true,
+        );
+      }
+    });
+
+    it("should make updated schema immediately effective for new events", async () => {
+      const topicName = "test-topic-immediate";
+      const initialSchemas = [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+        },
+        required: ["message"],
+      }];
+
+      await topicManager.createTopic(topicName, initialSchemas);
+
+      // Update schema to require new field
+      const updatedSchemas = [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+          count: { type: "number" },
+        },
+        required: ["message", "count"],
+      }];
+
+      await topicManager.updateSchemas(topicName, updatedSchemas);
+
+      // Try to validate event with old schema (missing count) - should fail
+      try {
+        topicManager.validateEvent(topicName, "test.event", {
+          message: "test",
+        });
+        throw new Error("Should have thrown validation error");
+      } catch (error) {
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
+        assertEquals(errorMessage.includes("Validation failed"), true);
+      }
+
+      // Validate event with new schema (has count) - should pass
+      const result = topicManager.validateEvent(topicName, "test.event", {
+        message: "test",
+        count: 42,
+      });
+      assertEquals(result, true);
+    });
+
+    it("should handle non-existent topic", async () => {
+      const updatedSchemas = [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+        },
+        required: ["message"],
+      }];
+
+      try {
+        await topicManager.updateSchemas("non-existent-topic", updatedSchemas);
+        throw new Error("Should have thrown topic not found error");
+      } catch (error) {
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
+        assertEquals(errorMessage.includes("not found"), true);
+      }
+    });
+
+    it("should handle concurrent updates safely", async () => {
+      const topicName = "test-topic-concurrent";
+      const initialSchemas = [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+        },
+        required: ["message"],
+      }];
+
+      await topicManager.createTopic(topicName, initialSchemas);
+
+      // Perform concurrent updates
+      const update1 = topicManager.updateSchemas(topicName, [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+          prop1: { type: "number" },
+        },
+        required: ["message"],
+      }]);
+
+      const update2 = topicManager.updateSchemas(topicName, [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+          prop2: { type: "number" },
+        },
+        required: ["message"],
+      }]);
+
+      // Both should complete without throwing (mutex serializes them)
+      await Promise.all([update1, update2]);
+
+      const config = await topicManager.loadTopicConfig(topicName);
+      assertEquals(config.schemas.length, 1);
+      // Should have the last update applied
+      assertEquals(config.schemas[0].eventType, "test.event");
+    });
+
+    it("should preserve sequence number when updating schemas", async () => {
+      const topicName = "test-topic-sequence";
+      const initialSchemas = [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+        },
+        required: ["message"],
+      }];
+
+      await topicManager.createTopic(topicName, initialSchemas);
+
+      // Update sequence
+      await topicManager.updateSequence(topicName, 42);
+
+      // Update schemas
+      const updatedSchemas = [{
+        eventType: "test.event",
+        type: "object",
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        properties: {
+          message: { type: "string" },
+          count: { type: "number" },
+        },
+        required: ["message"],
+      }];
+
+      await topicManager.updateSchemas(topicName, updatedSchemas);
+
+      const config = await topicManager.loadTopicConfig(topicName);
+      assertEquals(config.sequence, 42); // Sequence should be preserved
     });
   });
 });

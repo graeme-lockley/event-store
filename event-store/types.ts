@@ -53,6 +53,10 @@ export interface TopicCreation {
   schemas: Schema[];
 }
 
+export interface TopicUpdate {
+  schemas: Schema[];
+}
+
 export interface EventsQuery {
   sinceEventId?: string;
   date?: string;

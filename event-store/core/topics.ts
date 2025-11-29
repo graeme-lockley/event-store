@@ -1,5 +1,5 @@
 import { ensureDir, join } from "../deps.ts";
-import { JSONObject, Schema, TopicConfig, Topic } from "../types.ts";
+import { JSONObject, Schema, Topic, TopicConfig } from "../types.ts";
 import { SchemaValidator } from "../utils/validate.ts";
 
 export class TopicManager {
@@ -136,6 +136,74 @@ export class TopicManager {
   }
 
   /**
+   * Update schemas for a topic (additive only - cannot remove schemas)
+   */
+  async updateSchemas(name: string, newSchemas: Schema[]): Promise<void> {
+    await this.ensureInitialized();
+    const mutex = this.getMutex(name);
+    const release = await mutex.acquire();
+    try {
+      // Load current config
+      const current = await this.loadTopicConfig(name);
+      const configPath = join(this.configDir, `${name}.json`);
+
+      // Validate new schemas have required fields
+      newSchemas.forEach((schema, index) => {
+        if (!schema.eventType) {
+          throw new Error(
+            `Schema at index ${index} missing required 'eventType' field`,
+          );
+        }
+        if (!schema.$schema) {
+          throw new Error(
+            `Schema at index ${index} missing required '$schema' field`,
+          );
+        }
+      });
+
+      // Extract existing eventTypes
+      const existingTypes = new Set(
+        current.schemas.map((s) => s.eventType),
+      );
+      const newTypes = new Set(newSchemas.map((s) => s.eventType));
+
+      // Verify additive constraint: all existing eventTypes must be present
+      const missingTypes = Array.from(existingTypes).filter(
+        (type) => !newTypes.has(type),
+      );
+      if (missingTypes.length > 0) {
+        throw new Error(
+          `Cannot remove schemas. Missing eventTypes: ${
+            missingTypes.join(", ")
+          }`,
+        );
+      }
+
+      // Update config with new schemas (merges by eventType - new replaces old)
+      const updatedConfig: TopicConfig = {
+        name: current.name,
+        sequence: current.sequence,
+        schemas: newSchemas,
+      };
+
+      // Write updated config file
+      await Deno.writeTextFile(
+        configPath,
+        JSON.stringify(updatedConfig, null, 2),
+      );
+
+      // Re-register schemas with validator (overwrites existing validators)
+      this.validator.registerSchemas(name, newSchemas);
+
+      console.log(
+        `Updated schemas for topic '${name}': ${newSchemas.length} schemas`,
+      );
+    } finally {
+      release();
+    }
+  }
+
+  /**
    * Get next event ID for a topic
    */
   async getNextEventId(name: string): Promise<string> {
@@ -247,7 +315,10 @@ export class TopicManager {
             schemas: config.schemas,
           });
         } catch (error) {
-          console.error(`Error loading topic config for '${entry.name}':`, error);
+          console.error(
+            `Error loading topic config for '${entry.name}':`,
+            error,
+          );
         }
       }
     }

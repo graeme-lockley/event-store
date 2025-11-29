@@ -166,6 +166,29 @@ List all topics.
 
 Get topic details.
 
+#### `PUT /topics/:topic`
+
+Update schemas for an existing topic. Schema updates are **additive only** - you
+cannot remove schemas, only add or update them.
+
+**Request Body:**
+
+```json
+{
+  "schemas": [
+    {
+      "eventType": "event.type",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": { ... },
+      "required": [ ... ]
+    }
+  ]
+}
+```
+
+**Note:** All existing `eventType`s must be present in the update request. New
+schemas can be added, and existing schemas are updated by matching `eventType`.
+
 ### Events
 
 #### `POST /events`
