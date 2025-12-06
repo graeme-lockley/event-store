@@ -57,15 +57,23 @@ class JsonSchemaValidator(private val objectMapper: ObjectMapper = ObjectMapper(
 
         if (schema.properties.isNotEmpty()) {
             jsonSchema["properties"] = schema.properties
+            // By default, reject additional properties not defined in schema
+            // This can be overridden by explicitly setting additionalProperties in schema.additionalProperties
+            if (!schema.additionalProperties.containsKey("additionalProperties")) {
+                jsonSchema["additionalProperties"] = false
+            }
         }
 
         if (schema.required.isNotEmpty()) {
             jsonSchema["required"] = schema.required
         }
 
-        // Add any additional properties
+        // Add any additional properties (allows overriding additionalProperties setting)
         schema.additionalProperties.forEach { (key, value) ->
             if (key !in jsonSchema) {
+                jsonSchema[key] = value
+            } else if (key == "additionalProperties") {
+                // Allow explicit override of additionalProperties
                 jsonSchema[key] = value
             }
         }
