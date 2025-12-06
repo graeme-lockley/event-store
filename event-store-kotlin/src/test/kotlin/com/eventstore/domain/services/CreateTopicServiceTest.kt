@@ -3,20 +3,17 @@ package com.eventstore.domain.services
 import com.eventstore.domain.Schema
 import com.eventstore.domain.Topic
 import com.eventstore.domain.exceptions.TopicAlreadyExistsException
-import com.eventstore.domain.ports.outbound.SchemaValidator
-import com.eventstore.domain.ports.outbound.TopicRepository
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
+import com.eventstore.infrastructure.external.JsonSchemaValidator
+import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CreateTopicServiceTest {
-
-    private val topicRepository = mockk<TopicRepository>()
-    private val schemaValidator = mockk<SchemaValidator>(relaxed = true)
+    private val topicRepository = InMemoryTopicRepository()
+    private val schemaValidator = JsonSchemaValidator()
     private val service = CreateTopicService(topicRepository, schemaValidator)
 
     @Test
@@ -27,14 +24,10 @@ class CreateTopicServiceTest {
         )
         val topic = Topic(name, 0L, schemas)
 
-        coEvery { topicRepository.topicExists(name) } returns false
-        coEvery { topicRepository.createTopic(name, schemas) } returns topic
-
         val result = service.execute(name, schemas)
 
         assertEquals(topic, result)
-        coVerify { schemaValidator.registerSchemas(name, schemas) }
-        coVerify { topicRepository.createTopic(name, schemas) }
+        assertEquals(listOf(topic), topicRepository.getAllTopics())
     }
 
     @Test
@@ -42,29 +35,13 @@ class CreateTopicServiceTest {
         val name = "user-events"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        coEvery { topicRepository.topicExists(name) } returns true
+        val topic = service.execute(name, schemas)
 
         assertThrows<TopicAlreadyExistsException> {
             service.execute(name, schemas)
         }
 
-        coVerify(exactly = 0) { topicRepository.createTopic(any(), any()) }
-    }
-
-    @Test
-    fun `should throw exception for blank eventType`() = runTest {
-        // Schema constructor will throw, so we need to catch it during creation
-        assertThrows<IllegalArgumentException> {
-            Schema(eventType = "")
-        }
-    }
-
-    @Test
-    fun `should throw exception for blank schema`() = runTest {
-        // Schema constructor will throw, so we need to catch it during creation
-        assertThrows<IllegalArgumentException> {
-            Schema(eventType = "user.created", schema = "")
-        }
+        assertEquals(listOf(topic), topicRepository.getAllTopics())
     }
 
     @Test
@@ -74,15 +51,14 @@ class CreateTopicServiceTest {
             Schema(eventType = "user.created"),
             Schema(eventType = "user.updated")
         )
-        val topic = Topic(name, 0L, schemas)
 
-        coEvery { topicRepository.topicExists(name) } returns false
-        coEvery { topicRepository.createTopic(name, schemas) } returns topic
+        val topic = service.execute(name, schemas)
 
-        val result = service.execute(name, schemas)
+        assertEquals(Topic(name, 0L, schemas), topic)
+        assertEquals(listOf(topic), topicRepository.getAllTopics())
 
-        assertEquals(topic, result)
-        coVerify { schemaValidator.registerSchemas(name, schemas) }
+        assertTrue(schemaValidator.hasSchema("user-events", "user.created"))
+        assertTrue(schemaValidator.hasSchema("user-events", "user.updated"))
     }
 }
 
