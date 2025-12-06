@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} -- %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Root logger set to INFO to suppress DEBUG messages -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+    <!-- Ktor application logger -->
+    <logger name="ktor.application" level="INFO" />
+    
+    <!-- Netty logger (can be verbose) -->
+    <logger name="io.netty" level="WARN" />
+    
+    <!-- Kotlin coroutines logger -->
+    <logger name="kotlinx.coroutines" level="WARN" />
+</configuration>
+

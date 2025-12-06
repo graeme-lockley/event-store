@@ -71,4 +71,18 @@ application {
     mainClass.set("com.eventstore.ApplicationKt")
 }
 
+tasks.jar {
+    manifest {
+        attributes(
+            "Main-Class" to "com.eventstore.ApplicationKt"
+        )
+    }
+    
+    // Create a fat JAR that includes all dependencies
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }) {
+        exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 

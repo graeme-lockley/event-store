@@ -1,6 +1,6 @@
 package com.eventstore.infrastructure.persistence
 
-import com.eventstore.application.repositories.TopicRepository
+import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.Schema
 import com.eventstore.domain.Topic
 import com.fasterxml.jackson.databind.ObjectMapper

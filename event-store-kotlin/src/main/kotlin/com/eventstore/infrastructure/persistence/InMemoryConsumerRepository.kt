@@ -1,6 +1,6 @@
 package com.eventstore.infrastructure.persistence
 
-import com.eventstore.application.repositories.ConsumerRepository
+import com.eventstore.domain.ports.outbound.ConsumerRepository
 import com.eventstore.domain.Consumer
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

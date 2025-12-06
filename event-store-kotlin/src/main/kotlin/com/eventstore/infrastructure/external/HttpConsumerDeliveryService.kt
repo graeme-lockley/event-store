@@ -1,6 +1,6 @@
 package com.eventstore.infrastructure.external
 
-import com.eventstore.application.services.ConsumerDeliveryService
+import com.eventstore.domain.ports.outbound.ConsumerDeliveryService
 import com.eventstore.domain.Consumer
 import com.eventstore.domain.Event
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -43,9 +43,9 @@ class HttpConsumerDeliveryService(
     override suspend fun deliverEvents(
         consumer: Consumer,
         events: List<Event>
-    ): com.eventstore.application.services.DeliveryResult {
+    ): com.eventstore.domain.ports.outbound.DeliveryResult {
         if (events.isEmpty()) {
-            return com.eventstore.application.services.DeliveryResult(success = true)
+            return com.eventstore.domain.ports.outbound.DeliveryResult(success = true)
         }
 
         try {
@@ -71,20 +71,20 @@ class HttpConsumerDeliveryService(
             }
 
             if (response.status.isSuccess()) {
-                return com.eventstore.application.services.DeliveryResult(success = true)
+                return com.eventstore.domain.ports.outbound.DeliveryResult(success = true)
             } else {
-                return com.eventstore.application.services.DeliveryResult(
+                return com.eventstore.domain.ports.outbound.DeliveryResult(
                     success = false,
                     error = "HTTP ${response.status.value}: ${response.status.description}"
                 )
             }
         } catch (e: TimeoutCancellationException) {
-            return com.eventstore.application.services.DeliveryResult(
+            return com.eventstore.domain.ports.outbound.DeliveryResult(
                 success = false,
                 error = "Request timeout after ${timeoutSeconds}s"
             )
         } catch (e: Exception) {
-            return com.eventstore.application.services.DeliveryResult(
+            return com.eventstore.domain.ports.outbound.DeliveryResult(
                 success = false,
                 error = e.message ?: "Unknown error"
             )

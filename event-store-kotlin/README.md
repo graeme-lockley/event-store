@@ -1,6 +1,6 @@
 # 🚀 Event Store Backend (Kotlin)
 
-A lightweight, file-backed, API-driven message recording and delivery system built with Kotlin, Gradle, and Ktor using clean hexagonal architecture.
+A lightweight, file-backed, API-driven message recording and delivery system built with Kotlin, Gradle, and Ktor using pure hexagonal architecture (Ports & Adapters).
 
 ## ✨ Features
 
@@ -11,37 +11,52 @@ A lightweight, file-backed, API-driven message recording and delivery system bui
 - **Ephemeral consumer registration** with automatic removal on failure
 - **Globally unique event IDs** in format `<topic>-<sequence>`
 - **Near-instantaneous delivery** via consumer nudge mechanism
-- **Clean Architecture** with hexagonal architecture pattern
+- **Pure Hexagonal Architecture** (Ports & Adapters pattern)
 
 ## 🏗 Architecture
 
-The implementation follows clean hexagonal architecture with the following layers:
+The implementation follows **pure hexagonal architecture** (Ports & Adapters pattern) with the following structure:
 
 ```
 event-store-kotlin/
 ├── src/main/kotlin/com/eventstore/
 │   ├── Application.kt              # Entry point and Ktor setup
 │   ├── Config.kt                   # Configuration from environment
-│   ├── domain/                     # Domain layer (business logic)
-│   │   ├── Event.kt
+│   ├── domain/                     # Domain (the hexagon - core business logic)
+│   │   ├── Event.kt                # Domain entities
 │   │   ├── Topic.kt
 │   │   ├── Consumer.kt
 │   │   ├── Schema.kt
 │   │   ├── EventId.kt
-│   │   └── exceptions/
-│   ├── application/                # Application layer (use cases)
-│   │   ├── usecases/
-│   │   ├── repositories/           # Repository interfaces
-│   │   └── services/               # Service interfaces
-│   ├── infrastructure/             # Infrastructure layer (adapters)
-│   │   ├── persistence/           # File system repositories
-│   │   ├── external/              # External services (HTTP, validation)
-│   │   └── background/            # Background dispatchers
-│   └── interfaces/                 # Interface layer (API)
-│       ├── routes/                 # Ktor routes
+│   │   ├── exceptions/             # Domain exceptions
+│   │   ├── services/              # Domain services (use cases)
+│   │   │   ├── CreateTopicService.kt
+│   │   │   ├── PublishEventsService.kt
+│   │   │   └── ...
+│   │   └── ports/                  # Ports (interfaces)
+│   │       └── outbound/          # Outbound ports (what domain needs)
+│   │           ├── TopicRepository.kt
+│   │           ├── EventRepository.kt
+│   │           ├── ConsumerRepository.kt
+│   │           ├── SchemaValidator.kt
+│   │           └── ConsumerDeliveryService.kt
+│   ├── infrastructure/             # Infrastructure (adapters)
+│   │   ├── persistence/           # Adapters implementing repository ports
+│   │   ├── external/              # Adapters implementing service ports
+│   │   └── background/           # Background dispatchers
+│   └── interfaces/                 # Primary adapters (HTTP API)
+│       ├── routes/                 # Ktor routes (inbound adapter)
 │       └── dto/                   # Data transfer objects
 └── build.gradle.kts
 ```
+
+### Hexagonal Architecture Principles
+
+- **Domain (Core)**: Contains business logic, entities, domain services, and ports (interfaces). The domain defines what it needs through ports.
+- **Infrastructure (Adapters)**: Implements the ports defined by the domain. Can be swapped without changing domain code.
+- **Interfaces (Primary Adapters)**: Entry points like HTTP routes that drive the application.
+
+The domain is independent and defines its needs through ports. Infrastructure provides implementations of those ports.
 
 ## 🚀 Quick Start
 
@@ -62,12 +77,14 @@ event-store-kotlin/
 ./gradlew run
 ```
 
-Or run the JAR directly:
+Or build and run the JAR directly:
 
 ```bash
 ./gradlew jar
 java -jar build/libs/event-store-kotlin-1.0.0.jar
 ```
+
+The JAR includes all dependencies (fat JAR) and can be run standalone.
 
 The server will start on port 8000 (or the port specified in the `PORT` environment variable).
 
@@ -408,17 +425,28 @@ The system logs:
 
 ## 🏛 Architecture Principles
 
-This implementation follows **Clean Architecture** and **Hexagonal Architecture** principles:
+This implementation follows **Pure Hexagonal Architecture** (Ports & Adapters):
 
-- **Domain Layer**: Pure business logic, no framework dependencies
-- **Application Layer**: Use cases and repository/service interfaces
-- **Infrastructure Layer**: Concrete implementations (file system, HTTP, validation)
-- **Interface Layer**: Ktor routes and DTOs
+- **Domain (Core)**: 
+  - Pure business logic with no framework dependencies
+  - Domain entities (Event, Topic, Consumer, Schema)
+  - Domain services (business use cases)
+  - Ports (interfaces) defining what the domain needs from outside
+- **Infrastructure (Adapters)**: 
+  - Implements the ports defined by the domain
+  - File system repositories, HTTP clients, validators
+  - Can be swapped without changing domain code
+- **Interfaces (Primary Adapters)**: 
+  - HTTP routes (Ktor) that drive the application
+  - DTOs for API communication
 
-This separation ensures:
-- Testability: Each layer can be tested independently
-- Maintainability: Changes in one layer don't affect others
-- Flexibility: Easy to swap implementations (e.g., database instead of files)
+### Key Benefits:
+
+- **Domain Independence**: Domain code has no dependencies on infrastructure
+- **Testability**: Domain can be tested with mock adapters
+- **Flexibility**: Easy to swap implementations (e.g., database instead of files)
+- **Maintainability**: Clear separation of concerns, changes isolated to specific layers
+- **Port-Driven**: Domain defines what it needs (ports), infrastructure provides it (adapters)
 
 ## 🤝 Contributing
 

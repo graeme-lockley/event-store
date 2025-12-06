@@ -1,21 +1,21 @@
 package com.eventstore
 
-import com.eventstore.application.repositories.ConsumerRepository
-import com.eventstore.application.repositories.EventRepository
-import com.eventstore.application.repositories.TopicRepository
-import com.eventstore.application.services.ConsumerDeliveryService
-import com.eventstore.application.services.SchemaValidator
-import com.eventstore.application.usecases.*
+import com.eventstore.domain.ports.outbound.ConsumerRepository
+import com.eventstore.domain.ports.outbound.EventRepository
+import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.ports.outbound.ConsumerDeliveryService
+import com.eventstore.domain.ports.outbound.SchemaValidator
+import com.eventstore.domain.services.*
 import com.eventstore.infrastructure.background.DispatcherManager
 import com.eventstore.infrastructure.external.HttpConsumerDeliveryService
 import com.eventstore.infrastructure.external.JsonSchemaValidator
 import com.eventstore.infrastructure.persistence.FileSystemEventRepository
 import com.eventstore.infrastructure.persistence.FileSystemTopicRepository
 import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
-import com.eventstore.interfaces.routes.consumerRoutes
-import com.eventstore.interfaces.routes.eventRoutes
-import com.eventstore.interfaces.routes.healthRoutes
-import com.eventstore.interfaces.routes.topicRoutes
+import com.eventstore.interfaces.http.routes.consumerRoutes
+import com.eventstore.interfaces.http.routes.eventRoutes
+import com.eventstore.interfaces.http.routes.healthRoutes
+import com.eventstore.interfaces.http.routes.topicRoutes
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.ktor.http.*
@@ -75,15 +75,15 @@ fun Application.configureApplication(config: Config) {
         deliveryService = deliveryService
     )
 
-    // Initialize use cases
-    val createTopicUseCase = CreateTopicUseCase(topicRepository, schemaValidator)
-    val getTopicsUseCase = GetTopicsUseCase(topicRepository)
-    val updateTopicSchemasUseCase = UpdateTopicSchemasUseCase(topicRepository, schemaValidator)
-    val publishEventsUseCase = PublishEventsUseCase(topicRepository, eventRepository, schemaValidator)
-    val getEventsUseCase = GetEventsUseCase(eventRepository, topicRepository)
-    val registerConsumerUseCase = RegisterConsumerUseCase(consumerRepository, topicRepository)
-    val unregisterConsumerUseCase = UnregisterConsumerUseCase(consumerRepository)
-    val getHealthStatusUseCase = GetHealthStatusUseCase(consumerRepository) {
+    // Initialize domain services
+    val createTopicService = CreateTopicService(topicRepository, schemaValidator)
+    val getTopicsService = GetTopicsService(topicRepository)
+    val updateTopicSchemasService = UpdateTopicSchemasService(topicRepository, schemaValidator)
+    val publishEventsService = PublishEventsService(topicRepository, eventRepository, schemaValidator)
+    val getEventsService = GetEventsService(eventRepository, topicRepository)
+    val registerConsumerService = RegisterConsumerService(consumerRepository, topicRepository)
+    val unregisterConsumerService = UnregisterConsumerService(consumerRepository)
+    val getHealthStatusService = GetHealthStatusService(consumerRepository) {
         runBlocking { dispatcherManager.getRunningDispatchers() }
     }
 
@@ -123,7 +123,7 @@ fun Application.configureApplication(config: Config) {
             }
             call.respond(
                 status,
-                com.eventstore.interfaces.dto.ErrorResponse(
+                com.eventstore.interfaces.http.dto.ErrorResponse(
                     error = cause.message ?: "Unknown error",
                     code = null
                 )
@@ -138,7 +138,7 @@ fun Application.configureApplication(config: Config) {
             if (contentLength > config.maxBodyBytes) {
                 call.respond(
                     HttpStatusCode.PayloadTooLarge,
-                    com.eventstore.interfaces.dto.ErrorResponse(
+                    com.eventstore.interfaces.http.dto.ErrorResponse(
                         error = "Payload too large",
                         code = "PAYLOAD_TOO_LARGE"
                     )
@@ -172,7 +172,7 @@ fun Application.configureApplication(config: Config) {
             call.response.headers.append(HttpHeaders.RetryAfter, retryAfter.toString())
             call.respond(
                 HttpStatusCode.TooManyRequests,
-                com.eventstore.interfaces.dto.ErrorResponse(
+                com.eventstore.interfaces.http.dto.ErrorResponse(
                     error = "Too many requests",
                     code = "RATE_LIMITED"
                 )
@@ -183,10 +183,10 @@ fun Application.configureApplication(config: Config) {
 
     // Configure routing
     routing {
-        topicRoutes(createTopicUseCase, getTopicsUseCase, updateTopicSchemasUseCase, dispatcherManager)
-        eventRoutes(publishEventsUseCase, getEventsUseCase, dispatcherManager)
-        consumerRoutes(registerConsumerUseCase, unregisterConsumerUseCase, consumerRepository, dispatcherManager)
-        healthRoutes(getHealthStatusUseCase)
+        topicRoutes(createTopicService, getTopicsService, updateTopicSchemasService, dispatcherManager)
+        eventRoutes(publishEventsService, getEventsService, dispatcherManager)
+        consumerRoutes(registerConsumerService, unregisterConsumerService, consumerRepository, dispatcherManager)
+        healthRoutes(getHealthStatusService)
     }
 
     // Graceful shutdown
