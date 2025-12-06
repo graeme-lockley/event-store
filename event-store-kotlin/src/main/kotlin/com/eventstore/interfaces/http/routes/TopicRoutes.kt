@@ -1,9 +1,9 @@
 package com.eventstore.interfaces.http.routes
 
+import com.eventstore.domain.Schema
 import com.eventstore.domain.services.CreateTopicService
 import com.eventstore.domain.services.GetTopicsService
 import com.eventstore.domain.services.UpdateTopicSchemasService
-import com.eventstore.domain.Schema
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*

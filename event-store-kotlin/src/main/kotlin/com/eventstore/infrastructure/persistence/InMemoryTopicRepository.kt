@@ -1,8 +1,8 @@
 package com.eventstore.infrastructure.persistence
 
-import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.Schema
 import com.eventstore.domain.Topic
+import com.eventstore.domain.ports.outbound.TopicRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

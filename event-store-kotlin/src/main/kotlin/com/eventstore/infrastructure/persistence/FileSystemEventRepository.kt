@@ -1,8 +1,8 @@
 package com.eventstore.infrastructure.persistence
 
-import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
+import com.eventstore.domain.ports.outbound.EventRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.Dispatchers

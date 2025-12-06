@@ -1,8 +1,8 @@
 package com.eventstore.infrastructure.external
 
-import com.eventstore.domain.ports.outbound.ConsumerDeliveryService
 import com.eventstore.domain.Consumer
 import com.eventstore.domain.Event
+import com.eventstore.domain.ports.outbound.ConsumerDeliveryService
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*

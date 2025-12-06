@@ -1,9 +1,9 @@
 package com.eventstore.infrastructure.external
 
-import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.Schema
 import com.eventstore.domain.exceptions.SchemaNotFoundException
 import com.eventstore.domain.exceptions.SchemaValidationException
+import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion

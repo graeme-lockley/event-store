@@ -1,9 +1,9 @@
 package com.eventstore.infrastructure.background
 
+import com.eventstore.domain.EventId
+import com.eventstore.domain.ports.outbound.ConsumerDeliveryService
 import com.eventstore.domain.ports.outbound.ConsumerRepository
 import com.eventstore.domain.ports.outbound.EventRepository
-import com.eventstore.domain.ports.outbound.ConsumerDeliveryService
-import com.eventstore.domain.EventId
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
