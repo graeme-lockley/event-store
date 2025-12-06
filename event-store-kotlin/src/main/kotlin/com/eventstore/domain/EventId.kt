@@ -7,7 +7,7 @@ package com.eventstore.domain
  */
 data class EventId(val value: String) {
     init {
-        require(value.matches(Regex("^.+-[0-9]+$"))) {
+        require(value.matches(EVENT_ID_PATTERN)) {
             "Event ID must be in format '<topic>-<sequence>'"
         }
     }
@@ -19,6 +19,8 @@ data class EventId(val value: String) {
         get() = value.substringAfterLast("-").toLong()
 
     companion object {
+        private val EVENT_ID_PATTERN = Regex("^.+-[0-9]+$")
+        
         fun create(topic: String, sequence: Long): EventId {
             return EventId("$topic-$sequence")
         }
