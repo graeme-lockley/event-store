@@ -2,15 +2,14 @@ package com.eventstore.domain
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.net.URL
+import java.net.URI
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 class ConsumerTest {
     
     @Test
     fun `should create valid consumer`() {
-        val callback = URL("https://example.com/webhook")
+        val callback = URI("https://example.com/webhook").toURL()
         val topics = mapOf("user-events" to null)
         
         val consumer = Consumer("consumer-123", callback, topics)
@@ -22,7 +21,7 @@ class ConsumerTest {
     
     @Test
     fun `should throw exception for blank consumer ID`() {
-        val callback = URL("https://example.com/webhook")
+        val callback = URI("https://example.com/webhook").toURL()
         val topics = mapOf("user-events" to null)
         
         assertThrows<IllegalArgumentException> {
@@ -32,7 +31,7 @@ class ConsumerTest {
     
     @Test
     fun `should throw exception for empty topics`() {
-        val callback = URL("https://example.com/webhook")
+        val callback = URI("https://example.com/webhook").toURL()
         
         assertThrows<IllegalArgumentException> {
             Consumer("consumer-123", callback, emptyMap())
@@ -41,7 +40,7 @@ class ConsumerTest {
     
     @Test
     fun `should update last event ID for topic`() {
-        val callback = URL("https://example.com/webhook")
+        val callback = URI("https://example.com/webhook").toURL()
         val topics = mapOf("user-events" to null)
         val consumer = Consumer("consumer-123", callback, topics)
         
@@ -54,7 +53,7 @@ class ConsumerTest {
     
     @Test
     fun `should handle multiple topics`() {
-        val callback = URL("https://example.com/webhook")
+        val callback = URI("https://example.com/webhook").toURL()
         val topics = mapOf(
             "user-events" to null,
             "order-events" to "order-events-10"
@@ -69,7 +68,7 @@ class ConsumerTest {
     
     @Test
     fun `should preserve other topics when updating one`() {
-        val callback = URL("https://example.com/webhook")
+        val callback = URI("https://example.com/webhook").toURL()
         val topics = mapOf(
             "user-events" to null,
             "order-events" to "order-events-10"

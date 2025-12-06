@@ -3,7 +3,7 @@ package com.eventstore.infrastructure.persistence
 import com.eventstore.domain.Consumer
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
-import java.net.URL
+import java.net.URI
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -18,7 +18,7 @@ class InMemoryConsumerRepositoryTest {
     fun `should save and find consumer`() = runTest {
         val consumer = Consumer(
             id = "consumer-1",
-            callback = URL("https://example.com/webhook"),
+            callback = URI("https://example.com/webhook").toURL(),
             topics = mapOf("user-events" to null)
         )
         
@@ -37,8 +37,8 @@ class InMemoryConsumerRepositoryTest {
     
     @Test
     fun `should find all consumers`() = runTest {
-        val consumer1 = Consumer("consumer-1", URL("https://example.com/webhook1"), mapOf("topic1" to null))
-        val consumer2 = Consumer("consumer-2", URL("https://example.com/webhook2"), mapOf("topic2" to null))
+        val consumer1 = Consumer("consumer-1", URI("https://example.com/webhook1").toURL(), mapOf("topic1" to null))
+        val consumer2 = Consumer("consumer-2", URI("https://example.com/webhook2").toURL(), mapOf("topic2" to null))
         
         repository.save(consumer1)
         repository.save(consumer2)
@@ -52,9 +52,9 @@ class InMemoryConsumerRepositoryTest {
     
     @Test
     fun `should find consumers by topic`() = runTest {
-        val consumer1 = Consumer("consumer-1", URL("https://example.com/webhook1"), mapOf("user-events" to null))
-        val consumer2 = Consumer("consumer-2", URL("https://example.com/webhook2"), mapOf("order-events" to null))
-        val consumer3 = Consumer("consumer-3", URL("https://example.com/webhook3"), mapOf("user-events" to "user-events-5"))
+        val consumer1 = Consumer("consumer-1", URI("https://example.com/webhook1").toURL(), mapOf("user-events" to null))
+        val consumer2 = Consumer("consumer-2", URI("https://example.com/webhook2").toURL(), mapOf("order-events" to null))
+        val consumer3 = Consumer("consumer-3", URI("https://example.com/webhook3").toURL(), mapOf("user-events" to "user-events-5"))
         
         repository.save(consumer1)
         repository.save(consumer2)
@@ -70,7 +70,7 @@ class InMemoryConsumerRepositoryTest {
     
     @Test
     fun `should delete consumer`() = runTest {
-        val consumer = Consumer("consumer-1", URL("https://example.com/webhook"), mapOf("topic1" to null))
+        val consumer = Consumer("consumer-1", URI("https://example.com/webhook").toURL(), mapOf("topic1" to null))
         
         repository.save(consumer)
         val deleted = repository.delete("consumer-1")
@@ -89,10 +89,10 @@ class InMemoryConsumerRepositoryTest {
     fun `should return correct count`() = runTest {
         assertEquals(0, repository.count())
         
-        repository.save(Consumer("consumer-1", URL("https://example.com/webhook1"), mapOf("topic1" to null)))
+        repository.save(Consumer("consumer-1", URI("https://example.com/webhook1").toURL(), mapOf("topic1" to null)))
         assertEquals(1, repository.count())
         
-        repository.save(Consumer("consumer-2", URL("https://example.com/webhook2"), mapOf("topic2" to null)))
+        repository.save(Consumer("consumer-2", URI("https://example.com/webhook2").toURL(), mapOf("topic2" to null)))
         assertEquals(2, repository.count())
         
         repository.delete("consumer-1")
@@ -102,7 +102,7 @@ class InMemoryConsumerRepositoryTest {
     @Test
     fun `should handle concurrent operations`() = runTest {
         val consumers = (1..10).map { i ->
-            Consumer("consumer-$i", URL("https://example.com/webhook$i"), mapOf("topic$i" to null))
+            Consumer("consumer-$i", URI("https://example.com/webhook$i").toURL(), mapOf("topic$i" to null))
         }
         
         consumers.forEach { repository.save(it) }

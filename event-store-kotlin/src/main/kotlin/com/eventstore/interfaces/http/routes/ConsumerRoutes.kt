@@ -35,7 +35,7 @@ fun Route.consumerRoutes(
 
                 // Validate callback is a proper URL
                 try {
-                    java.net.URL(request.callback)
+                    java.net.URI(request.callback).toURL()
                 } catch (e: Exception) {
                     call.respond(
                         HttpStatusCode.BadRequest,

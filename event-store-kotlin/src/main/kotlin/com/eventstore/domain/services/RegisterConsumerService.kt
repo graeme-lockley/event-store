@@ -5,7 +5,7 @@ import com.eventstore.domain.exceptions.InvalidConsumerRegistrationException
 import com.eventstore.domain.exceptions.TopicNotFoundException
 import com.eventstore.domain.ports.outbound.ConsumerRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
-import java.net.URL
+import java.net.URI
 import java.util.*
 
 data class ConsumerRegistrationRequest(
@@ -20,7 +20,7 @@ class RegisterConsumerService(
     suspend fun execute(request: ConsumerRegistrationRequest): String {
         // Validate callback URL
         val callbackUrl = try {
-            URL(request.callback)
+            URI(request.callback).toURL()
         } catch (e: Exception) {
             throw InvalidConsumerRegistrationException("Invalid callback URL: ${e.message}")
         }
