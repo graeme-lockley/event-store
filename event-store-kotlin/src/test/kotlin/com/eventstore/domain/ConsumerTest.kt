@@ -41,7 +41,7 @@ class ConsumerTest {
     @Test
     fun `should update last event ID for topic`() {
         val callback = URI("https://example.com/webhook").toURL()
-        val topics = mapOf("user-events" to null)
+        val topics = mapOf("user-events" to "user-events-4")
         val consumer = Consumer("consumer-123", callback, topics)
         
         val updated = consumer.updateLastEventId("user-events", "user-events-5")
@@ -70,7 +70,7 @@ class ConsumerTest {
     fun `should preserve other topics when updating one`() {
         val callback = URI("https://example.com/webhook").toURL()
         val topics = mapOf(
-            "user-events" to null,
+            "user-events" to "user-events-4",
             "order-events" to "order-events-10"
         )
         val consumer = Consumer("consumer-123", callback, topics)
@@ -79,6 +79,7 @@ class ConsumerTest {
         
         assertEquals("user-events-5", updated.topics["user-events"])
         assertEquals("order-events-10", updated.topics["order-events"])
+        assertEquals(2, updated.topics.size)
     }
 }
 
