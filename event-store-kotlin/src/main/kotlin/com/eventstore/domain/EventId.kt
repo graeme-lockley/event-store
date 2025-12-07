@@ -18,6 +18,8 @@ data class EventId(val value: String) {
     val sequence: Long
         get() = value.substringAfterLast("-").toLong()
 
+    override fun toString(): String = value
+
     companion object {
         private val EVENT_ID_PATTERN = Regex("^.+-[0-9]+$")
         

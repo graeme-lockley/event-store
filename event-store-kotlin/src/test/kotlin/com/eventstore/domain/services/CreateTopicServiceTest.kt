@@ -3,22 +3,31 @@ package com.eventstore.domain.services
 import com.eventstore.domain.Schema
 import com.eventstore.domain.Topic
 import com.eventstore.domain.exceptions.TopicAlreadyExistsException
-import com.eventstore.infrastructure.external.JsonSchemaValidator
-import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class CreateTopicServiceTest {
-    private val topicRepository = InMemoryTopicRepository()
-    private val schemaValidator = JsonSchemaValidator()
-    private val service = CreateTopicService(topicRepository, schemaValidator)
+    val topicName = "user-events"
+
+    private lateinit var helper: PopulateEventStoreState
+    private lateinit var service: CreateTopicService
+
+    @BeforeEach
+    fun setup() = runBlocking {
+        helper = createEventStore(topicName)
+        service = CreateTopicService(helper.topicRepository, helper.schemaValidator)
+    }
+
 
     @Test
     fun `should create topic successfully`() = runTest {
-        val name = "user-events"
+        val name = "new-${topicName}"
         val schemas = listOf(
             Schema(eventType = "user.created", properties = mapOf("id" to "string"))
         )
@@ -27,26 +36,20 @@ class CreateTopicServiceTest {
         val result = service.execute(name, schemas)
 
         assertEquals(topic, result)
-        assertEquals(listOf(topic), topicRepository.getAllTopics())
+        assertEquals(topic, helper.findTopic(name))
     }
 
     @Test
     fun `should throw exception when topic already exists`() = runTest {
-        val name = "user-events"
-        val schemas = listOf(Schema(eventType = "user.created"))
-
-        val topic = service.execute(name, schemas)
-
+        assertNotNull(helper.findTopic(topicName))
         assertThrows<TopicAlreadyExistsException> {
-            service.execute(name, schemas)
+            service.execute(topicName, listOf(Schema(eventType = "user.created")))
         }
-
-        assertEquals(listOf(topic), topicRepository.getAllTopics())
     }
 
     @Test
     fun `should handle multiple schemas`() = runTest {
-        val name = "user-events"
+        val name = "new-${topicName}"
         val schemas = listOf(
             Schema(eventType = "user.created"),
             Schema(eventType = "user.updated")
@@ -55,10 +58,10 @@ class CreateTopicServiceTest {
         val topic = service.execute(name, schemas)
 
         assertEquals(Topic(name, 0L, schemas), topic)
-        assertEquals(listOf(topic), topicRepository.getAllTopics())
+        assertEquals(topic, helper.findTopic(name))
 
-        assertTrue(schemaValidator.hasSchema("user-events", "user.created"))
-        assertTrue(schemaValidator.hasSchema("user-events", "user.updated"))
+        assertTrue(helper.hasSchema(name, "user.created"))
+        assertTrue(helper.hasSchema(name, "user.updated"))
     }
 }
 
