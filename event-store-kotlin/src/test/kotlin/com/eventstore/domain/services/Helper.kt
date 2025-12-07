@@ -3,10 +3,12 @@ package com.eventstore.domain.services
 import com.eventstore.domain.EventId
 import com.eventstore.domain.Schema
 import com.eventstore.domain.exceptions.TopicNotFoundException
+import com.eventstore.domain.ports.outbound.ConsumerRepository
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.infrastructure.external.JsonSchemaValidator
+import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
 import com.eventstore.infrastructure.persistence.InMemoryEventRepository
 import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
 import java.time.Instant
@@ -15,6 +17,7 @@ data class PopulateEventStoreState(
     val topicName: String = "user-events",
     val topicRepository: TopicRepository = InMemoryTopicRepository(),
     val eventRepository: EventRepository = InMemoryEventRepository(),
+    val consumerRepository: ConsumerRepository = InMemoryConsumerRepository(),
     val schemaValidator: SchemaValidator = JsonSchemaValidator()
 ) {
     suspend fun findTopic(topicName: String) =
@@ -28,6 +31,12 @@ data class PopulateEventStoreState(
 
     suspend fun topicExists(topicName: String): Boolean =
         topicRepository.topicExists(topicName)
+
+    suspend fun findConsumer(consumerId: String) =
+        consumerRepository.findById(consumerId)
+
+    suspend fun findConsumers() =
+        consumerRepository.findAll()
 }
 
 suspend fun populateEventStore(state: PopulateEventStoreState) {

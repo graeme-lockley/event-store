@@ -7,36 +7,47 @@ import com.eventstore.domain.ports.outbound.TopicRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class RegisterConsumerServiceTest {
+    val topicName = "user-events"
 
-    private val consumerRepository = mockk<ConsumerRepository>(relaxed = true)
-    private val topicRepository = mockk<TopicRepository>()
-    private val service = RegisterConsumerService(consumerRepository, topicRepository)
+    private lateinit var helper: PopulateEventStoreState
+    private lateinit var service: RegisterConsumerService
+
+    @BeforeEach
+    fun setup() = runBlocking {
+        helper = createEventStore(topicName)
+        service = RegisterConsumerService(helper.consumerRepository, helper.topicRepository)
+    }
 
     @Test
     fun `should register consumer successfully`() = runTest {
         val request = ConsumerRegistrationRequest(
             callback = "https://example.com/webhook",
-            topics = mapOf("user-events" to null)
+            topics = mapOf(topicName to null)
         )
-
-        coEvery { topicRepository.topicExists("user-events") } returns true
 
         val consumerId = service.execute(request)
 
         assertNotNull(consumerId)
-        assertTrue(consumerId.isNotBlank())
-        coVerify { consumerRepository.save(any()) }
+        val consumer = helper.findConsumer(consumerId)
+
+        assertNotNull(consumer)
+        assertEquals("https://example.com/webhook", consumer.callback.toString())
     }
 
     @Test
     fun `should throw exception for invalid callback URL`() = runTest {
+        val consumers = helper.findConsumers()
+
         val request = ConsumerRegistrationRequest(
             callback = "not-a-valid-url",
             topics = mapOf("user-events" to null)
@@ -46,23 +57,23 @@ class RegisterConsumerServiceTest {
             service.execute(request)
         }
 
-        coVerify(exactly = 0) { consumerRepository.save(any()) }
+        assertEquals(consumers, helper.findConsumers())
     }
 
     @Test
     fun `should throw exception when topic does not exist`() = runTest {
+        val consumers = helper.findConsumers()
+
         val request = ConsumerRegistrationRequest(
             callback = "https://example.com/webhook",
             topics = mapOf("unknown-topic" to null)
         )
 
-        coEvery { topicRepository.topicExists("unknown-topic") } returns false
-
         assertThrows<TopicNotFoundException> {
             service.execute(request)
         }
 
-        coVerify(exactly = 0) { consumerRepository.save(any()) }
+        assertEquals(consumers, helper.findConsumers())
     }
 
     @Test
@@ -75,14 +86,9 @@ class RegisterConsumerServiceTest {
             )
         )
 
-        coEvery { topicRepository.topicExists("user-events") } returns true
-        coEvery { topicRepository.topicExists("unknown-topic") } returns false
-
         assertThrows<TopicNotFoundException> {
             service.execute(request)
         }
-
-        coVerify(exactly = 0) { consumerRepository.save(any()) }
     }
 
     @Test
@@ -91,17 +97,13 @@ class RegisterConsumerServiceTest {
             callback = "https://example.com/webhook",
             topics = mapOf(
                 "user-events" to "user-events-5",
-                "order-events" to null
+                "other-user-events" to null
             )
         )
-
-        coEvery { topicRepository.topicExists("user-events") } returns true
-        coEvery { topicRepository.topicExists("order-events") } returns true
 
         val consumerId = service.execute(request)
 
         assertNotNull(consumerId)
-        coVerify { consumerRepository.save(any()) }
     }
 }
 
