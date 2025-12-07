@@ -5,39 +5,53 @@ import com.eventstore.domain.ports.outbound.ConsumerRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class UnregisterConsumerServiceTest {
+    val topicName = "user-events"
 
-    private val consumerRepository = mockk<ConsumerRepository>()
-    private val service = UnregisterConsumerService(consumerRepository)
+    private lateinit var helper: PopulateEventStoreState
+    private lateinit var registerConsumerService: RegisterConsumerService
+    private lateinit var unregisterConsumerService: UnregisterConsumerService
+
+    @BeforeEach
+    fun setup() = runBlocking {
+        helper = createEventStore(topicName)
+        registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository)
+        unregisterConsumerService = UnregisterConsumerService(helper.consumerRepository)
+    }
 
     @Test
     fun `should unregister consumer successfully`() = runTest {
-        val consumerId = "consumer-123"
+        val request = ConsumerRegistrationRequest(
+            callback = "https://example.com/webhook",
+            topics = mapOf(topicName to null)
+        )
 
-        coEvery { consumerRepository.delete(consumerId) } returns true
+        val consumerId = registerConsumerService.execute(request)
 
-        val result = service.execute(consumerId)
+        assertNotNull(helper.findConsumer(consumerId))
+        unregisterConsumerService.execute(consumerId)
 
-        assertTrue(result)
-        coVerify { consumerRepository.delete(consumerId) }
+        assertNull(helper.findConsumer(consumerId))
     }
 
     @Test
     fun `should throw exception when consumer not found`() = runTest {
         val consumerId = "unknown-consumer"
 
-        coEvery { consumerRepository.delete(consumerId) } returns false
+        assertNull(helper.findConsumer(consumerId))
 
         assertThrows<ConsumerNotFoundException> {
-            service.execute(consumerId)
+            unregisterConsumerService.execute(consumerId)
         }
-
-        coVerify { consumerRepository.delete(consumerId) }
     }
 }
 
