@@ -21,7 +21,7 @@ data class PopulateEventStoreState(
     val schemaValidator: SchemaValidator = JsonSchemaValidator()
 ) {
     suspend fun findTopic(topicName: String) =
-        topicRepository.getAllTopics().find { it.name == topicName }
+        topicRepository.getTopic(topicName)
 
     fun hasSchema(topicName: String, eventType: String) =
         schemaValidator.hasSchema(topicName, eventType)
