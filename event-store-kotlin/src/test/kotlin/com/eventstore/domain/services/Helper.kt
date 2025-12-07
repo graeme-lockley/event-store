@@ -23,19 +23,28 @@ data class PopulateEventStoreState(
     fun hasSchema(topicName: String, eventType: String) =
         schemaValidator.hasSchema(topicName, eventType)
 
-    suspend fun getEvents(topicName: String) = eventRepository.getEvents(topicName)
-    suspend fun topicExists(topicName: String): Boolean = topicRepository.topicExists(topicName)
-}
+    suspend fun getEvents(topicName: String) =
+        eventRepository.getEvents(topicName)
 
+    suspend fun topicExists(topicName: String): Boolean =
+        topicRepository.topicExists(topicName)
+}
 
 suspend fun populateEventStore(state: PopulateEventStoreState) {
     val topicSchemas = listOf(
-        Schema(eventType = "user.created", properties = mapOf("id" to "string", "name" to "string"), required = listOf("id", "name")),
+        Schema(
+            eventType = "user.created",
+            properties = mapOf("id" to "string", "name" to "string"),
+            required = listOf("id", "name")
+        ),
         Schema(eventType = "user.updated", properties = mapOf("id" to "string", "name" to "string")),
     )
 
     state.topicRepository.createTopic(state.topicName, topicSchemas)
     state.schemaValidator.registerSchemas(state.topicName, topicSchemas)
+
+    state.topicRepository.createTopic("other-user-events", topicSchemas)
+    state.schemaValidator.registerSchemas("other-user-events", topicSchemas)
 
     val requests = listOf(
         EventRequest(state.topicName, "user.created", mapOf("id" to "1", "name" to "Alice")),
