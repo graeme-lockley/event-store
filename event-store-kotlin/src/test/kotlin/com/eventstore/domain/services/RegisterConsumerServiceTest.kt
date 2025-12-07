@@ -2,11 +2,6 @@ package com.eventstore.domain.services
 
 import com.eventstore.domain.exceptions.InvalidConsumerRegistrationException
 import com.eventstore.domain.exceptions.TopicNotFoundException
-import com.eventstore.domain.ports.outbound.ConsumerRepository
-import com.eventstore.domain.ports.outbound.TopicRepository
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
@@ -14,7 +9,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class RegisterConsumerServiceTest {
     val topicName = "user-events"
