@@ -31,10 +31,10 @@ class CreateTopicServiceTest {
         val schemas = listOf(
             Schema(eventType = "user.created", properties = mapOf("id" to "string"))
         )
-        val topic = Topic(name, 0L, schemas)
 
         val result = service.execute(name, schemas)
 
+        val topic = Topic(name, 0L, schemas)
         assertEquals(topic, result)
         assertEquals(topic, helper.findTopic(name))
     }
@@ -62,6 +62,19 @@ class CreateTopicServiceTest {
 
         assertTrue(helper.hasSchema(name, "user.created"))
         assertTrue(helper.hasSchema(name, "user.updated"))
+    }
+
+    @Test
+    fun `should throw exception when duplicate event types in schemas`() = runTest {
+        val name = "new-${topicName}"
+        val schemas = listOf(
+            Schema(eventType = "user.created", properties = mapOf("id" to "string")),
+            Schema(eventType = "user.created", properties = mapOf("id" to "string"))
+        )
+
+        assertThrows<IllegalArgumentException> {
+            service.execute(name, schemas)
+        }
     }
 }
 

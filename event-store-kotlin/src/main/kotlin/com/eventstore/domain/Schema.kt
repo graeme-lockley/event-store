@@ -15,5 +15,17 @@ data class Schema(
         require(eventType.isNotBlank()) { "eventType is required" }
         require(schema.isNotBlank()) { "schema is required" }
     }
-}
 
+    companion object {
+        fun unique(schemas: List<Schema>) {
+            val schemaNames = mutableSetOf<String>()
+
+            schemas.forEach { schema ->
+                if (!schemaNames.add(schema.eventType)) {
+                    throw IllegalArgumentException("Duplicate eventType found: ${schema.eventType}")
+                }
+            }
+        }
+    }
+
+}

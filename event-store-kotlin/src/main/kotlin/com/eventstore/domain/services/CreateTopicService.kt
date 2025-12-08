@@ -11,6 +11,8 @@ class CreateTopicService(
     private val schemaValidator: SchemaValidator
 ) {
     suspend fun execute(name: String, schemas: List<Schema>): Topic {
+        Schema.unique(schemas)
+
         // Validate schemas have required fields
         schemas.forEachIndexed { index, schema ->
             require(schema.eventType.isNotBlank()) {
