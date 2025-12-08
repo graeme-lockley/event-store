@@ -1,13 +1,7 @@
 package com.eventstore.domain.services
 
 import com.eventstore.domain.Schema
-import com.eventstore.domain.Topic
 import com.eventstore.domain.exceptions.TopicNotFoundException
-import com.eventstore.domain.ports.outbound.SchemaValidator
-import com.eventstore.domain.ports.outbound.TopicRepository
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach

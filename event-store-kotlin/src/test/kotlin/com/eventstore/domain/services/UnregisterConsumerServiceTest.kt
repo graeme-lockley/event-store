@@ -1,10 +1,6 @@
 package com.eventstore.domain.services
 
 import com.eventstore.domain.exceptions.ConsumerNotFoundException
-import com.eventstore.domain.ports.outbound.ConsumerRepository
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
@@ -12,7 +8,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class UnregisterConsumerServiceTest {
     val topicName = "user-events"

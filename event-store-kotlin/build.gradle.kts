@@ -45,7 +45,6 @@ dependencies {
     // Testing
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:1.9.22")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
-    testImplementation("io.mockk:mockk:1.13.8")
     testImplementation("io.ktor:ktor-server-test-host:2.3.8")
     testImplementation("io.ktor:ktor-client-content-negotiation:2.3.8")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")

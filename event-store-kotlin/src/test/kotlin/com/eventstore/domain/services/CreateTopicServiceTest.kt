@@ -24,7 +24,6 @@ class CreateTopicServiceTest {
         service = CreateTopicService(helper.topicRepository, helper.schemaValidator)
     }
 
-
     @Test
     fun `should create topic successfully`() = runTest {
         val name = "new-${topicName}"

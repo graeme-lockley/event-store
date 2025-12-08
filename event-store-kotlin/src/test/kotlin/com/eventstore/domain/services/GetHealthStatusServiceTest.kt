@@ -1,54 +1,64 @@
 package com.eventstore.domain.services
 
 import com.eventstore.domain.ports.outbound.ConsumerRepository
-import io.mockk.coEvery
-import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 class GetHealthStatusServiceTest {
+    val topicName = "user-events"
+
+    private lateinit var helper: PopulateEventStoreState
+
+    @BeforeEach
+    fun setup() = runBlocking {
+        helper = createEventStore(topicName)
+    }
 
     @Test
     fun `should return health status with consumer count and dispatchers`() = runTest {
-        val consumerRepository = mockk<ConsumerRepository>()
+        val request = ConsumerRegistrationRequest(
+            callback = "https://example.com/webhook",
+            topics = mapOf(topicName to null)
+        )
+        val registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository)
+
+        registerConsumerService.execute(request)
+        registerConsumerService.execute(request)
+        registerConsumerService.execute(request)
+
         val runningDispatchers = listOf("topic1", "topic2")
-        val service = GetHealthStatusService(consumerRepository) { runningDispatchers }
-
-        coEvery { consumerRepository.count() } returns 5
-
-        val result = service.execute()
-
-        assertEquals("healthy", result.status)
-        assertEquals(5, result.consumers)
-        assertEquals(runningDispatchers, result.runningDispatchers)
-    }
-
-    @Test
-    fun `should return zero consumers when none exist`() = runTest {
-        val consumerRepository = mockk<ConsumerRepository>()
-        val service = GetHealthStatusService(consumerRepository) { emptyList() }
-
-        coEvery { consumerRepository.count() } returns 0
-
-        val result = service.execute()
-
-        assertEquals("healthy", result.status)
-        assertEquals(0, result.consumers)
-        assertEquals(emptyList(), result.runningDispatchers)
-    }
-
-    @Test
-    fun `should return empty dispatchers list when none running`() = runTest {
-        val consumerRepository = mockk<ConsumerRepository>()
-        val service = GetHealthStatusService(consumerRepository) { emptyList() }
-
-        coEvery { consumerRepository.count() } returns 3
+        val service = GetHealthStatusService(helper.consumerRepository) { runningDispatchers }
 
         val result = service.execute()
 
         assertEquals("healthy", result.status)
         assertEquals(3, result.consumers)
+        assertEquals(runningDispatchers, result.runningDispatchers)
+    }
+
+    @Test
+    fun `should return zero consumers when none exist`() = runTest {
+        val runningDispatchers = listOf("topic1", "topic2")
+        val service = GetHealthStatusService(helper.consumerRepository) { runningDispatchers }
+
+        val result = service.execute()
+
+        assertEquals("healthy", result.status)
+        assertEquals(0, result.consumers)
+        assertEquals(runningDispatchers, result.runningDispatchers)
+    }
+
+    @Test
+    fun `should return empty dispatchers list when none running`() = runTest {
+        val service = GetHealthStatusService(helper.consumerRepository) { emptyList() }
+
+        val result = service.execute()
+
+        assertEquals("healthy", result.status)
+        assertEquals(0, result.consumers)
         assertEquals(emptyList(), result.runningDispatchers)
     }
 }
