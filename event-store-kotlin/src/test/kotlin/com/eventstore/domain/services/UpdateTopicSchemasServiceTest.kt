@@ -28,9 +28,8 @@ class UpdateTopicSchemasServiceTest {
         service = UpdateTopicSchemasService(helper.topicRepository, helper.schemaValidator)
     }
 
-
     @Test
-    fun `should update schemas successfully`() = runTest {
+    fun `should successfully add new schemas`() = runTest {
         val currentTopic = helper.findTopic(topicName)!!
         val newSchemas = currentTopic.schemas + Schema(eventType = "user.deleted", properties = mapOf("id" to "string"))
 
@@ -38,6 +37,28 @@ class UpdateTopicSchemasServiceTest {
 
         assertEquals(result.schemas, newSchemas)
         assertEquals(helper.findTopic(topicName)!!.schemas, newSchemas)
+    }
+
+    @Test
+    fun `should successfully update existing schemas`() = runTest {
+        val currentTopic = helper.findTopic(topicName)!!
+        val newSchemas = currentTopic.schemas.filter { it.eventType != "user.created" } +
+                Schema(eventType = "user.created", properties = mapOf("id" to "string", "email" to "string"))
+
+        val result = service.execute(topicName, newSchemas)
+
+        assertEquals(result.schemas, newSchemas)
+        assertEquals(helper.findTopic(topicName)!!.schemas, newSchemas)
+    }
+
+    @Test
+    fun `should throw an exception when there are duplicate event types in the schemas`() = runTest {
+        val currentTopic = helper.findTopic(topicName)!!
+        val newSchemas = currentTopic.schemas + currentTopic.schemas[0]
+
+        assertThrows<IllegalArgumentException> {
+            service.execute(topicName, newSchemas)
+        }
     }
 
     @Test
