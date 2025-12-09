@@ -40,7 +40,7 @@ class PublishEventsService(
 
         // Store all events
         val eventIds = mutableListOf<String>()
-            val timestamp = Instant.now()
+        val timestamp = Instant.now()
 
         for (request in requests) {
             val topic = topicRepository.getTopic(request.topic)

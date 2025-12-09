@@ -1,6 +1,5 @@
 package com.eventstore.domain.services
 
-import com.eventstore.domain.ports.outbound.ConsumerRepository
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach

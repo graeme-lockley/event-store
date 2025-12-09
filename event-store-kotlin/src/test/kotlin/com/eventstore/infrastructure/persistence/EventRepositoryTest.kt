@@ -1,6 +1,5 @@
 package com.eventstore.infrastructure.persistence
 
-import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
 import com.eventstore.domain.ports.outbound.EventRepository
 import kotlinx.coroutines.test.runTest

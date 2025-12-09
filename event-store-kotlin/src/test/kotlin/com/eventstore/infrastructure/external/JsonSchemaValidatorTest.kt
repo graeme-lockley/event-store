@@ -126,7 +126,7 @@ class JsonSchemaValidatorTest {
 
         // Payload with only defined fields (email is optional)
         validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "name" to "Alice"))
-        
+
         // Payload with all fields
         validator.validateEvent(
             "user-events",

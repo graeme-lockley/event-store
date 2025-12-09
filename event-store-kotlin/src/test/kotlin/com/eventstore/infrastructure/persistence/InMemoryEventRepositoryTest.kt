@@ -83,6 +83,7 @@ class InMemoryEventRepositoryTest {
                             topic, "event$i", mapOf("id" to i.toString()),
                             EventId.create(topic, i.toLong()), timestamp
                         )
+
                         1 -> repository.getEvent(topic, EventId.create(topic, 0L))
                         else -> repository.getEvents(topic)
                     }

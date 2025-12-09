@@ -117,10 +117,12 @@ class InMemoryTopicRepositoryTest {
 
         repository.createTopic(name, initialSchemas)
         repository.updateSequence(name, 5L)
-        repository.updateSchemas(name, listOf(
-            Schema(eventType = "user.created"),
-            Schema(eventType = "user.updated")
-        ))
+        repository.updateSchemas(
+            name, listOf(
+                Schema(eventType = "user.created"),
+                Schema(eventType = "user.updated")
+            )
+        )
 
         val topic = repository.getTopic(name)
         assert(topic != null)

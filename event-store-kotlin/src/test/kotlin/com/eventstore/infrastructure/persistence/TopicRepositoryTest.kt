@@ -1,7 +1,6 @@
 package com.eventstore.infrastructure.persistence
 
 import com.eventstore.domain.Schema
-import com.eventstore.domain.Topic
 import com.eventstore.domain.exceptions.TopicAlreadyExistsException
 import com.eventstore.domain.exceptions.TopicNotFoundException
 import com.eventstore.domain.ports.outbound.TopicRepository
@@ -11,11 +10,7 @@ import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 /**
  * Parameterized tests for TopicRepository implementations.

@@ -22,7 +22,7 @@ data class EventId(val value: String) {
 
     companion object {
         private val EVENT_ID_PATTERN = Regex("^.+-[0-9]+$")
-        
+
         fun create(topic: String, sequence: Long): EventId {
             return EventId("$topic-$sequence")
         }
