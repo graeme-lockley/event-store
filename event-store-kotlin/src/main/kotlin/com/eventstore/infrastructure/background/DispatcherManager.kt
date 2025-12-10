@@ -2,6 +2,7 @@ package com.eventstore.infrastructure.background
 
 import com.eventstore.domain.ports.outbound.ConsumerDeliveryService
 import com.eventstore.domain.ports.outbound.ConsumerRepository
+import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.EventRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,7 +13,7 @@ class DispatcherManager(
     private val consumerRepository: ConsumerRepository,
     private val eventRepository: EventRepository,
     private val deliveryService: ConsumerDeliveryService
-) {
+) : EventDispatcher {
     private val dispatchers = mutableMapOf<String, TopicDispatcher>()
     private val mutex = Mutex()
     private val scope = CoroutineScope(Dispatchers.Default)
@@ -64,6 +65,12 @@ class DispatcherManager(
     suspend fun getRunningDispatchers(): List<String> {
         return mutex.withLock {
             dispatchers.filter { it.value.isRunning.value }.keys.toList()
+        }
+    }
+
+    override suspend fun notifyEventsPublished(topics: Set<String>) {
+        for (topic in topics) {
+            triggerDelivery(topic)
         }
     }
 }

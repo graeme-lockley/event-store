@@ -3,6 +3,7 @@ package com.eventstore.domain.services
 import com.eventstore.domain.EventId
 import com.eventstore.domain.exceptions.InvalidEventPayloadException
 import com.eventstore.domain.exceptions.TopicNotFoundException
+import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
@@ -17,7 +18,8 @@ data class EventRequest(
 class PublishEventsService(
     private val topicRepository: TopicRepository,
     private val eventRepository: EventRepository,
-    private val schemaValidator: SchemaValidator
+    private val schemaValidator: SchemaValidator,
+    private val eventDispatcher: EventDispatcher
 ) {
     suspend fun execute(requests: List<EventRequest>): List<String> {
         require(requests.isNotEmpty()) { "Events must be a non-empty array" }
@@ -62,6 +64,10 @@ class PublishEventsService(
 
             eventIds.add(eventId.value)
         }
+
+        // Notify dispatcher that events have been published
+        val topicsWithEvents = requests.map { it.topic }.toSet()
+        eventDispatcher.notifyEventsPublished(topicsWithEvents)
 
         return eventIds
     }

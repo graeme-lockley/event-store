@@ -9,16 +9,16 @@
 
     <!-- Root logger set to INFO to suppress DEBUG messages -->
     <root level="INFO">
-        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="CONSOLE"/>
     </root>
 
     <!-- Ktor application logger -->
-    <logger name="ktor.application" level="INFO" />
-    
+    <logger name="ktor.application" level="INFO"/>
+
     <!-- Netty logger (can be verbose) -->
-    <logger name="io.netty" level="WARN" />
-    
+    <logger name="io.netty" level="WARN"/>
+
     <!-- Kotlin coroutines logger -->
-    <logger name="kotlinx.coroutines" level="WARN" />
+    <logger name="kotlinx.coroutines" level="WARN"/>
 </configuration>
 

@@ -5,6 +5,7 @@ import com.eventstore.domain.EventId
 import com.eventstore.domain.exceptions.SchemaNotFoundException
 import com.eventstore.domain.exceptions.SchemaValidationException
 import com.eventstore.domain.exceptions.TopicNotFoundException
+import com.eventstore.domain.ports.outbound.EventDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
@@ -19,11 +20,16 @@ class PublishEventsServiceTest {
 
     private lateinit var helper: PopulateEventStoreState
     private lateinit var service: PublishEventsService
+    private val mockEventDispatcher = object : EventDispatcher {
+        override suspend fun notifyEventsPublished(topics: Set<String>) {
+            // No-op for tests
+        }
+    }
 
     @BeforeEach
     fun setup() = runBlocking {
         helper = createEventStore(topicName)
-        service = PublishEventsService(helper.topicRepository, helper.eventRepository, helper.schemaValidator)
+        service = PublishEventsService(helper.topicRepository, helper.eventRepository, helper.schemaValidator, mockEventDispatcher)
     }
 
     @Test

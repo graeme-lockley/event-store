@@ -11,8 +11,7 @@ import io.ktor.server.routing.*
 
 fun Route.eventRoutes(
     publishEventsService: PublishEventsService,
-    getEventsService: GetEventsService,
-    dispatcherManager: com.eventstore.infrastructure.background.DispatcherManager
+    getEventsService: GetEventsService
 ) {
     route("/events") {
         // POST /events - Publish events
@@ -48,12 +47,6 @@ fun Route.eventRoutes(
                 }
 
                 val eventIds = publishEventsService.execute(eventRequests)
-
-                // Trigger immediate delivery for each topic that received events
-                val topicsWithEvents = requests.map { it.topic }.distinct()
-                for (topic in topicsWithEvents) {
-                    dispatcherManager.triggerDelivery(topic)
-                }
 
                 call.respond(HttpStatusCode.Created, EventResponse(eventIds))
             } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {

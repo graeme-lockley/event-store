@@ -75,7 +75,8 @@ fun Application.configureApplication(config: Config) {
     val createTopicService = CreateTopicService(topicRepository, schemaValidator)
     val getTopicsService = GetTopicsService(topicRepository)
     val updateTopicSchemasService = UpdateTopicSchemasService(topicRepository, schemaValidator)
-    val publishEventsService = PublishEventsService(topicRepository, eventRepository, schemaValidator)
+    val publishEventsService =
+        PublishEventsService(topicRepository, eventRepository, schemaValidator, dispatcherManager)
     val getEventsService = GetEventsService(eventRepository, topicRepository)
     val registerConsumerService = RegisterConsumerService(consumerRepository, topicRepository)
     val unregisterConsumerService = UnregisterConsumerService(consumerRepository)
@@ -180,7 +181,7 @@ fun Application.configureApplication(config: Config) {
     // Configure routing
     routing {
         topicRoutes(createTopicService, getTopicsService, updateTopicSchemasService, dispatcherManager)
-        eventRoutes(publishEventsService, getEventsService, dispatcherManager)
+        eventRoutes(publishEventsService, getEventsService)
         consumerRoutes(registerConsumerService, unregisterConsumerService, consumerRepository, dispatcherManager)
         healthRoutes(getHealthStatusService)
     }
