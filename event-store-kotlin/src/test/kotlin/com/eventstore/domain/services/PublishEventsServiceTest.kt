@@ -15,21 +15,25 @@ import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
+class InMemoryEventDispatcher : EventDispatcher {
+    val events = mutableListOf<Set<String>>()
+
+    override suspend fun notifyEventsPublished(topics: Set<String>) {
+        events.add(topics)
+    }
+}
+
 class PublishEventsServiceTest {
     val topicName = "user-events"
 
     private lateinit var helper: PopulateEventStoreState
     private lateinit var service: PublishEventsService
-    private val mockEventDispatcher = object : EventDispatcher {
-        override suspend fun notifyEventsPublished(topics: Set<String>) {
-            // No-op for tests
-        }
-    }
+    private val eventDispatcher = InMemoryEventDispatcher()
 
     @BeforeEach
     fun setup() = runBlocking {
         helper = createEventStore(topicName)
-        service = PublishEventsService(helper.topicRepository, helper.eventRepository, helper.schemaValidator, mockEventDispatcher)
+        service = PublishEventsService(helper.topicRepository, helper.eventRepository, helper.schemaValidator, eventDispatcher)
     }
 
     @Test
@@ -49,6 +53,7 @@ class PublishEventsServiceTest {
         val events = helper.getEvents(topicName)
         assertEquals(numberOfEvents + 1, events.size)
         assertEquals(event.copy(timestamp = events[numberOfEvents].timestamp), events[numberOfEvents])
+        assertEquals(eventDispatcher.events, listOf(setOf(topicName)))
     }
 
     @Test
@@ -79,6 +84,7 @@ class PublishEventsServiceTest {
             Event(event2, events[numberOfEvents + 1].timestamp, "user.created", requests[1].payload),
             events[numberOfEvents + 1]
         )
+        assertEquals(eventDispatcher.events, listOf(setOf(topicName)))
     }
 
     @Test
@@ -145,6 +151,7 @@ class PublishEventsServiceTest {
         }
 
         assertEquals(numberOfEvents, helper.getEvents(topicName).size)
+        assertEquals(eventDispatcher.events, listOf())
     }
 
     @Test
@@ -155,5 +162,7 @@ class PublishEventsServiceTest {
         assertThrows<SchemaValidationException> {
             service.execute(listOf(request))
         }
+
+        assertEquals(eventDispatcher.events, listOf())
     }
 }
