@@ -44,3 +44,13 @@ jobs:
         run: |
           cd cli
           go build -o es .
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Test CLI Integration
+        run: |
+          cd integration-tests
+          ./run.sh

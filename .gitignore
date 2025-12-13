@@ -116,3 +116,6 @@ test_*.sh
 test_*.js
 debug_*.js
 run_tests.sh
+
+# Integration test data
+integration-tests/test-data/

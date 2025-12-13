@@ -1,0 +1,25 @@
+[
+  {
+    "eventType": "user.created",
+    "type": "object",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "id": { "type": "string" },
+      "name": { "type": "string" },
+      "email": { "type": "string" }
+    },
+    "required": ["id", "name", "email"]
+  },
+  {
+    "eventType": "user.updated",
+    "type": "object",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "id": { "type": "string" },
+      "name": { "type": "string", "minLength": 1 },
+      "email": { "type": "string", "format": "email" }
+    },
+    "required": ["id"]
+  }
+]
+
