@@ -100,6 +100,13 @@ type Event struct {
 	Payload   map[string]interface{} `json:"payload"`
 }
 
+// Health represents the health status of the event store
+type Health struct {
+	Status            string   `json:"status"`
+	Consumers         int      `json:"consumers"`
+	RunningDispatchers []string `json:"runningDispatchers"`
+}
+
 // EventsResponse represents the response from GET /topics/{topic}/events
 type EventsResponse struct {
 	Events []Event `json:"events"`
@@ -280,4 +287,46 @@ func (c *Client) GetEvents(topic string, query *EventsQuery) ([]Event, error) {
 	}
 	
 	return resp.Events, nil
+}
+
+// GetHealth retrieves the health status of the event store
+func (c *Client) GetHealth() (*Health, error) {
+	respBody, err := c.request("GET", "/health", nil)
+	if err != nil {
+		return nil, err
+	}
+	
+	var health Health
+	if err := json.Unmarshal(respBody, &health); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+	
+	return &health, nil
+}
+
+// EventPublishRequest represents a request to publish an event
+type EventPublishRequest struct {
+	Topic   string                 `json:"topic"`
+	Type    string                 `json:"type"`
+	Payload map[string]interface{} `json:"payload"`
+}
+
+// EventPublishResponse represents the response from POST /events
+type EventPublishResponse struct {
+	EventIDs []string `json:"eventIds"`
+}
+
+// PublishEvents publishes one or more events
+func (c *Client) PublishEvents(events []EventPublishRequest) ([]string, error) {
+	respBody, err := c.request("POST", "/events", events)
+	if err != nil {
+		return nil, err
+	}
+	
+	var resp EventPublishResponse
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+	
+	return resp.EventIDs, nil
 }

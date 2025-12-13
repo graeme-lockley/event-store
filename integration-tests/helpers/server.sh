@@ -25,7 +25,7 @@ start_event_store() {
     EVENT_STORE_PID=$!
     
     # Wait for server to be ready
-    if ! wait_for_health "http://localhost:$EVENT_STORE_PORT/health" 30; then
+    if ! wait_for_health "http://localhost:$EVENT_STORE_PORT" 30; then
         echo "Event store server failed to start"
         if [ -n "$EVENT_STORE_PID" ]; then
             kill "$EVENT_STORE_PID" 2>/dev/null || true
@@ -49,12 +49,18 @@ stop_event_store() {
 }
 
 wait_for_health() {
-    local url=$1
+    local base_url=$1
     local timeout=$2
     local elapsed=0
     
+    # Get CLI binary path
+    local cli_bin="$_PROJECT_ROOT/cli/es"
+    
     while [ $elapsed -lt $timeout ]; do
-        if curl -sf "$url" > /dev/null 2>&1; then
+        # Use CLI health command instead of curl
+        if "$cli_bin" health show --server-url "$base_url" --output json > /dev/null 2>&1; then
+            # Give server a moment to fully initialize
+            sleep 1
             return 0
         fi
         sleep 1

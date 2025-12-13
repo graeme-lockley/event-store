@@ -23,7 +23,6 @@ Shell-driven integration tests for the Event Store CLI and server.
 - Java 17+
 - Go 1.21+
 - `jq` (for JSON parsing)
-- `curl` (for health checks)
 
 ## Test Ports
 

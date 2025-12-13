@@ -16,14 +16,11 @@ test_event_listing() {
     echo "  Creating topic for event test: $topic_name"
     es_json topic create --name "$topic_name" --schemas-file "$schemas_file" > /dev/null
     
-    # Publish events via API
+    # Publish events via CLI
     echo "  Publishing test events..."
-    local event1_payload='{"topic":"'$topic_name'","type":"user.created","payload":{"id":"1","name":"Alice","email":"alice@example.com"}}'
-    local event2_payload='{"topic":"'$topic_name'","type":"user.created","payload":{"id":"2","name":"Bob","email":"bob@example.com"}}'
+    local events_json='[{"topic":"'$topic_name'","type":"user.created","payload":{"id":"1","name":"Alice","email":"alice@example.com"}},{"topic":"'$topic_name'","type":"user.created","payload":{"id":"2","name":"Bob","email":"bob@example.com"}}]'
     
-    curl -s -X POST "${SERVER_URL}/events" \
-        -H "Content-Type: application/json" \
-        -d "[$event1_payload,$event2_payload]" > /dev/null
+    es_json event publish --json "$events_json" > /dev/null
     
     # Wait a moment for events to be processed
     sleep 1
@@ -64,11 +61,9 @@ test_event_show() {
     echo "  Creating topic for event show test: $topic_name"
     es_json topic create --name "$topic_name" --schemas-file "$schemas_file" > /dev/null
     
-    # Publish event
-    local event_payload='{"topic":"'$topic_name'","type":"user.created","payload":{"id":"1","name":"Alice","email":"alice@example.com"}}'
-    curl -s -X POST "${SERVER_URL}/events" \
-        -H "Content-Type: application/json" \
-        -d "[$event_payload]" > /dev/null
+    # Publish event via CLI
+    local event_json='[{"topic":"'$topic_name'","type":"user.created","payload":{"id":"1","name":"Alice","email":"alice@example.com"}}]'
+    es_json event publish --json "$event_json" > /dev/null
     
     sleep 1
     

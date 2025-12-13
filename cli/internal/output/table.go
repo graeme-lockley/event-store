@@ -219,3 +219,35 @@ func PrintEventDetails(event *client.Event) {
 		fmt.Println(string(payloadJSON))
 	}
 }
+
+// PrintHealth prints health status in table format
+func PrintHealth(health *client.Health) {
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.SetStyle(getTableStyle())
+
+	t.AppendRow(table.Row{"Status", health.Status})
+	t.AppendRow(table.Row{"Consumers", strconv.Itoa(health.Consumers)})
+	
+	// Format running dispatchers
+	dispatchersStr := "None"
+	if len(health.RunningDispatchers) > 0 {
+		dispatchersStr = strings.Join(health.RunningDispatchers, ", ")
+	}
+	t.AppendRow(table.Row{"Running Dispatchers", dispatchersStr})
+	
+	t.Render()
+}
+
+// PrintEventPublishResponse prints event publish response in table format
+func PrintEventPublishResponse(eventIDs []string) {
+	if len(eventIDs) == 0 {
+		fmt.Println("No events published")
+		return
+	}
+
+	fmt.Printf("Published %d event(s):\n", len(eventIDs))
+	for _, id := range eventIDs {
+		fmt.Printf("  - %s\n", id)
+	}
+}

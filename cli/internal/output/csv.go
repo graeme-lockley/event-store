@@ -215,3 +215,38 @@ func PrintConsumerIDCSV(consumerID string) error {
 	return writer.Write([]string{consumerID})
 }
 
+// PrintHealthCSV prints health status as CSV
+func PrintHealthCSV(health *client.Health) error {
+	writer := csv.NewWriter(os.Stdout)
+	defer writer.Flush()
+
+	if err := writer.Write([]string{"Status", "Consumers", "Running Dispatchers"}); err != nil {
+		return err
+	}
+	
+	dispatchersStr := ""
+	if len(health.RunningDispatchers) > 0 {
+		dispatchersStr = strings.Join(health.RunningDispatchers, "; ")
+	}
+	
+	return writer.Write([]string{health.Status, strconv.Itoa(health.Consumers), dispatchersStr})
+}
+
+// PrintEventPublishResponseCSV prints event publish response as CSV
+func PrintEventPublishResponseCSV(eventIDs []string) error {
+	writer := csv.NewWriter(os.Stdout)
+	defer writer.Flush()
+
+	if err := writer.Write([]string{"Event ID"}); err != nil {
+		return err
+	}
+
+	for _, id := range eventIDs {
+		if err := writer.Write([]string{id}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+

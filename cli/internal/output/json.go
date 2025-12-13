@@ -70,3 +70,15 @@ func PrintEventsListJSON(events []client.Event) error {
 func PrintEventDetailsJSON(event *client.Event) error {
 	return PrintJSON(event)
 }
+
+// PrintHealthJSON prints health status as JSON
+func PrintHealthJSON(health *client.Health) error {
+	return PrintJSON(health)
+}
+
+// PrintEventPublishResponseJSON prints event publish response as JSON
+func PrintEventPublishResponseJSON(eventIDs []string) error {
+	return PrintJSON(map[string]interface{}{
+		"eventIds": eventIDs,
+	})
+}
