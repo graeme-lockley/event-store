@@ -1,32 +1,75 @@
-// Event Store Client Library
+// Event Store Client Library for Admin UI
 // Provides a clean, type-safe interface for interacting with the Event Store API
 
-import {
-  Consumer,
-  ConsumerRegistration,
-  Event,
-  EventRequest,
-  EventsQuery,
-  EventStoreConfig,
-  EventStoreError,
-  HealthStatus,
-  Schema,
-  Topic,
-  TopicCreation,
-} from "./types.ts";
+export interface EventStoreConfig {
+  baseUrl: string;
+  timeout?: number;
+  retries?: number;
+  retryDelay?: number;
+}
+
+export interface EventStoreError extends Error {
+  status?: number;
+}
+
+export interface Event {
+  id: string; // Generated as <topic>-<sequence>
+  timestamp: string; // ISO8601
+  type: string; // e.g. "user.created"
+  payload: Record<string, unknown>; // Valid JSON object payload
+}
+
+export interface EventRequest {
+  topic: string;
+  type: string;
+  payload: unknown;
+}
+
+export interface EventsQuery {
+  sinceEventId?: string;
+  date?: string;
+  limit?: number;
+}
+
+export interface Schema {
+  eventType: string;
+  type: string;
+  $schema: string;
+  properties: Record<string, unknown>;
+  required: string[];
+  [key: string]: unknown;
+}
+
+export interface Topic {
+  name: string;
+  sequence: number;
+  schemas: Schema[];
+}
+
+export interface Consumer {
+  id: string; // UUID
+  callback: string;
+  topics: Record<string, string | null>; // topic -> lastEventId (or null)
+}
+
+export interface ConsumerRegistration {
+  callback: string;
+  topics: Record<string, string | null>; // topic -> lastEventId (or null)
+}
+
+export interface HealthStatus {
+  status: string;
+  consumers: number;
+  runningDispatchers: string[];
+}
 
 export class EventStoreClient {
   private config: Required<EventStoreConfig>;
 
   constructor(config: EventStoreConfig) {
-    const maybeDeno = (globalThis as any).Deno;
-    const envBaseUrl: string | undefined = maybeDeno?.env?.get?.(
-      "EVENT_STORE_BASE_URL",
-    );
-    const browserOrigin: string | undefined = (globalThis as any)?.location
-      ?.origin;
+    const envBaseUrl: string | undefined = Deno.env.get("EVENT_STORE_BASE_URL");
 
-    const rawBaseUrl = config?.baseUrl ?? envBaseUrl ?? browserOrigin;
+    const rawBaseUrl = config?.baseUrl ?? envBaseUrl;
     if (!rawBaseUrl || typeof rawBaseUrl !== "string") {
       throw new Error(
         "EventStoreClient: baseUrl is required. Provide config.baseUrl or set EVENT_STORE_BASE_URL.",
@@ -158,7 +201,7 @@ export class EventStoreClient {
   async publishEvent(
     topic: string,
     type: string,
-    payload: any,
+    payload: unknown,
   ): Promise<string> {
     const eventIds = await this.publishEvents([{ topic, type, payload }]);
     return eventIds[0];
@@ -302,17 +345,3 @@ export class EventStoreClient {
   }
 }
 
-// Re-export all types for convenience
-export type {
-  Consumer,
-  ConsumerRegistration,
-  Event,
-  EventRequest,
-  EventsQuery,
-  EventStoreConfig,
-  EventStoreError,
-  HealthStatus,
-  Schema,
-  Topic,
-  TopicCreation,
-};

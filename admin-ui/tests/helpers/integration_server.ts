@@ -51,13 +51,43 @@ async function cleanDir(path: string) {
 }
 
 export async function startEventStore(): Promise<TestServer> {
-  // Start Event Store server with environment variables
-  const process = new Deno.Command("deno", {
+  // Build the Kotlin event store JAR if it doesn't exist
+  // Check for both possible JAR names (old and new)
+  let jarPath = "../event-store/build/libs/event-store-1.0.0.jar";
+  try {
+    await Deno.stat(jarPath);
+  } catch {
+    // Try the old name
+    jarPath = "../event-store/build/libs/event-store-kotlin-1.0.0.jar";
+    try {
+      await Deno.stat(jarPath);
+    } catch {
+      // JAR doesn't exist, build it
+      const buildProcess = new Deno.Command("../event-store/gradlew", {
+        args: ["jar"],
+        cwd: "../event-store",
+        stdout: "piped",
+        stderr: "piped",
+      });
+      const buildResult = await buildProcess.output();
+      if (!buildResult.success) {
+        const stderr = new TextDecoder().decode(buildResult.stderr);
+        throw new Error(`Failed to build event store: ${stderr}`);
+      }
+      // After building, check which JAR was created
+      try {
+        await Deno.stat(jarPath);
+      } catch {
+        jarPath = "../event-store/build/libs/event-store-1.0.0.jar";
+      }
+    }
+  }
+
+  // Start Event Store server (Kotlin JAR) with environment variables
+  const process = new Deno.Command("java", {
     args: [
-      "run",
-      "-A",
-      "--unstable",
-      "../event-store/mod.ts",
+      "-jar",
+      jarPath,
     ],
     env: {
       "PORT": String(TEST_EVENT_STORE_PORT),

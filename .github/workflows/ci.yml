@@ -13,17 +13,34 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
           deno-version: v2.4.x
 
-      - name: Test Event Store Core
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Test Event Store (Kotlin)
         run: |
           cd event-store
-          deno test --allow-all
+          chmod +x gradlew
+          ./gradlew test
 
       - name: Test Admin UI
         run: |
           cd admin-ui
           deno test --allow-all
+
+      - name: Build CLI (Go)
+        run: |
+          cd cli
+          go build -o es .

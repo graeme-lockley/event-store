@@ -1,7 +1,7 @@
 import { assertEquals } from "$std/assert/mod.ts";
 import { afterAll, beforeAll, describe, it } from "$std/testing/bdd.ts";
 import { startIntegrationServers } from "../helpers/integration_server.ts";
-import { EventStoreClient } from "../../../event-store/client.ts";
+import { EventStoreClient } from "../../client.ts";
 
 const TEST_TOPIC = {
   name: "test-topic",

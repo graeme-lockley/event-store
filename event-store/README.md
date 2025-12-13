@@ -1,54 +1,102 @@
-# 🚀 Event Store Backend
+# 🚀 Event Store Backend (Kotlin)
 
-A lightweight, file-backed, API-driven message recording and delivery system
-built with Deno.
+A lightweight, file-backed, API-driven message recording and delivery system built with Kotlin, Gradle, and Ktor using pure hexagonal architecture (Ports & Adapters).
 
 ## ✨ Features
 
-- **File-backed storage** with per-event files organized by topic, date, and
-  grouping
-- **JSON Schema validation** for all incoming events
+- **File-backed storage** with per-event files organized by topic, date, and grouping
+- **JSON Schema validation** for all incoming events using networknt/json-schema-validator
 - **Topic-based partitioning** with explicit topic creation and configuration
-- **Asynchronous event dispatching** with background dispatchers per topic
+- **Asynchronous event dispatching** with background dispatchers per topic using Kotlin coroutines
 - **Ephemeral consumer registration** with automatic removal on failure
 - **Globally unique event IDs** in format `<topic>-<sequence>`
-- **Near-instantaneous delivery** via consumer `nudge()` mechanism
-- **No external dependencies** beyond the Deno runtime
+- **Near-instantaneous delivery** via consumer nudge mechanism
+- **Pure Hexagonal Architecture** (Ports & Adapters pattern)
 
 ## 🏗 Architecture
 
+The implementation follows **pure hexagonal architecture** (Ports & Adapters pattern) with the following structure:
+
 ```
 event-store/
-├── mod.ts                   # Entry point
-├── api/
-│   └── routes.ts            # HTTP routes
-├── core/
-│   ├── topics.ts            # Topic & schema management
-│   ├── events.ts            # Event persistence & reading
-│   ├── dispatcher.ts        # Asynchronous dispatchers
-│   └── consumers.ts         # Consumer registry and logic
-├── utils/
-│   └── validate.ts          # Schema validation
-├── types.ts                 # Type definitions
-└── deps.ts                  # Centralized imports
+├── src/main/kotlin/com/eventstore/
+│   ├── Application.kt              # Entry point and Ktor setup
+│   ├── Config.kt                   # Configuration from environment
+│   ├── domain/                     # Domain (the hexagon - core business logic)
+│   │   ├── Event.kt                # Domain entities
+│   │   ├── Topic.kt
+│   │   ├── Consumer.kt
+│   │   ├── Schema.kt
+│   │   ├── EventId.kt
+│   │   ├── exceptions/             # Domain exceptions
+│   │   ├── services/              # Domain services (use cases)
+│   │   │   ├── CreateTopicService.kt
+│   │   │   ├── PublishEventsService.kt
+│   │   │   └── ...
+│   │   └── ports/                  # Ports (interfaces)
+│   │       └── outbound/          # Outbound ports (what domain needs)
+│   │           ├── TopicRepository.kt
+│   │           ├── EventRepository.kt
+│   │           ├── ConsumerRepository.kt
+│   │           ├── SchemaValidator.kt
+│   │           └── ConsumerDeliveryService.kt
+│   ├── infrastructure/             # Infrastructure (adapters)
+│   │   ├── persistence/           # Adapters implementing repository ports
+│   │   ├── external/              # Adapters implementing service ports
+│   │   └── background/           # Background dispatchers
+│   └── interfaces/                 # Primary adapters (HTTP API)
+│       ├── routes/                 # Ktor routes (inbound adapter)
+│       └── dto/                   # Data transfer objects
+└── build.gradle.kts
 ```
+
+### Hexagonal Architecture Principles
+
+- **Domain (Core)**: Contains business logic, entities, domain services, and ports (interfaces). The domain defines what it needs through ports.
+- **Infrastructure (Adapters)**: Implements the ports defined by the domain. Can be swapped without changing domain code.
+- **Interfaces (Primary Adapters)**: Entry points like HTTP routes that drive the application.
+
+The domain is independent and defines its needs through ports. Infrastructure provides implementations of those ports.
 
 ## 🚀 Quick Start
 
-### 1. Install Deno
+### Prerequisites
 
-Make sure you have [Deno](https://deno.land/) installed on your system.
+- Java 17 or higher
+- Gradle 8.5 or higher (wrapper included)
 
-### 2. Run the Event Store
+### Build the Project
 
 ```bash
-deno run --allow-net --allow-read --allow-write --allow-env mod.ts
+./gradlew build
 ```
 
-The server will start on port 8000 (or the port specified in the `PORT`
-environment variable).
+### Run the Event Store
 
-### 3. Create a Topic
+```bash
+./gradlew run
+```
+
+Or build and run the JAR directly:
+
+```bash
+./gradlew jar
+java -jar build/libs/event-store-1.0.0.jar
+```
+
+The JAR includes all dependencies (fat JAR) and can be run standalone.
+
+The server will start on port 8000 (or the port specified in the `PORT` environment variable).
+
+### Environment Variables
+
+- `PORT` - Server port (default: 8000)
+- `DATA_DIR` - Event storage directory (default: `./data`)
+- `CONFIG_DIR` - Topic config directory (default: `./config`)
+- `MAX_BODY_BYTES` - Max request body size in bytes (default: 1048576)
+- `RATE_LIMIT_PER_MINUTE` - Rate limit per IP per route (default: 600)
+
+### Create a Topic
 
 ```bash
 curl -X POST http://localhost:8000/topics \
@@ -57,7 +105,8 @@ curl -X POST http://localhost:8000/topics \
     "name": "user-events",
     "schemas": [
       {
-        "type": "user.created",
+        "eventType": "user.created",
+        "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "properties": {
           "id": { "type": "string" },
@@ -67,7 +116,8 @@ curl -X POST http://localhost:8000/topics \
         "required": ["id", "name", "email"]
       },
       {
-        "type": "user.updated",
+        "eventType": "user.updated",
+        "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "properties": {
           "id": { "type": "string" },
@@ -79,7 +129,7 @@ curl -X POST http://localhost:8000/topics \
   }'
 ```
 
-### 4. Publish Events
+### Publish Events
 
 ```bash
 curl -X POST http://localhost:8000/events \
@@ -105,7 +155,7 @@ curl -X POST http://localhost:8000/events \
   ]'
 ```
 
-### 5. Register a Consumer
+### Register a Consumer
 
 ```bash
 curl -X POST http://localhost:8000/consumers/register \
@@ -118,7 +168,7 @@ curl -X POST http://localhost:8000/consumers/register \
   }'
 ```
 
-### 6. Retrieve Events
+### Retrieve Events
 
 ```bash
 # Get all events from a topic
@@ -149,7 +199,8 @@ Create a new topic with schemas.
   "name": "topic-name",
   "schemas": [
     {
-      "type": "event.type",
+      "eventType": "event.type",
+      "type": "object",
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": { ... },
       "required": [ ... ]
@@ -162,14 +213,13 @@ Create a new topic with schemas.
 
 List all topics.
 
-#### `GET /topics/:topic`
+#### `GET /topics/{topic}`
 
 Get topic details.
 
-#### `PUT /topics/:topic`
+#### `PUT /topics/{topic}`
 
-Update schemas for an existing topic. Schema updates are **additive only** - you
-cannot remove schemas, only add or update them.
+Update schemas for an existing topic. Schema updates are **additive only** - you cannot remove schemas, only add or update them.
 
 **Request Body:**
 
@@ -178,6 +228,7 @@ cannot remove schemas, only add or update them.
   "schemas": [
     {
       "eventType": "event.type",
+      "type": "object",
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "properties": { ... },
       "required": [ ... ]
@@ -186,8 +237,7 @@ cannot remove schemas, only add or update them.
 }
 ```
 
-**Note:** All existing `eventType`s must be present in the update request. New
-schemas can be added, and existing schemas are updated by matching `eventType`.
+**Note:** All existing `eventType`s must be present in the update request. New schemas can be added, and existing schemas are updated by matching `eventType`.
 
 ### Events
 
@@ -215,7 +265,7 @@ Publish one or more events.
 }
 ```
 
-#### `GET /topics/:topic/events`
+#### `GET /topics/{topic}/events`
 
 Retrieve events from a topic.
 
@@ -254,7 +304,7 @@ Register a new consumer.
 
 List all registered consumers.
 
-#### `DELETE /consumers/:id`
+#### `DELETE /consumers/{id}`
 
 Unregister a consumer.
 
@@ -279,6 +329,10 @@ Health check endpoint.
 ### Environment Variables
 
 - `PORT` - Server port (default: 8000)
+- `DATA_DIR` - Event storage directory (default: `./data`)
+- `CONFIG_DIR` - Topic config directory (default: `./config`)
+- `MAX_BODY_BYTES` - Max request body size (default: 1048576)
+- `RATE_LIMIT_PER_MINUTE` - Rate limit (default: 600)
 
 ### File Structure
 
@@ -309,13 +363,7 @@ data/
 Run the test suite:
 
 ```bash
-deno test --allow-net --allow-read --allow-write
-```
-
-Or run the example:
-
-```bash
-deno run --allow-net --allow-read --allow-write --allow-env test_example.ts
+./gradlew test
 ```
 
 ## 🔄 Consumer Webhook Format
@@ -343,6 +391,7 @@ Consumers are automatically removed if:
 - The callback returns a non-2xx status code
 - The callback throws an error or times out
 - The callback fails to respond within 30 seconds
+- After 5 failed delivery attempts with exponential backoff
 
 ## 🔍 Event ID Format
 
@@ -364,13 +413,40 @@ The system logs:
 - Event delivery attempts and failures
 - Dispatcher start/stop events
 
-## 🛡 Permissions
+## 🛠 Technology Stack
 
-The following Deno permissions are required:
+- **Kotlin** 1.9.22
+- **Ktor** 2.3.8 - Web framework
+- **Kotlinx Coroutines** - Asynchronous programming
+- **Jackson** - JSON serialization
+- **networknt/json-schema-validator** - JSON Schema validation
+- **SLF4J + Logback** - Logging
+- **Gradle** 8.5 - Build system
 
-- `--allow-net` - For HTTP server and webhook delivery
-- `--allow-read` - For reading configuration and event files
-- `--allow-write` - For writing event files and configuration
+## 🏛 Architecture Principles
+
+This implementation follows **Pure Hexagonal Architecture** (Ports & Adapters):
+
+- **Domain (Core)**: 
+  - Pure business logic with no framework dependencies
+  - Domain entities (Event, Topic, Consumer, Schema)
+  - Domain services (business use cases)
+  - Ports (interfaces) defining what the domain needs from outside
+- **Infrastructure (Adapters)**: 
+  - Implements the ports defined by the domain
+  - File system repositories, HTTP clients, validators
+  - Can be swapped without changing domain code
+- **Interfaces (Primary Adapters)**: 
+  - HTTP routes (Ktor) that drive the application
+  - DTOs for API communication
+
+### Key Benefits:
+
+- **Domain Independence**: Domain code has no dependencies on infrastructure
+- **Testability**: Domain can be tested with mock adapters
+- **Flexibility**: Easy to swap implementations (e.g., database instead of files)
+- **Maintainability**: Clear separation of concerns, changes isolated to specific layers
+- **Port-Driven**: Domain defines what it needs (ports), infrastructure provides it (adapters)
 
 ## 🤝 Contributing
 
@@ -383,3 +459,4 @@ The following Deno permissions are required:
 ## 📄 License
 
 This project is open source and available under the MIT License.
+

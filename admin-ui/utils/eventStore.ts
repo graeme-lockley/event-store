@@ -7,7 +7,7 @@ import {
   type HealthStatus,
   type Schema,
   type Topic,
-} from "../../event-store/client.ts";
+} from "../client.ts";
 
 // Re-export types
 export type { Consumer, Event, EventStoreConfig, HealthStatus, Schema, Topic };
