@@ -1,10 +1,11 @@
 package com.eventstore
 
+import com.eventstore.domain.ports.outbound.ConsumerFactory
 import com.eventstore.domain.ports.outbound.*
 import com.eventstore.domain.services.*
 import com.eventstore.infrastructure.background.DispatcherManager
-import com.eventstore.infrastructure.external.HttpConsumerDeliveryService
 import com.eventstore.infrastructure.external.JsonSchemaValidator
+import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import com.eventstore.infrastructure.persistence.FileSystemEventRepository
 import com.eventstore.infrastructure.persistence.FileSystemTopicRepository
 import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
@@ -54,7 +55,7 @@ fun Application.configureApplication(config: Config) {
     val eventRepository: EventRepository = FileSystemEventRepository(dataDir, objectMapper)
     val consumerRepository: ConsumerRepository = InMemoryConsumerRepository()
     val schemaValidator: SchemaValidator = JsonSchemaValidator(objectMapper)
-    val deliveryService: ConsumerDeliveryService = HttpConsumerDeliveryService(objectMapper)
+    val consumerFactory: ConsumerFactory = ConsumerFactoryImpl()
 
     // Load existing schemas on startup
     runBlocking {
@@ -67,8 +68,7 @@ fun Application.configureApplication(config: Config) {
     // Initialize dispatcher manager
     val dispatcherManager = DispatcherManager(
         consumerRepository = consumerRepository,
-        eventRepository = eventRepository,
-        deliveryService = deliveryService
+        eventRepository = eventRepository
     )
 
     // Initialize domain services
@@ -78,7 +78,7 @@ fun Application.configureApplication(config: Config) {
     val publishEventsService =
         PublishEventsService(topicRepository, eventRepository, schemaValidator, dispatcherManager)
     val getEventsService = GetEventsService(eventRepository, topicRepository)
-    val registerConsumerService = RegisterConsumerService(consumerRepository, topicRepository)
+    val registerConsumerService = RegisterConsumerService(consumerRepository, topicRepository, consumerFactory)
     val unregisterConsumerService = UnregisterConsumerService(consumerRepository)
     val getHealthStatusService = GetHealthStatusService(consumerRepository) {
         runBlocking { dispatcherManager.getRunningDispatchers() }

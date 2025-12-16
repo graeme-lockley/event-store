@@ -20,39 +20,23 @@ fun Route.consumerRoutes(
         // POST /consumers/register - Register a consumer
         post("register") {
             try {
-                val request = call.receive<ConsumerRegistrationRequest>()
+                val requestDto = call.receive<ConsumerRegistrationRequestDto>()
 
-                if (request.callback.isBlank() || request.topics.isEmpty()) {
+                // Convert DTO to domain request
+                val registrationRequest = try {
+                    ConsumerRegistrationRequestMapper.toDomain(requestDto)
+                } catch (e: IllegalArgumentException) {
                     call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse(
-                            "Invalid request body. Required: callback URL and topics object",
-                            "INVALID_REQUEST"
-                        )
+                        ErrorResponse(e.message ?: "Invalid request", "INVALID_REQUEST")
                     )
                     return@post
                 }
-
-                // Validate callback is a proper URL
-                try {
-                    java.net.URI(request.callback).toURL()
-                } catch (e: Exception) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ErrorResponse("Invalid callback URL", "INVALID_CALLBACK")
-                    )
-                    return@post
-                }
-
-                val registrationRequest = com.eventstore.domain.services.ConsumerRegistrationRequest(
-                    callback = request.callback,
-                    topics = request.topics
-                )
 
                 val consumerId = registerConsumerService.execute(registrationRequest)
 
                 // Start dispatchers for topics that don't have one running
-                for (topic in request.topics.keys) {
+                for (topic in registrationRequest.topics.keys) {
                     if (!dispatcherManager.isDispatcherRunning(topic)) {
                         dispatcherManager.startDispatcher(topic)
                     }
@@ -82,11 +66,7 @@ fun Route.consumerRoutes(
             try {
                 val consumers = consumerRepository.findAll()
                 val consumerInfo = consumers.map { consumer ->
-                    ConsumerResponse(
-                        id = consumer.id,
-                        callback = consumer.callback.toString(),
-                        topics = consumer.topics
-                    )
+                    ConsumerResponseMapper.toDto(consumer)
                 }
                 call.respond(HttpStatusCode.OK, ConsumersResponse(consumerInfo))
             } catch (e: Exception) {
@@ -124,4 +104,3 @@ fun Route.consumerRoutes(
         }
     }
 }
-

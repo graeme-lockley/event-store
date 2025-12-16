@@ -1,7 +1,7 @@
 package com.eventstore.infrastructure.background
 
+import com.eventstore.domain.Consumer
 import com.eventstore.domain.EventId
-import com.eventstore.domain.ports.outbound.ConsumerDeliveryService
 import com.eventstore.domain.ports.outbound.ConsumerRepository
 import com.eventstore.domain.ports.outbound.EventRepository
 import kotlinx.coroutines.*
@@ -12,7 +12,6 @@ class TopicDispatcher(
     private val topic: String,
     private val consumerRepository: ConsumerRepository,
     private val eventRepository: EventRepository,
-    private val deliveryService: ConsumerDeliveryService,
     private val checkIntervalMs: Long = 500
 ) {
     private var job: Job? = null
@@ -67,7 +66,7 @@ class TopicDispatcher(
         }
     }
 
-    private suspend fun deliverPendingEvents(consumer: com.eventstore.domain.Consumer) {
+    private suspend fun deliverPendingEvents(consumer: Consumer) {
         // Respect backoff window if set
         val state = retryState[consumer.id]
         if (state != null && System.currentTimeMillis() < state.nextRetryAt) {
@@ -92,7 +91,7 @@ class TopicDispatcher(
 
                     // Update the last consumed event ID
                     val latestEventId = events.last().id.value
-                    val updatedConsumer = consumer.updateLastEventId(topicName, latestEventId)
+                    val updatedConsumer = consumer.withUpdatedLastEventId(topicName, latestEventId)
                     consumerRepository.save(updatedConsumer)
                 }
             } catch (e: Exception) {
@@ -107,8 +106,8 @@ class TopicDispatcher(
         // Sort events by ID to ensure proper ordering
         eventsToDeliver.sortWith { a, b -> compareEventIds(a.id, b.id) }
 
-        // Deliver events to consumer
-        val result = deliveryService.deliverEvents(consumer, eventsToDeliver)
+        // Deliver events using the consumer's deliver method
+        val result = consumer.deliver(eventsToDeliver)
 
         if (result.success) {
             // Reset retry state on success
@@ -139,4 +138,3 @@ class TopicDispatcher(
         return id1.sequence.compareTo(id2.sequence)
     }
 }
-

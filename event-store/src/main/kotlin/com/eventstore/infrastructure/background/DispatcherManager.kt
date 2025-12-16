@@ -1,6 +1,5 @@
 package com.eventstore.infrastructure.background
 
-import com.eventstore.domain.ports.outbound.ConsumerDeliveryService
 import com.eventstore.domain.ports.outbound.ConsumerRepository
 import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.EventRepository
@@ -11,8 +10,7 @@ import kotlinx.coroutines.sync.withLock
 
 class DispatcherManager(
     private val consumerRepository: ConsumerRepository,
-    private val eventRepository: EventRepository,
-    private val deliveryService: ConsumerDeliveryService
+    private val eventRepository: EventRepository
 ) : EventDispatcher {
     private val dispatchers = mutableMapOf<String, TopicDispatcher>()
     private val mutex = Mutex()
@@ -27,8 +25,7 @@ class DispatcherManager(
             val dispatcher = TopicDispatcher(
                 topic = topic,
                 consumerRepository = consumerRepository,
-                eventRepository = eventRepository,
-                deliveryService = deliveryService
+                eventRepository = eventRepository
             )
 
             dispatcher.start(scope)
@@ -74,4 +71,3 @@ class DispatcherManager(
         }
     }
 }
-

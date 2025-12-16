@@ -1,5 +1,6 @@
 package com.eventstore.domain.services
 
+import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
@@ -18,11 +19,12 @@ class GetHealthStatusServiceTest {
 
     @Test
     fun `should return health status with consumer count and dispatchers`() = runTest {
-        val request = ConsumerRegistrationRequest(
-            callback = "https://example.com/webhook",
+        val request = HttpConsumerRegistrationRequest(
+            callbackUrl = "https://example.com/webhook",
             topics = mapOf(topicName to null)
         )
-        val registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository)
+        val consumerFactory = ConsumerFactoryImpl()
+        val registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory)
 
         registerConsumerService.execute(request)
         registerConsumerService.execute(request)
@@ -61,4 +63,3 @@ class GetHealthStatusServiceTest {
         assertEquals(emptyList(), result.runningDispatchers)
     }
 }
-

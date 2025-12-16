@@ -1,6 +1,7 @@
 package com.eventstore.domain.services
 
 import com.eventstore.domain.exceptions.ConsumerNotFoundException
+import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
@@ -19,14 +20,15 @@ class UnregisterConsumerServiceTest {
     @BeforeEach
     fun setup() = runBlocking {
         helper = createEventStore(topicName)
-        registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository)
+        val consumerFactory = ConsumerFactoryImpl()
+        registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory)
         unregisterConsumerService = UnregisterConsumerService(helper.consumerRepository)
     }
 
     @Test
     fun `should unregister consumer successfully`() = runTest {
-        val request = ConsumerRegistrationRequest(
-            callback = "https://example.com/webhook",
+        val request = HttpConsumerRegistrationRequest(
+            callbackUrl = "https://example.com/webhook",
             topics = mapOf(topicName to null)
         )
 
@@ -49,4 +51,3 @@ class UnregisterConsumerServiceTest {
         }
     }
 }
-
