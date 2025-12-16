@@ -42,11 +42,15 @@ class FileSystemEventRepositoryTest {
 
         repository.storeEvent(topic, "user.created", mapOf("id" to "123"), eventId, timestamp)
 
-        // Verify file structure exists
-        val date = timestamp.atZone(java.time.ZoneId.systemDefault())
-            .format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-        val group = String.format("%04d", eventId.sequence / 1000)
-        val eventFile = tempDir.resolve(topic).resolve(date).resolve(group).resolve("${eventId.value}.json")
+        // Verify file structure exists (new sequence-based hierarchical structure)
+        val group1 = String.format("%03d", eventId.sequence / 1_000_000)
+        val group2 = String.format("%02d", (eventId.sequence / 10_000) % 100)
+        val group3 = String.format("%02d", (eventId.sequence / 100) % 100)
+        val eventFile = tempDir.resolve(topic)
+            .resolve(group1)
+            .resolve(group2)
+            .resolve(group3)
+            .resolve("${eventId.value}.json")
 
         assertTrue(Files.exists(eventFile))
         assertTrue(Files.isRegularFile(eventFile))
@@ -90,19 +94,23 @@ class FileSystemEventRepositoryTest {
 
         repository.storeEvent(topic, "user.created", mapOf("id" to "123"), eventId, timestamp)
 
-        val date = timestamp.atZone(java.time.ZoneId.systemDefault())
-            .format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-        val group = String.format("%04d", eventId.sequence / 1000)
+        // Verify new sequence-based hierarchical directory structure
+        val group1 = String.format("%03d", eventId.sequence / 1_000_000)
+        val group2 = String.format("%02d", (eventId.sequence / 10_000) % 100)
+        val group3 = String.format("%02d", (eventId.sequence / 100) % 100)
         val topicDir = tempDir.resolve(topic)
-        val dateDir = topicDir.resolve(date)
-        val groupDir = dateDir.resolve(group)
+        val group1Dir = topicDir.resolve(group1)
+        val group2Dir = group1Dir.resolve(group2)
+        val group3Dir = group2Dir.resolve(group3)
 
         assertTrue(Files.exists(topicDir))
         assertTrue(Files.isDirectory(topicDir))
-        assertTrue(Files.exists(dateDir))
-        assertTrue(Files.isDirectory(dateDir))
-        assertTrue(Files.exists(groupDir))
-        assertTrue(Files.isDirectory(groupDir))
+        assertTrue(Files.exists(group1Dir))
+        assertTrue(Files.isDirectory(group1Dir))
+        assertTrue(Files.exists(group2Dir))
+        assertTrue(Files.isDirectory(group2Dir))
+        assertTrue(Files.exists(group3Dir))
+        assertTrue(Files.isDirectory(group3Dir))
     }
 
     @Test
@@ -110,20 +118,21 @@ class FileSystemEventRepositoryTest {
         val topic = "date-organized-topic"
         val today = Instant.now()
         val yesterday = today.minusSeconds(86400) // 24 hours ago
-        val dateFormatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
-
-        val todayDate = today.atZone(java.time.ZoneId.systemDefault()).format(dateFormatter)
-        val yesterdayDate = yesterday.atZone(java.time.ZoneId.systemDefault()).format(dateFormatter)
 
         repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L), today)
         repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 2L), yesterday)
 
-        // Verify directory structure
-        val todayDir = tempDir.resolve(topic).resolve(todayDate)
-        val yesterdayDir = tempDir.resolve(topic).resolve(yesterdayDate)
+        // Verify both events are stored in the same sequence-based directory structure
+        // (events with sequences 1 and 2 will be in the same group3 directory)
+        val group1 = String.format("%03d", 1L / 1_000_000)
+        val group2 = String.format("%02d", (1L / 10_000) % 100)
+        val group3 = String.format("%02d", (1L / 100) % 100)
+        val eventDir = tempDir.resolve(topic).resolve(group1).resolve(group2).resolve(group3)
 
-        assertTrue(Files.exists(todayDir))
-        assertTrue(Files.exists(yesterdayDir))
+        assertTrue(Files.exists(eventDir))
+        // Both events should be in the same directory
+        val events = repository.getEvents(topic)
+        assertEquals(2, events.size)
     }
 
     @Test
@@ -131,20 +140,30 @@ class FileSystemEventRepositoryTest {
         val topic = "group-organized-topic"
         val timestamp = Instant.now()
 
-        // Store events that will be in different groups (every 1000 events)
+        // Store events that will be in different groups
+        // Sequence 1: group1=000, group2=00, group3=00
+        // Sequence 100: group1=000, group2=00, group3=01
+        // Sequence 10000: group1=000, group2=01, group3=00
         repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L), timestamp)
-        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 1000L), timestamp)
-        repository.storeEvent(topic, "event3", mapOf("id" to "3"), EventId.create(topic, 2000L), timestamp)
+        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 100L), timestamp)
+        repository.storeEvent(topic, "event3", mapOf("id" to "3"), EventId.create(topic, 10000L), timestamp)
 
-        val date = timestamp.atZone(java.time.ZoneId.systemDefault())
-            .format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-        val group1 = tempDir.resolve(topic).resolve(date).resolve("0000")
-        val group2 = tempDir.resolve(topic).resolve(date).resolve("0001")
-        val group3 = tempDir.resolve(topic).resolve(date).resolve("0002")
+        // Verify directory structure - events should be in different group3 directories
+        val group1_1 = String.format("%03d", 1L / 1_000_000)
+        val group2_1 = String.format("%02d", (1L / 10_000) % 100)
+        val group3_1 = String.format("%02d", (1L / 100) % 100)
+        val dir1 = tempDir.resolve(topic).resolve(group1_1).resolve(group2_1).resolve(group3_1)
 
-        assertTrue(Files.exists(group1))
-        assertTrue(Files.exists(group2))
-        assertTrue(Files.exists(group3))
+        val group3_2 = String.format("%02d", (100L / 100) % 100)
+        val dir2 = tempDir.resolve(topic).resolve(group1_1).resolve(group2_1).resolve(group3_2)
+
+        val group2_3 = String.format("%02d", (10000L / 10_000) % 100)
+        val group3_3 = String.format("%02d", (10000L / 100) % 100)
+        val dir3 = tempDir.resolve(topic).resolve(group1_1).resolve(group2_3).resolve(group3_3)
+
+        assertTrue(Files.exists(dir1))
+        assertTrue(Files.exists(dir2))
+        assertTrue(Files.exists(dir3))
     }
 
     @Test
@@ -180,11 +199,15 @@ class FileSystemEventRepositoryTest {
 
         repository.storeEvent(topic, "user.created", payload, eventId, timestamp)
 
-        // Verify file exists and is readable
-        val date = timestamp.atZone(java.time.ZoneId.systemDefault())
-            .format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-        val group = String.format("%04d", eventId.sequence / 1000)
-        val eventFile = tempDir.resolve(topic).resolve(date).resolve(group).resolve("${eventId.value}.json")
+        // Verify file exists and is readable (new sequence-based structure)
+        val group1 = String.format("%03d", eventId.sequence / 1_000_000)
+        val group2 = String.format("%02d", (eventId.sequence / 10_000) % 100)
+        val group3 = String.format("%02d", (eventId.sequence / 100) % 100)
+        val eventFile = tempDir.resolve(topic)
+            .resolve(group1)
+            .resolve(group2)
+            .resolve(group3)
+            .resolve("${eventId.value}.json")
 
         assertTrue(Files.exists(eventFile))
         val content = Files.readString(eventFile)
