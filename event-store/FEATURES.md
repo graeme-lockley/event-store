@@ -13,23 +13,7 @@ This document outlines the features to be built following the architecture revie
 
 ## Critical Features
 
-### CRIT-001: Consumer Persistence
-**Category**: Critical  
-**Priority**: P0  
-**Description**: Implement persistent storage for consumer registrations. Currently consumers are stored in-memory and lost on restart. This prevents production deployment.
-
-**Requirements**:
-- Persist consumers to file system (similar to topics)
-- Load consumers on application startup
-- Preserve consumer state (lastEventId per topic)
-- Resume dispatchers for existing consumers on startup
-- Handle consumer state recovery after restart
-
-**Estimated Effort**: 2-3 days
-
----
-
-### CRIT-002: Tenant & Namespace Management
+### CRIT-001: Tenant & Namespace Management
 **Category**: Critical  
 **Priority**: P0  
 **Description**: Implement tenant and namespace hierarchy using event-sourced approach. This is foundational for multi-tenancy and security.
@@ -46,7 +30,7 @@ This document outlines the features to be built following the architecture revie
 
 ---
 
-### CRIT-003: User Management
+### CRIT-002: User Management
 **Category**: Critical  
 **Priority**: P0  
 **Description**: System-wide user management with tenant associations. Users exist globally but are managed through tenant lens.
@@ -64,7 +48,7 @@ This document outlines the features to be built following the architecture revie
 
 ---
 
-### CRIT-004: Permission & Authorization System
+### CRIT-003: Permission & Authorization System
 **Category**: Critical  
 **Priority**: P0  
 **Description**: Event-sourced permission system for unified security model across tenants, namespaces, topics, events, and consumers.
@@ -82,7 +66,7 @@ This document outlines the features to be built following the architecture revie
 
 ---
 
-### CRIT-005: API Key Management
+### CRIT-004: API Key Management
 **Category**: Critical  
 **Priority**: P0  
 **Description**: API key creation and management for programmatic access. API keys are associated with users and can have scoped permissions.
@@ -136,24 +120,7 @@ This document outlines the features to be built following the architecture revie
 
 ---
 
-### HIGH-003: Consumer State Recovery
-**Category**: High Priority  
-**Priority**: P1  
-**Description**: Recover consumer positions and resume delivery after application restart or consumer re-registration.
-
-**Requirements**:
-- Load consumer state on startup
-- Resume dispatchers for existing consumers
-- Handle gaps in event delivery
-- Consumer position recovery
-- Backfill missed events
-- Consumer health monitoring
-
-**Estimated Effort**: 2-3 days
-
----
-
-### HIGH-004: Role & Group Management
+### HIGH-003: Role & Group Management
 **Category**: High Priority  
 **Priority**: P1  
 **Description**: Predefined roles and groups for simplified permission management. Roles have predefined permission sets.
@@ -171,7 +138,7 @@ This document outlines the features to be built following the architecture revie
 
 ---
 
-### HIGH-005: Event Replay
+### HIGH-004: Event Replay
 **Category**: High Priority  
 **Priority**: P1  
 **Description**: Replay events from a point in time or event ID. Useful for recovery, testing, and data migration.
@@ -189,7 +156,7 @@ This document outlines the features to be built following the architecture revie
 
 ---
 
-### HIGH-006: Consumer Correlation ID
+### HIGH-005: Consumer Correlation ID
 **Category**: High Priority  
 **Priority**: P1  
 **Description**: Add correlation ID support for event delivery to consumers. Correlation IDs enable distributed tracing and help correlate webhook deliveries with consumer processing.
@@ -416,15 +383,13 @@ This document outlines the features to be built following the architecture revie
 ## Feature Dependencies
 
 ```
-CRIT-002 (Tenant/Namespace) ──┐
-                              ├──> CRIT-003 (User Management)
-CRIT-004 (Permissions) ──────┘
+CRIT-001 (Tenant/Namespace) ──┐
+                              ├──> CRIT-002 (User Management)
+CRIT-003 (Permissions) ──────┘
                               │
-                              ├──> CRIT-005 (API Keys)
+                              ├──> CRIT-004 (API Keys)
                               │
-                              └──> HIGH-004 (Roles/Groups)
-
-CRIT-001 (Consumer Persistence) ──> HIGH-003 (Consumer Recovery)
+                              └──> HIGH-003 (Roles/Groups)
 
 HIGH-001 (Observability) ──> MED-006 (Health/Monitoring)
 
@@ -434,23 +399,21 @@ HIGH-002 (DLQ) ──> MED-001 (Consumer Management)
 ## Implementation Phases
 
 ### Phase 1: Foundation (Critical)
-- CRIT-001: Consumer Persistence
-- CRIT-002: Tenant & Namespace Management
-- CRIT-003: User Management
-- CRIT-004: Permission & Authorization System
-- CRIT-005: API Key Management
+- CRIT-001: Tenant & Namespace Management
+- CRIT-002: User Management
+- CRIT-003: Permission & Authorization System
+- CRIT-004: API Key Management
 
-**Timeline**: 6-8 weeks
+**Timeline**: 5-7 weeks
 
 ### Phase 2: Operations (High Priority)
 - HIGH-001: Structured Logging & Observability
 - HIGH-002: Dead Letter Queue
-- HIGH-003: Consumer State Recovery
-- HIGH-004: Role & Group Management
-- HIGH-005: Event Replay
-- HIGH-006: Consumer Correlation ID
+- HIGH-003: Role & Group Management
+- HIGH-004: Event Replay
+- HIGH-005: Consumer Correlation ID
 
-**Timeline**: 4-5 weeks
+**Timeline**: 3-4 weeks
 
 ### Phase 3: Enhancements (Medium Priority)
 - MED-001: Consumer Management Enhancements
@@ -475,5 +438,6 @@ HIGH-002 (DLQ) ──> MED-001 (Consumer Management)
 - Event-sourcing approach for tenant/namespace/permissions
 - System-wide users with tenant associations
 - URL path structure: `/tenants/{tenantId}/namespaces/{namespaceId}/...`
+- **Consumer Design**: Consumers are ephemeral and do not persist between restarts. The push-based webhook delivery system remains available for real-time delivery, but agents are responsible for tracking their own position (`lastEventId`) and re-registering consumers after event-store restarts. This keeps the event-store stateless for consumer management while maintaining the convenience of push-based delivery.
 - Comprehensive test coverage required for all features
 - Documentation required for all features
