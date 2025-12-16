@@ -9,11 +9,18 @@ import com.eventstore.domain.services.*
  */
 object ConsumerRegistrationRequestMapper {
     fun toDomain(dto: ConsumerRegistrationRequestDto): ConsumerRegistrationRequest {
+        // Normalize empty strings to null for lastEventId
+        fun normalizeTopics(topics: Map<String, String?>): Map<String, String?> {
+            return topics.mapValues { (_, value) ->
+                if (value.isNullOrBlank()) null else value
+            }
+        }
+        
         return when (dto) {
             is HttpConsumerRegistrationRequestDto -> {
                 HttpConsumerRegistrationRequest(
                     callbackUrl = dto.callback,
-                    topics = dto.topics
+                    topics = normalizeTopics(dto.topics)
                 )
             }
             
@@ -21,7 +28,7 @@ object ConsumerRegistrationRequestMapper {
                 AzureEventGridConsumerRegistrationRequest(
                     endpointUrl = dto.endpointUrl,
                     accessKey = dto.accessKey,
-                    topics = dto.topics
+                    topics = normalizeTopics(dto.topics)
                 )
             }
         }

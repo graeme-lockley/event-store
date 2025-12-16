@@ -16,10 +16,10 @@ class DispatcherManager(
     private val mutex = Mutex()
     private val scope = CoroutineScope(Dispatchers.Default)
 
-    suspend fun startDispatcher(topic: String) {
-        mutex.withLock {
+    suspend fun startDispatcher(topic: String): Boolean {
+        return mutex.withLock {
             if (dispatchers.containsKey(topic)) {
-                return
+                return false // Dispatcher already existed
             }
 
             val dispatcher = TopicDispatcher(
@@ -30,6 +30,7 @@ class DispatcherManager(
 
             dispatcher.start(scope)
             dispatchers[topic] = dispatcher
+            true // New dispatcher was started
         }
     }
 
@@ -73,7 +74,13 @@ class DispatcherManager(
     
     override suspend fun ensureDispatchersRunning(topics: Set<String>) {
         for (topic in topics) {
-            startDispatcher(topic)
+            val wasNew = startDispatcher(topic)
+            
+            // If we just started a new dispatcher, trigger immediate delivery check
+            // This ensures catchup happens immediately when a consumer is registered
+            if (wasNew) {
+                triggerDelivery(topic)
+            }
         }
     }
 }

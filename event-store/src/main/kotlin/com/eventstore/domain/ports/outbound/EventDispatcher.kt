@@ -17,7 +17,8 @@ interface EventDispatcher {
     /**
      * Ensures dispatchers are running for the given topics.
      * This should be called when consumers are registered to ensure
-     * events can be delivered to them.
+     * events can be delivered to them. For newly started dispatchers,
+     * this will trigger an immediate delivery check to handle catchup scenarios.
      *
      * @param topics The set of topic names that need dispatchers running
      */

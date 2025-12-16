@@ -7,6 +7,7 @@ import com.eventstore.domain.ports.outbound.EventRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import org.slf4j.LoggerFactory
 
 class TopicDispatcher(
     private val topic: String,
@@ -14,6 +15,7 @@ class TopicDispatcher(
     private val eventRepository: EventRepository,
     private val checkIntervalMs: Long = 500
 ) {
+    private val logger = LoggerFactory.getLogger(TopicDispatcher::class.java)
     private var job: Job? = null
     private val _isRunning = MutableStateFlow(false)
     val isRunning: StateFlow<Boolean> = _isRunning
@@ -61,7 +63,7 @@ class TopicDispatcher(
             try {
                 deliverPendingEvents(consumer)
             } catch (e: Exception) {
-                // Log error but continue with other consumers
+                logger.error("Failed to deliver events to consumer ${consumer.id} for topic $topic", e)
             }
         }
     }
@@ -80,6 +82,9 @@ class TopicDispatcher(
             if (topicName != topic) continue
 
             try {
+                // ConsumerRegistrationRequestMapper already normalizes empty strings to null,
+                // so lastEventIdStr will be either null or a valid EventId string.
+                // If EventId construction fails, it indicates data corruption and should not be silently ignored.
                 val lastEventId = lastEventIdStr?.let { EventId(it) }
                 val events = eventRepository.getEvents(
                     topic = topicName,
@@ -95,16 +100,13 @@ class TopicDispatcher(
                     consumerRepository.save(updatedConsumer)
                 }
             } catch (e: Exception) {
-                // Log error but continue
+                logger.error("Failed to deliver events to consumer ${consumer.id} for topic $topicName", e)
             }
         }
 
         if (eventsToDeliver.isEmpty()) {
             return
         }
-
-        // Sort events by ID to ensure proper ordering
-        eventsToDeliver.sortWith { a, b -> compareEventIds(a.id, b.id) }
 
         // Deliver events using the consumer's deliver method
         val result = consumer.deliver(eventsToDeliver)
@@ -129,12 +131,5 @@ class TopicDispatcher(
                 consumerRepository.delete(consumer.id)
             }
         }
-    }
-
-    private fun compareEventIds(id1: EventId, id2: EventId): Int {
-        if (id1.topic != id2.topic) {
-            return id1.topic.compareTo(id2.topic)
-        }
-        return id1.sequence.compareTo(id2.sequence)
     }
 }

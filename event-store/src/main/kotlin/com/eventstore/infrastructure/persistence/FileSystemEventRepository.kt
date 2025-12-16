@@ -75,20 +75,21 @@ class FileSystemEventRepository(
             }
 
             // Search for event file by walking the directory structure
-            Files.walk(topicDir)
-                .filter { it.fileName.toString() == "${eventId.value}.json" }
-                .findFirst()
-                .map { path ->
-                    val json = Files.readString(path)
-                    val eventFile: EventFile = objectMapper.readValue(json)
-                    Event(
-                        id = EventId(eventFile.id),
-                        timestamp = Instant.parse(eventFile.timestamp),
-                        type = eventFile.type,
-                        payload = eventFile.payload
-                    )
-                }
-                .orElse(null)
+            Files.walk(topicDir).use { paths ->
+                paths.filter { it.fileName.toString() == "${eventId.value}.json" }
+                    .findFirst()
+                    .map { path ->
+                        val json = Files.readString(path)
+                        val eventFile: EventFile = objectMapper.readValue(json)
+                        Event(
+                            id = EventId(eventFile.id),
+                            timestamp = Instant.parse(eventFile.timestamp),
+                            type = eventFile.type,
+                            payload = eventFile.payload
+                        )
+                    }
+                    .orElse(null)
+            }
         }
     }
 
@@ -111,37 +112,38 @@ class FileSystemEventRepository(
 
             val events = mutableListOf<Event>()
 
-            Files.walk(topicDir)
-                .filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".json") }
-                .forEach { path ->
-                    try {
-                        val json = Files.readString(path)
-                        val eventFile: EventFile = objectMapper.readValue(json)
-                        val event = Event(
-                            id = EventId(eventFile.id),
-                            timestamp = Instant.parse(eventFile.timestamp),
-                            type = eventFile.type,
-                            payload = eventFile.payload
-                        )
+            Files.walk(topicDir).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".json") }
+                    .forEach { path ->
+                        try {
+                            val json = Files.readString(path)
+                            val eventFile: EventFile = objectMapper.readValue(json)
+                            val event = Event(
+                                id = EventId(eventFile.id),
+                                timestamp = Instant.parse(eventFile.timestamp),
+                                type = eventFile.type,
+                                payload = eventFile.payload
+                            )
 
-                        // Apply filters
-                        if (sinceEventId != null && compareEventIds(event.id, sinceEventId) <= 0) {
-                            return@forEach
-                        }
-
-                        if (date != null) {
-                            val eventDate = event.timestamp.atZone(java.time.ZoneId.systemDefault())
-                                .format(DateTimeFormatter.ISO_LOCAL_DATE)
-                            if (eventDate != date) {
+                            // Apply filters
+                            if (sinceEventId != null && compareEventIds(event.id, sinceEventId) <= 0) {
                                 return@forEach
                             }
-                        }
 
-                        events.add(event)
-                    } catch (e: Exception) {
-                        // Skip invalid event files
+                            if (date != null) {
+                                val eventDate = event.timestamp.atZone(java.time.ZoneId.systemDefault())
+                                    .format(DateTimeFormatter.ISO_LOCAL_DATE)
+                                if (eventDate != date) {
+                                    return@forEach
+                                }
+                            }
+
+                            events.add(event)
+                        } catch (e: Exception) {
+                            // Skip invalid event files
+                        }
                     }
-                }
+            }
 
             // Sort by event ID
             events.sortWith { a, b -> compareEventIds(a.id, b.id) }

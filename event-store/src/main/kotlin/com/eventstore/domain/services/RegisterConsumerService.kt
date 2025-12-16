@@ -14,8 +14,10 @@ class RegisterConsumerService(
     private val eventDispatcher: EventDispatcher
 ) {
     suspend fun execute(request: ConsumerRegistrationRequest): String {
+        val topics = request.topics.keys.toSet()
+
         // Validate topics exist
-        for (topic in request.topics.keys) {
+        for (topic in topics) {
             if (!topicRepository.topicExists(topic)) {
                 throw TopicNotFoundException(topic)
             }
@@ -34,7 +36,8 @@ class RegisterConsumerService(
         consumerRepository.save(consumer)
 
         // Ensure dispatchers are running for the consumer's topics
-        eventDispatcher.ensureDispatchersRunning(request.topics.keys.toSet())
+        // This will also trigger immediate delivery check for catchup scenarios
+        eventDispatcher.ensureDispatchersRunning(topics)
 
         return consumer.id
     }
