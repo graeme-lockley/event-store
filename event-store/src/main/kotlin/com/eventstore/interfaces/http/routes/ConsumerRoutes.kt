@@ -13,8 +13,7 @@ import io.ktor.server.routing.*
 fun Route.consumerRoutes(
     registerConsumerService: RegisterConsumerService,
     unregisterConsumerService: UnregisterConsumerService,
-    consumerRepository: ConsumerRepository,
-    dispatcherManager: com.eventstore.infrastructure.background.DispatcherManager
+    consumerRepository: ConsumerRepository
 ) {
     route("/consumers") {
         // POST /consumers/register - Register a consumer
@@ -34,13 +33,6 @@ fun Route.consumerRoutes(
                 }
 
                 val consumerId = registerConsumerService.execute(registrationRequest)
-
-                // Start dispatchers for topics that don't have one running
-                for (topic in registrationRequest.topics.keys) {
-                    if (!dispatcherManager.isDispatcherRunning(topic)) {
-                        dispatcherManager.startDispatcher(topic)
-                    }
-                }
 
                 call.respond(HttpStatusCode.Created, ConsumerRegistrationResponse(consumerId))
             } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {

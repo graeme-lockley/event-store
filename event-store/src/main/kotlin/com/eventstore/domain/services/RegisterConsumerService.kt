@@ -4,12 +4,14 @@ import com.eventstore.domain.exceptions.InvalidConsumerRegistrationException
 import com.eventstore.domain.exceptions.TopicNotFoundException
 import com.eventstore.domain.ports.outbound.ConsumerFactory
 import com.eventstore.domain.ports.outbound.ConsumerRepository
+import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.TopicRepository
 
 class RegisterConsumerService(
     private val consumerRepository: ConsumerRepository,
     private val topicRepository: TopicRepository,
-    private val consumerFactory: ConsumerFactory
+    private val consumerFactory: ConsumerFactory,
+    private val eventDispatcher: EventDispatcher
 ) {
     suspend fun execute(request: ConsumerRegistrationRequest): String {
         // Validate topics exist
@@ -30,6 +32,9 @@ class RegisterConsumerService(
 
         // Save consumer
         consumerRepository.save(consumer)
+
+        // Ensure dispatchers are running for the consumer's topics
+        eventDispatcher.ensureDispatchersRunning(request.topics.keys.toSet())
 
         return consumer.id
     }

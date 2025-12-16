@@ -12,6 +12,8 @@ import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
+private val testEventDispatcher = InMemoryEventDispatcher()
+
 class RegisterConsumerServiceTest {
     val topicName = "user-events"
 
@@ -22,7 +24,7 @@ class RegisterConsumerServiceTest {
     fun setup() = runBlocking {
         helper = createEventStore(topicName)
         val consumerFactory = ConsumerFactoryImpl()
-        service = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory)
+        service = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, testEventDispatcher)
     }
 
     @Test

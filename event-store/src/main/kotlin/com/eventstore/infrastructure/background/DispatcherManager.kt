@@ -70,4 +70,10 @@ class DispatcherManager(
             triggerDelivery(topic)
         }
     }
+    
+    override suspend fun ensureDispatchersRunning(topics: Set<String>) {
+        for (topic in topics) {
+            startDispatcher(topic)
+        }
+    }
 }

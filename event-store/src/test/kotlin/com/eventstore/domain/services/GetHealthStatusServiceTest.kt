@@ -24,7 +24,8 @@ class GetHealthStatusServiceTest {
             topics = mapOf(topicName to null)
         )
         val consumerFactory = ConsumerFactoryImpl()
-        val registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory)
+        val eventDispatcher = InMemoryEventDispatcher()
+        val registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, eventDispatcher)
 
         registerConsumerService.execute(request)
         registerConsumerService.execute(request)

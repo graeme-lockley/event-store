@@ -21,7 +21,8 @@ class UnregisterConsumerServiceTest {
     fun setup() = runBlocking {
         helper = createEventStore(topicName)
         val consumerFactory = ConsumerFactoryImpl()
-        registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory)
+        val eventDispatcher = InMemoryEventDispatcher()
+        registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, eventDispatcher)
         unregisterConsumerService = UnregisterConsumerService(helper.consumerRepository)
     }
 

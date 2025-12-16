@@ -78,7 +78,7 @@ fun Application.configureApplication(config: Config) {
     val publishEventsService =
         PublishEventsService(topicRepository, eventRepository, schemaValidator, dispatcherManager)
     val getEventsService = GetEventsService(eventRepository, topicRepository)
-    val registerConsumerService = RegisterConsumerService(consumerRepository, topicRepository, consumerFactory)
+    val registerConsumerService = RegisterConsumerService(consumerRepository, topicRepository, consumerFactory, dispatcherManager)
     val unregisterConsumerService = UnregisterConsumerService(consumerRepository)
     val getHealthStatusService = GetHealthStatusService(consumerRepository) {
         runBlocking { dispatcherManager.getRunningDispatchers() }
@@ -182,7 +182,7 @@ fun Application.configureApplication(config: Config) {
     routing {
         topicRoutes(createTopicService, getTopicsService, updateTopicSchemasService, dispatcherManager)
         eventRoutes(publishEventsService, getEventsService)
-        consumerRoutes(registerConsumerService, unregisterConsumerService, consumerRepository, dispatcherManager)
+        consumerRoutes(registerConsumerService, unregisterConsumerService, consumerRepository)
         healthRoutes(getHealthStatusService)
     }
 
