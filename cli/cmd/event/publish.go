@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/event-store/cli/cmd"
 	"github.com/event-store/cli/internal/client"
 	"github.com/event-store/cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -98,4 +98,3 @@ func init() {
 	publishCmd.Flags().StringVar(&publishFile, "file", "", "Path to JSON file containing events")
 	publishCmd.Flags().StringVar(&publishJSON, "json", "", "Inline JSON string containing events")
 }
-

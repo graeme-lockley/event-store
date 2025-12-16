@@ -223,12 +223,12 @@ func PrintHealthCSV(health *client.Health) error {
 	if err := writer.Write([]string{"Status", "Consumers", "Running Dispatchers"}); err != nil {
 		return err
 	}
-	
+
 	dispatchersStr := ""
 	if len(health.RunningDispatchers) > 0 {
 		dispatchersStr = strings.Join(health.RunningDispatchers, "; ")
 	}
-	
+
 	return writer.Write([]string{health.Status, strconv.Itoa(health.Consumers), dispatchersStr})
 }
 
@@ -249,4 +249,3 @@ func PrintEventPublishResponseCSV(eventIDs []string) error {
 
 	return nil
 }
-

@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/event-store/cli/internal/client"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"golang.org/x/term"
 )
 
@@ -18,12 +18,12 @@ func shouldUseColors() bool {
 	if os.Getenv("NO_COLOR") != "" {
 		return false
 	}
-	
+
 	// Check if stdout is a terminal
 	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -228,14 +228,14 @@ func PrintHealth(health *client.Health) {
 
 	t.AppendRow(table.Row{"Status", health.Status})
 	t.AppendRow(table.Row{"Consumers", strconv.Itoa(health.Consumers)})
-	
+
 	// Format running dispatchers
 	dispatchersStr := "None"
 	if len(health.RunningDispatchers) > 0 {
 		dispatchersStr = strings.Join(health.RunningDispatchers, ", ")
 	}
 	t.AppendRow(table.Row{"Running Dispatchers", dispatchersStr})
-	
+
 	t.Render()
 }
 

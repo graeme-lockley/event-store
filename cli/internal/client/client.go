@@ -83,8 +83,8 @@ type ConsumersResponse struct {
 
 // ConsumerRegistrationRequest represents a request to register a consumer
 type ConsumerRegistrationRequest struct {
-	Callback string            `json:"callback"`
-	Topics   map[string]string `json:"topics"` // topic -> lastEventId (or null)
+	Callback string             `json:"callback"`
+	Topics   map[string]*string `json:"topics"` // topic -> lastEventId (nil for null, pointer to string for value)
 }
 
 // ConsumerRegistrationResponse represents the response from POST /consumers/register
@@ -102,8 +102,8 @@ type Event struct {
 
 // Health represents the health status of the event store
 type Health struct {
-	Status            string   `json:"status"`
-	Consumers         int      `json:"consumers"`
+	Status             string   `json:"status"`
+	Consumers          int      `json:"consumers"`
 	RunningDispatchers []string `json:"runningDispatchers"`
 }
 
@@ -228,10 +228,24 @@ func (c *Client) GetConsumers() ([]Consumer, error) {
 }
 
 // RegisterConsumer registers a new consumer
+// topics map: empty string or "null" means null (start from beginning), otherwise the event ID
 func (c *Client) RegisterConsumer(callback string, topics map[string]string) (string, error) {
+	// Convert map[string]string to map[string]*string for proper null handling
+	topicsWithNull := make(map[string]*string)
+	for topic, eventID := range topics {
+		if eventID == "" || eventID == "null" {
+			// Set to nil to send JSON null
+			topicsWithNull[topic] = nil
+		} else {
+			// Set to pointer to string value
+			eventIDCopy := eventID
+			topicsWithNull[topic] = &eventIDCopy
+		}
+	}
+
 	req := ConsumerRegistrationRequest{
 		Callback: callback,
-		Topics:   topics,
+		Topics:   topicsWithNull,
 	}
 
 	respBody, err := c.request("POST", "/consumers/register", req)
@@ -257,7 +271,7 @@ func (c *Client) DeleteConsumer(id string) error {
 // GetEvents retrieves events from a topic
 func (c *Client) GetEvents(topic string, query *EventsQuery) ([]Event, error) {
 	endpoint := "/topics/" + url.PathEscape(topic) + "/events"
-	
+
 	// Build query parameters
 	params := url.Values{}
 	if query != nil {
@@ -271,21 +285,21 @@ func (c *Client) GetEvents(topic string, query *EventsQuery) ([]Event, error) {
 			params.Add("limit", fmt.Sprintf("%d", query.Limit))
 		}
 	}
-	
+
 	if len(params) > 0 {
 		endpoint += "?" + params.Encode()
 	}
-	
+
 	respBody, err := c.request("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var resp EventsResponse
 	if err := json.Unmarshal(respBody, &resp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
-	
+
 	return resp.Events, nil
 }
 
@@ -295,12 +309,12 @@ func (c *Client) GetHealth() (*Health, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var health Health
 	if err := json.Unmarshal(respBody, &health); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
-	
+
 	return &health, nil
 }
 
@@ -322,11 +336,11 @@ func (c *Client) PublishEvents(events []EventPublishRequest) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var resp EventPublishResponse
 	if err := json.Unmarshal(respBody, &resp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
-	
+
 	return resp.EventIDs, nil
 }

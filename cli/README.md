@@ -194,6 +194,46 @@ es consumer delete <id>
 
 Unregisters a consumer. The consumer will stop receiving events.
 
+#### Listen for Webhook Events
+
+```bash
+es consumer listen [flags]
+```
+
+Starts an HTTP server that listens for POST requests from the event store. All received events are logged to stdout and saved to a JSON file for inspection. This is useful for testing consumer webhooks and integration testing.
+
+**Flags:**
+- `--port, -p <port>` - Port to listen on (default: 19000)
+- `--data-file <path>` - File to save received events (only saves if this flag is provided)
+- `--silent` - Suppress output to stdout
+
+**Examples:**
+```bash
+# Start listening on default port (19000)
+es consumer listen
+
+# Listen on a custom port
+es consumer listen --port 3000
+
+# Save events to a custom file
+es consumer listen --data-file /tmp/webhook-events.json
+
+# Run silently (no stdout output)
+es consumer listen --silent
+
+# Save to file and run silently
+es consumer listen --data-file /tmp/webhook-events.json --silent
+```
+
+The server will:
+- Accept POST requests on any path
+- Log all received events to stdout with timestamps (unless `--silent` is used)
+- Save all events to a JSON file if `--data-file` is provided
+- Respond with `{"status":"ok"}` to successful requests
+- Provide a `/health` endpoint for health checks
+
+Press Ctrl+C to stop the server.
+
 ## Output Formats
 
 ### Table Format (Default)

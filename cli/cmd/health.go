@@ -19,4 +19,3 @@ func HealthCmd() *cobra.Command {
 func init() {
 	rootCmd.AddCommand(healthCmd)
 }
-

@@ -1,10 +1,10 @@
 package health
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/event-store/cli/cmd"
 	"github.com/event-store/cli/internal/client"
 	"github.com/event-store/cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var showCmd = &cobra.Command{
@@ -42,4 +42,3 @@ var showCmd = &cobra.Command{
 func init() {
 	cmd.HealthCmd().AddCommand(showCmd)
 }
-
