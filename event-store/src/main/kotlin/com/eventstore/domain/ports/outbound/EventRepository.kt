@@ -15,6 +15,8 @@ interface EventRepository {
         timestamp: java.time.Instant
     ): Event
 
+    suspend fun storeEvents(events: List<Event>): List<Event>
+
     suspend fun getEvent(topic: String, eventId: EventId): Event?
     suspend fun getEvents(
         topic: String,

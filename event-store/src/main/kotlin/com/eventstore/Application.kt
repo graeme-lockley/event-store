@@ -27,7 +27,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import org.slf4j.event.Level
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
@@ -57,19 +57,24 @@ fun Application.configureApplication(config: Config) {
     val schemaValidator: SchemaValidator = JsonSchemaValidator(objectMapper)
     val consumerFactory: ConsumerFactory = ConsumerFactoryImpl()
 
-    // Load existing schemas on startup
-    runBlocking {
-        val topics = topicRepository.getAllTopics()
-        topics.forEach { topic ->
-            schemaValidator.registerSchemas(topic.name, topic.schemas)
-        }
-    }
-
     // Initialize dispatcher manager
     val dispatcherManager = DispatcherManager(
         consumerRepository = consumerRepository,
         eventRepository = eventRepository
     )
+
+    // Create application scope for lifecycle management
+    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // Load existing schemas on startup (non-blocking)
+    environment.monitor.subscribe(ApplicationStarted) {
+        applicationScope.launch {
+            val topics = topicRepository.getAllTopics()
+            topics.forEach { topic ->
+                schemaValidator.registerSchemas(topic.name, topic.schemas)
+            }
+        }
+    }
 
     // Initialize domain services
     val createTopicService = CreateTopicService(topicRepository, schemaValidator)
@@ -81,7 +86,7 @@ fun Application.configureApplication(config: Config) {
     val registerConsumerService = RegisterConsumerService(consumerRepository, topicRepository, consumerFactory, dispatcherManager)
     val unregisterConsumerService = UnregisterConsumerService(consumerRepository)
     val getHealthStatusService = GetHealthStatusService(consumerRepository) {
-        runBlocking { dispatcherManager.getRunningDispatchers() }
+        dispatcherManager.getRunningDispatchers()
     }
 
     // Configure Ktor plugins
@@ -115,6 +120,8 @@ fun Application.configureApplication(config: Config) {
             val status = when (cause) {
                 is com.eventstore.domain.exceptions.TopicNotFoundException -> HttpStatusCode.NotFound
                 is com.eventstore.domain.exceptions.ConsumerNotFoundException -> HttpStatusCode.NotFound
+                is com.eventstore.domain.exceptions.EventStorageException -> HttpStatusCode.InternalServerError
+                is com.eventstore.domain.exceptions.TopicConfigException -> HttpStatusCode.InternalServerError
                 is IllegalArgumentException -> HttpStatusCode.BadRequest
                 else -> HttpStatusCode.InternalServerError
             }
@@ -147,6 +154,16 @@ fun Application.configureApplication(config: Config) {
 
     // Middleware: Rate limiting (in-memory per IP per route)
     val rateBuckets = ConcurrentHashMap<String, RateBucket>()
+    
+    // Periodic cleanup of expired rate limit buckets
+    applicationScope.launch {
+        while (isActive) {
+            delay(60_000) // Every minute
+            val now = System.currentTimeMillis()
+            rateBuckets.entries.removeAll { it.value.resetAt < now }
+        }
+    }
+    
     intercept(ApplicationCallPipeline.Plugins) {
         val ip = call.request.headers["X-Forwarded-For"]?.split(",")?.firstOrNull()?.trim()
             ?: call.request.local.remoteHost
@@ -190,6 +207,7 @@ fun Application.configureApplication(config: Config) {
     environment.monitor.subscribe(ApplicationStopped) {
         runBlocking {
             dispatcherManager.stopAllDispatchers()
+            applicationScope.cancel()
         }
     }
 

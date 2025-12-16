@@ -11,6 +11,7 @@ interface TopicRepository {
     suspend fun getTopic(name: String): Topic?
     suspend fun topicExists(name: String): Boolean
     suspend fun updateSequence(name: String, sequence: Long)
+    suspend fun getAndIncrementSequence(topicName: String): Long
     suspend fun updateSchemas(name: String, schemas: List<Schema>): Topic
     suspend fun getAllTopics(): List<Topic>
 }

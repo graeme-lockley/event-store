@@ -5,6 +5,7 @@ import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.EventRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -14,7 +15,7 @@ class DispatcherManager(
 ) : EventDispatcher {
     private val dispatchers = mutableMapOf<String, TopicDispatcher>()
     private val mutex = Mutex()
-    private val scope = CoroutineScope(Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     suspend fun startDispatcher(topic: String): Boolean {
         return mutex.withLock {

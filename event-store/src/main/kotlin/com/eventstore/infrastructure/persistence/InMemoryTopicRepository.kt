@@ -43,6 +43,17 @@ class InMemoryTopicRepository : TopicRepository {
         }
     }
 
+    override suspend fun getAndIncrementSequence(topicName: String): Long {
+        return mutex.withLock {
+            val current = topics[topicName]
+                ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicName)
+
+            val nextSequence = current.sequence + 1
+            topics[topicName] = current.copy(sequence = nextSequence)
+            nextSequence
+        }
+    }
+
     override suspend fun updateSchemas(name: String, schemas: List<Schema>): Topic {
         return mutex.withLock {
             val current = topics[name]

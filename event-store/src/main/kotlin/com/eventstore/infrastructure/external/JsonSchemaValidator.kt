@@ -7,9 +7,10 @@ import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion
+import java.util.concurrent.ConcurrentHashMap
 
 class JsonSchemaValidator(private val objectMapper: ObjectMapper = ObjectMapper()) : SchemaValidator {
-    private val validators = mutableMapOf<String, com.networknt.schema.JsonSchema>()
+    private val validators = ConcurrentHashMap<String, com.networknt.schema.JsonSchema>()
     private val factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7)
 
     override fun registerSchemas(topic: String, schemas: List<Schema>) {

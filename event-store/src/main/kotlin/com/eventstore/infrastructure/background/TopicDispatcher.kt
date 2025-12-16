@@ -8,6 +8,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.slf4j.LoggerFactory
+import java.util.concurrent.ConcurrentHashMap
 
 class TopicDispatcher(
     private val topic: String,
@@ -20,7 +21,7 @@ class TopicDispatcher(
     private val _isRunning = MutableStateFlow(false)
     val isRunning: StateFlow<Boolean> = _isRunning
 
-    private val retryState = mutableMapOf<String, RetryState>()
+    private val retryState = ConcurrentHashMap<String, RetryState>()
     private val maxRetries = 5
     private val baseRetryDelayMs = 1000L
 
@@ -41,6 +42,8 @@ class TopicDispatcher(
                     checkAndDeliverEvents()
                     delay(checkIntervalMs)
                 }
+            } catch (e: Exception) {
+                logger.error("Dispatcher for topic $topic encountered an error and will stop", e)
             } finally {
                 _isRunning.value = false
             }
@@ -76,6 +79,7 @@ class TopicDispatcher(
         }
 
         val eventsToDeliver = mutableListOf<com.eventstore.domain.Event>()
+        val topicToLatestEventId = mutableMapOf<String, String>()
 
         // Check each topic the consumer is interested in
         for ((topicName, lastEventIdStr) in consumer.topics) {
@@ -93,11 +97,8 @@ class TopicDispatcher(
 
                 if (events.isNotEmpty()) {
                     eventsToDeliver.addAll(events)
-
-                    // Update the last consumed event ID
-                    val latestEventId = events.last().id.value
-                    val updatedConsumer = consumer.withUpdatedLastEventId(topicName, latestEventId)
-                    consumerRepository.save(updatedConsumer)
+                    // Track the latest event ID for this topic (will update consumer state only after successful delivery)
+                    topicToLatestEventId[topicName] = events.last().id.value
                 }
             } catch (e: Exception) {
                 logger.error("Failed to deliver events to consumer ${consumer.id} for topic $topicName", e)
@@ -112,6 +113,13 @@ class TopicDispatcher(
         val result = consumer.deliver(eventsToDeliver)
 
         if (result.success) {
+            // Update consumer state only after successful delivery
+            var updatedConsumer = consumer
+            for ((topicName, latestEventId) in topicToLatestEventId) {
+                updatedConsumer = updatedConsumer.withUpdatedLastEventId(topicName, latestEventId)
+            }
+            consumerRepository.save(updatedConsumer)
+            
             // Reset retry state on success
             retryState.remove(consumer.id)
         } else {

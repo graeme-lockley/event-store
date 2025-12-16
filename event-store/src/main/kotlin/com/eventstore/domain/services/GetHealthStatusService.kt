@@ -10,7 +10,7 @@ data class HealthStatus(
 
 class GetHealthStatusService(
     private val consumerRepository: ConsumerRepository,
-    private val runningDispatchers: () -> List<String>
+    private val runningDispatchers: suspend () -> List<String>
 ) {
     suspend fun execute(): HealthStatus {
         return HealthStatus(

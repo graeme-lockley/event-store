@@ -21,3 +21,7 @@ class ConsumerNotFoundException(consumerId: String) : DomainException("Consumer 
 
 class InvalidConsumerRegistrationException(message: String) : DomainException("Invalid consumer registration: $message")
 
+class EventStorageException(message: String, cause: Throwable? = null) : DomainException("Event storage failed: $message", cause)
+
+class TopicConfigException(message: String, cause: Throwable? = null) : DomainException("Topic configuration failed: $message", cause)
+

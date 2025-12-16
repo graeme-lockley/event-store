@@ -1,5 +1,6 @@
 package com.eventstore.domain.services
 
+import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
 import com.eventstore.domain.exceptions.InvalidEventPayloadException
 import com.eventstore.domain.exceptions.TopicNotFoundException
@@ -40,36 +41,26 @@ class PublishEventsService(
             schemaValidator.validateEvent(request.topic, request.type, request.payload)
         }
 
-        // Store all events
-        val eventIds = mutableListOf<String>()
+        // Generate all event IDs first (atomic sequence increments)
         val timestamp = Instant.now()
+        val events = mutableListOf<Event>()
 
         for (request in requests) {
-            val topic = topicRepository.getTopic(request.topic)
-                ?: throw TopicNotFoundException(request.topic)
-
-            val nextSequence = topic.nextSequence()
+            // Atomically get and increment sequence to prevent race conditions
+            val nextSequence = topicRepository.getAndIncrementSequence(request.topic)
             val eventId = EventId.create(request.topic, nextSequence)
-
-            eventRepository.storeEvent(
-                topic = request.topic,
-                type = request.type,
-                payload = request.payload,
-                eventId = eventId,
-                timestamp = timestamp
-            )
-
-            // Update topic sequence
-            topicRepository.updateSequence(request.topic, nextSequence)
-
-            eventIds.add(eventId.value)
+            val event = Event(eventId, timestamp, request.type, request.payload)
+            events.add(event)
         }
+
+        // Store all events in bulk for better atomicity
+        val storedEvents = eventRepository.storeEvents(events)
 
         // Notify dispatcher that events have been published
         val topicsWithEvents = requests.map { it.topic }.toSet()
         eventDispatcher.notifyEventsPublished(topicsWithEvents)
 
-        return eventIds
+        return storedEvents.map { it.id.value }
     }
 }
 

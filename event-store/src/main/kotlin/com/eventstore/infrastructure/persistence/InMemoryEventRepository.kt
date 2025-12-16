@@ -28,6 +28,30 @@ class InMemoryEventRepository : EventRepository {
         }
     }
 
+    override suspend fun storeEvents(events: List<Event>): List<Event> {
+        if (events.isEmpty()) {
+            return emptyList()
+        }
+
+        return mutex.withLock {
+            val storedEvents = mutableListOf<Event>()
+            try {
+                for (event in events) {
+                    val eventsList = eventsByTopic.getOrPut(event.id.topic) { mutableListOf() }
+                    eventsList.add(event)
+                    storedEvents.add(event)
+                }
+                storedEvents
+            } catch (e: Exception) {
+                // Rollback: remove events that were added
+                for (event in storedEvents) {
+                    eventsByTopic[event.id.topic]?.remove(event)
+                }
+                throw e
+            }
+        }
+    }
+
     override suspend fun getEvent(topic: String, eventId: EventId): Event? {
         return mutex.withLock {
             eventsByTopic[topic]?.firstOrNull { it.id == eventId }
