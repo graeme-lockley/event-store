@@ -1,4 +1,4 @@
-package com.eventstore.domain.services
+package com.eventstore.domain.services.consumer
 
 /**
  * Sealed interface for consumer registration requests.

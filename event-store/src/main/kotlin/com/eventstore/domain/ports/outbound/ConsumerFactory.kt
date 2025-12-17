@@ -1,7 +1,7 @@
 package com.eventstore.domain.ports.outbound
 
 import com.eventstore.domain.Consumer
-import com.eventstore.domain.services.ConsumerRegistrationRequest
+import com.eventstore.domain.services.consumer.ConsumerRegistrationRequest
 
 /**
  * Factory interface for creating Consumer instances based on registration requests.

@@ -1,6 +1,8 @@
 package com.eventstore.interfaces.http.dto
 
-import com.eventstore.domain.services.*
+import com.eventstore.domain.services.consumer.AzureEventGridConsumerRegistrationRequest
+import com.eventstore.domain.services.consumer.ConsumerRegistrationRequest
+import com.eventstore.domain.services.consumer.HttpConsumerRegistrationRequest
 
 /**
  * Mapper to convert HTTP DTOs to domain registration requests.

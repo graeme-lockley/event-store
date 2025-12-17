@@ -1,4 +1,7 @@
-package com.eventstore.domain.services
+package com.eventstore.domain.services.topic
+
+import com.eventstore.domain.services.PopulateEventStoreState
+import com.eventstore.domain.services.createEventStore
 
 import com.eventstore.domain.Schema
 import com.eventstore.domain.Topic

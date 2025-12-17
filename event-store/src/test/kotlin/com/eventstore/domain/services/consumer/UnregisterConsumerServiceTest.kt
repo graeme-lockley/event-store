@@ -1,4 +1,8 @@
-package com.eventstore.domain.services
+package com.eventstore.domain.services.consumer
+
+import com.eventstore.domain.services.PopulateEventStoreState
+import com.eventstore.domain.services.createEventStore
+import com.eventstore.domain.services.event.InMemoryEventDispatcher
 
 import com.eventstore.domain.exceptions.ConsumerNotFoundException
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl

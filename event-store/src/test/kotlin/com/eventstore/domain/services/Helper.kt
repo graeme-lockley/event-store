@@ -1,5 +1,7 @@
 package com.eventstore.domain.services
 
+import com.eventstore.domain.services.event.EventRequest
+
 import com.eventstore.domain.EventId
 import com.eventstore.domain.Schema
 import com.eventstore.domain.exceptions.TopicNotFoundException

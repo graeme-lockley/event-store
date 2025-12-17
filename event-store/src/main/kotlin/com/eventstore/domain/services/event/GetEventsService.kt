@@ -1,4 +1,4 @@
-package com.eventstore.domain.services
+package com.eventstore.domain.services.event
 
 import com.eventstore.domain.Event
 import com.eventstore.domain.EventId

@@ -4,7 +4,10 @@ import com.eventstore.domain.Consumer
 import com.eventstore.domain.consumers.HttpConsumer
 import com.eventstore.domain.consumers.InMemoryConsumer
 import com.eventstore.domain.ports.outbound.ConsumerFactory
-import com.eventstore.domain.services.*
+import com.eventstore.domain.services.consumer.AzureEventGridConsumerRegistrationRequest
+import com.eventstore.domain.services.consumer.ConsumerRegistrationRequest
+import com.eventstore.domain.services.consumer.HttpConsumerRegistrationRequest
+import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import java.net.URI
 import java.util.*
 

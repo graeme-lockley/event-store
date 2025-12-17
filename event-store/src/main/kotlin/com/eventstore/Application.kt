@@ -2,7 +2,14 @@ package com.eventstore
 
 import com.eventstore.domain.ports.outbound.ConsumerFactory
 import com.eventstore.domain.ports.outbound.*
-import com.eventstore.domain.services.*
+import com.eventstore.domain.services.consumer.RegisterConsumerService
+import com.eventstore.domain.services.consumer.UnregisterConsumerService
+import com.eventstore.domain.services.event.GetEventsService
+import com.eventstore.domain.services.event.PublishEventsService
+import com.eventstore.domain.services.health.GetHealthStatusService
+import com.eventstore.domain.services.topic.CreateTopicService
+import com.eventstore.domain.services.topic.GetTopicsService
+import com.eventstore.domain.services.topic.UpdateTopicSchemasService
 import com.eventstore.infrastructure.background.DispatcherManager
 import com.eventstore.infrastructure.external.JsonSchemaValidator
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl

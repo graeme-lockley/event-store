@@ -1,4 +1,4 @@
-package com.eventstore.domain.services
+package com.eventstore.domain.services.topic
 
 import com.eventstore.domain.Topic
 import com.eventstore.domain.exceptions.TopicNotFoundException

@@ -1,4 +1,7 @@
-package com.eventstore.domain.services
+package com.eventstore.domain.services.event
+
+import com.eventstore.domain.services.PopulateEventStoreState
+import com.eventstore.domain.services.createEventStore
 
 import com.eventstore.domain.exceptions.TopicNotFoundException
 import kotlinx.coroutines.runBlocking

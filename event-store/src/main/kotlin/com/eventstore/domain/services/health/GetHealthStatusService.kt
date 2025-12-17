@@ -1,4 +1,4 @@
-package com.eventstore.domain.services
+package com.eventstore.domain.services.health
 
 import com.eventstore.domain.ports.outbound.ConsumerRepository
 

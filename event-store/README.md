@@ -30,9 +30,18 @@ event-store/
 │   │   ├── EventId.kt
 │   │   ├── exceptions/             # Domain exceptions
 │   │   ├── services/              # Domain services (use cases)
-│   │   │   ├── CreateTopicService.kt
-│   │   │   ├── PublishEventsService.kt
-│   │   │   └── ...
+│   │   │   ├── topic/
+│   │   │   │   ├── CreateTopicService.kt
+│   │   │   │   ├── GetTopicsService.kt
+│   │   │   │   └── UpdateTopicSchemasService.kt
+│   │   │   ├── event/
+│   │   │   │   ├── PublishEventsService.kt
+│   │   │   │   └── GetEventsService.kt
+│   │   │   ├── consumer/
+│   │   │   │   ├── RegisterConsumerService.kt
+│   │   │   │   └── UnregisterConsumerService.kt
+│   │   │   └── health/
+│   │   │       └── GetHealthStatusService.kt
 │   │   └── ports/                  # Ports (interfaces)
 │   │       └── outbound/          # Outbound ports (what domain needs)
 │   │           ├── TopicRepository.kt

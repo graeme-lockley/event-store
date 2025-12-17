@@ -1,7 +1,7 @@
 package com.eventstore.interfaces.http.routes
 
-import com.eventstore.domain.services.GetEventsService
-import com.eventstore.domain.services.PublishEventsService
+import com.eventstore.domain.services.event.GetEventsService
+import com.eventstore.domain.services.event.PublishEventsService
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -39,7 +39,7 @@ fun Route.eventRoutes(
                 }
 
                 val eventRequests = requests.map { dto ->
-                    com.eventstore.domain.services.EventRequest(
+                    com.eventstore.domain.services.event.EventRequest(
                         topic = dto.topic,
                         type = dto.type,
                         payload = dto.payload

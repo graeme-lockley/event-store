@@ -1,6 +1,6 @@
 package com.eventstore.interfaces.http.routes
 
-import com.eventstore.domain.services.GetHealthStatusService
+import com.eventstore.domain.services.health.GetHealthStatusService
 import com.eventstore.interfaces.http.dto.HealthResponse
 import io.ktor.http.*
 import io.ktor.server.application.*

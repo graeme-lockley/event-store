@@ -1,4 +1,4 @@
-package com.eventstore.domain.services
+package com.eventstore.domain.services.consumer
 
 import com.eventstore.domain.exceptions.InvalidConsumerRegistrationException
 import com.eventstore.domain.exceptions.TopicNotFoundException

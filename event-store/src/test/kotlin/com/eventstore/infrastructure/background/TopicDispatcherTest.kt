@@ -2,10 +2,10 @@ package com.eventstore.infrastructure.background
 
 import com.eventstore.domain.Event
 import com.eventstore.domain.ports.outbound.DeliveryResult
-import com.eventstore.domain.services.InMemoryConsumerRegistrationRequest
-import com.eventstore.domain.services.RegisterConsumerService
+import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
+import com.eventstore.domain.services.consumer.RegisterConsumerService
 import com.eventstore.domain.services.createEventStore
-import com.eventstore.domain.services.InMemoryEventDispatcher
+import com.eventstore.domain.services.event.InMemoryEventDispatcher
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test

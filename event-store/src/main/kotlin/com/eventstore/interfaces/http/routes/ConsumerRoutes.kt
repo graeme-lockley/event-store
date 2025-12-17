@@ -1,8 +1,8 @@
 package com.eventstore.interfaces.http.routes
 
 import com.eventstore.domain.ports.outbound.ConsumerRepository
-import com.eventstore.domain.services.RegisterConsumerService
-import com.eventstore.domain.services.UnregisterConsumerService
+import com.eventstore.domain.services.consumer.RegisterConsumerService
+import com.eventstore.domain.services.consumer.UnregisterConsumerService
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
