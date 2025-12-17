@@ -10,7 +10,12 @@ class CreateTopicService(
     private val topicRepository: TopicRepository,
     private val schemaValidator: SchemaValidator
 ) {
-    suspend fun execute(name: String, schemas: List<Schema>): Topic {
+    suspend fun execute(
+        name: String,
+        schemas: List<Schema>,
+        tenantId: String = "default",
+        namespaceId: String = "default"
+    ): Topic {
         Schema.unique(schemas)
 
         // Validate schemas have required fields
@@ -24,12 +29,12 @@ class CreateTopicService(
         }
 
         // Check if topic already exists
-        if (topicRepository.topicExists(name)) {
+        if (topicRepository.topicExists(name, tenantId, namespaceId)) {
             throw TopicAlreadyExistsException(name)
         }
 
         // Create topic
-        val topic = topicRepository.createTopic(name, schemas)
+        val topic = topicRepository.createTopic(name, schemas, tenantId, namespaceId)
 
         // Register schemas with validator
         schemaValidator.registerSchemas(name, schemas)

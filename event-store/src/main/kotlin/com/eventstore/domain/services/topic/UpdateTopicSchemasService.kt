@@ -10,7 +10,12 @@ class UpdateTopicSchemasService(
     private val topicRepository: TopicRepository,
     private val schemaValidator: SchemaValidator
 ) {
-    suspend fun execute(topicName: String, newSchemas: List<Schema>): Topic {
+    suspend fun execute(
+        topicName: String,
+        newSchemas: List<Schema>,
+        tenantId: String = "default",
+        namespaceId: String = "default"
+    ): Topic {
         Schema.unique(newSchemas)
 
         // Validate schemas have required fields
@@ -24,7 +29,7 @@ class UpdateTopicSchemasService(
         }
 
         // Load current topic
-        val currentTopic = topicRepository.getTopic(topicName)
+        val currentTopic = topicRepository.getTopic(topicName, tenantId, namespaceId)
             ?: throw TopicNotFoundException(topicName)
 
         // Extract existing eventTypes
@@ -40,7 +45,7 @@ class UpdateTopicSchemasService(
         }
 
         // Update schemas
-        val updatedTopic = topicRepository.updateSchemas(topicName, newSchemas)
+        val updatedTopic = topicRepository.updateSchemas(topicName, newSchemas, tenantId, namespaceId)
 
         // Re-register schemas with validator
         schemaValidator.registerSchemas(topicName, newSchemas)

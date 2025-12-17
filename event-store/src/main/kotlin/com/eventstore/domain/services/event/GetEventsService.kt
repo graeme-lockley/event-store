@@ -14,20 +14,26 @@ class GetEventsService(
         topic: String,
         sinceEventId: String? = null,
         date: String? = null,
-        limit: Int? = null
+        limit: Int? = null,
+        tenantId: String = "default",
+        namespaceId: String = "default"
     ): List<Event> {
         // Validate topic exists
-        if (!topicRepository.topicExists(topic)) {
+        if (!topicRepository.topicExists(topic, tenantId, namespaceId)) {
             throw TopicNotFoundException(topic)
         }
 
         val sinceId = sinceEventId?.let { EventId(it) }
+        val tenantForStorage = if (tenantId == "default" && namespaceId == "default") null else tenantId
+        val namespaceForStorage = if (tenantId == "default" && namespaceId == "default") null else namespaceId
 
         return eventRepository.getEvents(
             topic = topic,
             sinceEventId = sinceId,
             date = date,
-            limit = limit
+            limit = limit,
+            tenantId = tenantForStorage,
+            namespaceId = namespaceForStorage
         )
     }
 }

@@ -23,7 +23,7 @@ class GetTopicsServiceTest {
 
     @Test
     fun `should get all topics`() = runTest {
-        val result = service.execute()
+        val result = service.list()
 
         assertEquals(listOf("user-events", "other-user-events"), result.map { it.name })
     }
@@ -32,7 +32,7 @@ class GetTopicsServiceTest {
     fun `should get single topic by name`() = runTest {
         val topicName = "user-events"
 
-        val result = service.execute(topicName)
+        val result = service.get(topicName)
 
         assertEquals(topicName, result.name)
     }
@@ -42,7 +42,7 @@ class GetTopicsServiceTest {
         val topicName = "unknown-topic"
 
         assertThrows<TopicNotFoundException> {
-            service.execute(topicName)
+            service.get(topicName)
         }
     }
 }

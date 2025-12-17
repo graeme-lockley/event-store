@@ -13,7 +13,9 @@ import java.time.Instant
 data class EventRequest(
     val topic: String,
     val type: String,
-    val payload: Map<String, Any>
+    val payload: Map<String, Any>,
+    val tenantId: String? = null,
+    val namespaceId: String? = null
 )
 
 class PublishEventsService(
@@ -28,7 +30,9 @@ class PublishEventsService(
         // Validate all events first
         for (request in requests) {
             // Validate topic exists
-            if (!topicRepository.topicExists(request.topic)) {
+            val tenantId = request.tenantId ?: "default"
+            val namespaceId = request.namespaceId ?: "default"
+            if (!topicRepository.topicExists(request.topic, tenantId, namespaceId)) {
                 throw TopicNotFoundException(request.topic)
             }
 
@@ -47,14 +51,25 @@ class PublishEventsService(
 
         for (request in requests) {
             // Atomically get and increment sequence to prevent race conditions
-            val nextSequence = topicRepository.getAndIncrementSequence(request.topic)
-            val eventId = EventId.create(request.topic, nextSequence)
+            val tenantId = request.tenantId ?: "default"
+            val namespaceId = request.namespaceId ?: "default"
+            val useLegacy = tenantId == "default" && namespaceId == "default"
+            val nextSequence = topicRepository.getAndIncrementSequence(request.topic, tenantId, namespaceId)
+            val eventId = if (useLegacy) {
+                EventId.create(request.topic, nextSequence)
+            } else {
+                EventId.create(request.topic, nextSequence, tenantId, namespaceId)
+            }
             val event = Event(eventId, timestamp, request.type, request.payload)
             events.add(event)
         }
 
         // Store all events in bulk for better atomicity
-        val storedEvents = eventRepository.storeEvents(events)
+        val storedEvents = eventRepository.storeEvents(
+            events,
+            tenantId = events.firstOrNull()?.id?.tenantId,
+            namespaceId = events.firstOrNull()?.id?.namespaceId
+        )
 
         // Notify dispatcher that events have been published
         val topicsWithEvents = requests.map { it.topic }.toSet()

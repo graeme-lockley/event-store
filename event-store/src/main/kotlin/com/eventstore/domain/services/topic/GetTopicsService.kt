@@ -7,13 +7,10 @@ import com.eventstore.domain.ports.outbound.TopicRepository
 class GetTopicsService(
     private val topicRepository: TopicRepository
 ) {
-    suspend fun execute(): List<Topic> {
-        return topicRepository.getAllTopics()
-    }
+    suspend fun list(tenantId: String = "default", namespaceId: String = "default"): List<Topic> =
+        topicRepository.getAllTopics().filter { it.tenantId == tenantId && it.namespaceId == namespaceId }
 
-    suspend fun execute(topicName: String): Topic {
-        return topicRepository.getTopic(topicName)
-            ?: throw TopicNotFoundException(topicName)
-    }
+    suspend fun get(topicName: String, tenantId: String = "default", namespaceId: String = "default"): Topic =
+        topicRepository.getTopic(topicName, tenantId, namespaceId) ?: throw TopicNotFoundException(topicName)
 }
 

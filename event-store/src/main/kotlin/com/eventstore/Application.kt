@@ -12,6 +12,11 @@ import com.eventstore.domain.services.tenant.CreateTenantService
 import com.eventstore.domain.services.tenant.DeleteTenantService
 import com.eventstore.domain.services.tenant.GetTenantService
 import com.eventstore.domain.services.tenant.UpdateTenantService
+import com.eventstore.domain.services.namespace.CreateNamespaceService
+import com.eventstore.domain.services.namespace.DeleteNamespaceService
+import com.eventstore.domain.services.namespace.GetNamespaceService
+import com.eventstore.domain.services.namespace.UpdateNamespaceService
+import com.eventstore.domain.services.namespace.CreateNamespaceRequest
 import com.eventstore.domain.services.topic.CreateTopicService
 import com.eventstore.domain.services.topic.GetTopicsService
 import com.eventstore.domain.services.topic.UpdateTopicSchemasService
@@ -22,13 +27,16 @@ import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import com.eventstore.infrastructure.persistence.FileSystemEventRepository
 import com.eventstore.infrastructure.persistence.FileSystemTopicRepository
 import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
+import com.eventstore.infrastructure.projections.InMemoryNamespaceRepository
 import com.eventstore.infrastructure.projections.InMemoryTenantRepository
 import com.eventstore.infrastructure.projections.TenantProjectionService
+import com.eventstore.infrastructure.projections.NamespaceProjectionService
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import com.eventstore.interfaces.http.routes.consumerRoutes
 import com.eventstore.interfaces.http.routes.eventRoutes
 import com.eventstore.interfaces.http.routes.healthRoutes
+import com.eventstore.interfaces.http.routes.namespaceRoutes
 import com.eventstore.interfaces.http.routes.tenantRoutes
 import com.eventstore.interfaces.http.routes.topicRoutes
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -113,11 +121,21 @@ fun Application.configureApplication(config: Config) {
     val tenantProjectionService = TenantProjectionService(tenantProjectionRepository)
     val tenantTopic = SystemTopics.qualified(SystemTopics.TENANTS_TOPIC)
 
+    val namespaceProjectionRepository = InMemoryNamespaceRepository()
+    val namespaceProjectionService = NamespaceProjectionService(namespaceProjectionRepository)
+    val namespaceTopic = SystemTopics.qualified(SystemTopics.NAMESPACES_TOPIC)
+
     runBlocking {
         registerConsumerService.execute(
             InMemoryConsumerRegistrationRequest(
                 handler = { events -> tenantProjectionService.handleEvents(events) },
                 topics = mapOf(tenantTopic to null)
+            )
+        )
+        registerConsumerService.execute(
+            InMemoryConsumerRegistrationRequest(
+                handler = { events -> namespaceProjectionService.handleEvents(events) },
+                topics = mapOf(namespaceTopic to null)
             )
         )
     }
@@ -136,6 +154,28 @@ fun Application.configureApplication(config: Config) {
     val getTenantService = GetTenantService(tenantProjectionService)
     val updateTenantService = UpdateTenantService(eventRepository, topicRepository, tenantProjectionService, config)
     val deleteTenantService = DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config)
+    val createNamespaceService = CreateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config)
+    val getNamespaceService = GetNamespaceService(namespaceProjectionService)
+    val updateNamespaceService = UpdateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config)
+    val deleteNamespaceService = DeleteNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config)
+
+    // Ensure default/default namespace exists for legacy endpoints when multi-tenant is enabled
+    if (config.multiTenantEnabled) {
+        runBlocking {
+            if (tenantProjectionService.tenantExists("default") &&
+                !namespaceProjectionService.namespaceExists("default", "default")) {
+                runCatching {
+                    createNamespaceService.execute(
+                        CreateNamespaceRequest(
+                            tenantId = "default",
+                            namespaceId = "default",
+                            name = "Default"
+                        )
+                    )
+                }
+            }
+        }
+    }
 
     // Configure Ktor plugins
     install(ContentNegotiation) {
@@ -249,6 +289,7 @@ fun Application.configureApplication(config: Config) {
         eventRoutes(publishEventsService, getEventsService)
         consumerRoutes(registerConsumerService, unregisterConsumerService, consumerRepository)
         tenantRoutes(createTenantService, getTenantService, updateTenantService, deleteTenantService)
+        namespaceRoutes(createNamespaceService, getNamespaceService, updateNamespaceService, deleteNamespaceService)
         healthRoutes(getHealthStatusService)
     }
 
