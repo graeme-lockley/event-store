@@ -29,7 +29,6 @@ class FileSystemEventRepository(
     private val logger = LoggerFactory.getLogger(FileSystemEventRepository::class.java)
 
     init {
-        // Ensure data directory exists
         try {
             Files.createDirectories(dataDir)
         } catch (e: Exception) {
@@ -37,7 +36,28 @@ class FileSystemEventRepository(
         }
     }
 
-    private fun getEventFilePath(topic: String, eventId: EventId): Path {
+    private fun resolveBaseDir(
+        topic: String,
+        tenantId: String?,
+        namespaceId: String?,
+        eventId: EventId? = null
+    ): Path {
+        val resolvedTenant = tenantId ?: eventId?.tenantId
+        val resolvedNamespace = namespaceId ?: eventId?.namespaceId
+
+        return if (resolvedTenant != null && resolvedNamespace != null) {
+            dataDir.resolve(resolvedTenant).resolve(resolvedNamespace).resolve(topic)
+        } else {
+            dataDir.resolve(topic)
+        }
+    }
+
+    private fun getEventFilePath(
+        topic: String,
+        eventId: EventId,
+        tenantId: String?,
+        namespaceId: String?
+    ): Path {
         val sequence = eventId.sequence
         
         // Hierarchical grouping: millions / ten-thousands / hundreds
@@ -49,7 +69,7 @@ class FileSystemEventRepository(
         val group3 = String.format("%02d", (sequence / 100) % 100)
 
         val fileName = "${eventId.value}.json"
-        return dataDir.resolve(topic)
+        return resolveBaseDir(topic, tenantId, namespaceId, eventId)
             .resolve(group1)
             .resolve(group2)
             .resolve(group3)
@@ -61,17 +81,17 @@ class FileSystemEventRepository(
         type: String,
         payload: Map<String, Any>,
         eventId: EventId,
-        timestamp: Instant
+        timestamp: Instant,
+        tenantId: String?,
+        namespaceId: String?
     ): Event {
         return withContext(Dispatchers.IO) {
             try {
                 val event = Event(eventId, timestamp, type, payload)
-                val filePath = getEventFilePath(topic, eventId)
+                val filePath = getEventFilePath(topic, eventId, tenantId, namespaceId)
 
-                // Ensure directory exists
                 Files.createDirectories(filePath.parent)
 
-                // Write event to file
                 val eventFile = EventFile(
                     id = eventId.value,
                     timestamp = timestamp.toString(),
@@ -90,7 +110,11 @@ class FileSystemEventRepository(
         }
     }
 
-    override suspend fun storeEvents(events: List<Event>): List<Event> {
+    override suspend fun storeEvents(
+        events: List<Event>,
+        tenantId: String?,
+        namespaceId: String?
+    ): List<Event> {
         if (events.isEmpty()) {
             return emptyList()
         }
@@ -101,12 +125,10 @@ class FileSystemEventRepository(
 
             try {
                 for (event in events) {
-                    val filePath = getEventFilePath(event.id.topic, event.id)
+                    val filePath = getEventFilePath(event.id.topic, event.id, tenantId, namespaceId)
 
-                    // Ensure directory exists
                     Files.createDirectories(filePath.parent)
 
-                    // Write event to file
                     val eventFile = EventFile(
                         id = event.id.value,
                         timestamp = event.timestamp.toString(),
@@ -121,7 +143,6 @@ class FileSystemEventRepository(
                 }
                 storedEvents
             } catch (e: Exception) {
-                // Best-effort cleanup: attempt to remove files that were written
                 for (path in storedPaths) {
                     try {
                         if (Files.exists(path)) {
@@ -136,15 +157,20 @@ class FileSystemEventRepository(
         }
     }
 
-    override suspend fun getEvent(topic: String, eventId: EventId): Event? {
+    override suspend fun getEvent(
+        topic: String,
+        eventId: EventId,
+        tenantId: String?,
+        namespaceId: String?
+    ): Event? {
         return withContext(Dispatchers.IO) {
             try {
-                val filePath = getEventFilePath(topic, eventId)
-                
+                val filePath = getEventFilePath(topic, eventId, tenantId, namespaceId)
+
                 if (!Files.exists(filePath)) {
                     return@withContext null
                 }
-                
+
                 val json = Files.readString(filePath)
                 val eventFile: EventFile = objectMapper.readValue(json)
                 Event(
@@ -164,39 +190,36 @@ class FileSystemEventRepository(
         topic: String,
         sinceEventId: EventId?,
         date: String?,
-        limit: Int?
+        limit: Int?,
+        tenantId: String?,
+        namespaceId: String?
     ): List<Event> {
         return withContext(Dispatchers.IO) {
-            val topicDir = dataDir.resolve(topic)
+            val topicDir = resolveBaseDir(topic, tenantId, namespaceId, sinceEventId)
 
             if (!Files.exists(topicDir)) {
                 return@withContext emptyList()
             }
 
-            // Use priority queue when limit is specified to maintain only top N events in memory
-            // Max heap: comparator reverses order so we keep smallest (earliest) events
             val eventCollection: MutableCollection<Event> = if (limit != null && limit > 0) {
                 PriorityQueue(limit + 1) { a, b -> compareEventIds(b.id, a.id) }
             } else {
                 mutableListOf()
             }
 
-            // Calculate starting point if sinceEventId is provided
             val startSequence = sinceEventId?.sequence ?: 0L
             val startGroup1 = (startSequence / 1_000_000).toInt()
             val startGroup2 = ((startSequence / 10_000) % 100).toInt()
             val startGroup3 = ((startSequence / 100) % 100).toInt()
 
-            // Flag to break out of nested loops when limit is reached (for MutableList case)
             var shouldStop = false
 
-            // Traverse directories in sequence order
             Files.list(topicDir).use { group1Dirs ->
                 group1Dirs.filter { Files.isDirectory(it) }
-                    .sorted() // Natural string sort works for zero-padded numbers
+                    .sorted()
                     .forEach group1Loop@{ group1Dir ->
                         if (shouldStop) return@group1Loop
-                        
+
                         val group1 = group1Dir.fileName.toString().toIntOrNull() ?: return@group1Loop
                         if (group1 < startGroup1) return@group1Loop
 
@@ -205,7 +228,7 @@ class FileSystemEventRepository(
                                 .sorted()
                                 .forEach group2Loop@{ group2Dir ->
                                     if (shouldStop) return@group2Loop
-                                    
+
                                     val group2 = group2Dir.fileName.toString().toIntOrNull() ?: return@group2Loop
                                     if (group1 == startGroup1 && group2 < startGroup2) return@group2Loop
 
@@ -214,23 +237,21 @@ class FileSystemEventRepository(
                                             .sorted()
                                             .forEach group3Loop@{ group3Dir ->
                                                 if (shouldStop) return@group3Loop
-                                                
+
                                                 val group3 = group3Dir.fileName.toString().toIntOrNull() ?: return@group3Loop
-                                                if (group1 == startGroup1 && 
-                                                    group2 == startGroup2 && 
+                                                if (group1 == startGroup1 &&
+                                                    group2 == startGroup2 &&
                                                     group3 < startGroup3) return@group3Loop
 
-                                                // Read events in this directory
                                                 Files.list(group3Dir).use { files ->
-                                                    files.filter { 
-                                                        Files.isRegularFile(it) && 
+                                                    files.filter {
+                                                        Files.isRegularFile(it) &&
                                                         it.fileName.toString().endsWith(".json")
                                                     }
-                                                    .sorted() // Sort by filename (which contains sequence)
+                                                    .sorted()
                                                     .forEach fileLoop@{ path ->
-                                                        // Early exit if limit reached and using list
-                                                        if (limit != null && 
-                                                            limit > 0 && 
+                                                        if (limit != null &&
+                                                            limit > 0 &&
                                                             eventCollection !is PriorityQueue &&
                                                             eventCollection.size >= limit) {
                                                             shouldStop = true
@@ -247,8 +268,7 @@ class FileSystemEventRepository(
                                                                 payload = eventFile.payload
                                                             )
 
-                                                            // Apply filters
-                                                            if (sinceEventId != null && 
+                                                            if (sinceEventId != null &&
                                                                 compareEventIds(event.id, sinceEventId) <= 0) {
                                                                 return@fileLoop
                                                             }
@@ -262,7 +282,6 @@ class FileSystemEventRepository(
                                                                 }
                                                             }
 
-                                                            // Add to collection
                                                             if (eventCollection is PriorityQueue) {
                                                                 eventCollection.add(event)
                                                                 if (eventCollection.size > limit!!) {
@@ -270,7 +289,6 @@ class FileSystemEventRepository(
                                                                 }
                                                             } else {
                                                                 (eventCollection as MutableList).add(event)
-                                                                // Check if we've reached the limit
                                                                 if (limit != null && limit > 0 && eventCollection.size >= limit) {
                                                                     shouldStop = true
                                                                     return@fileLoop
@@ -288,17 +306,11 @@ class FileSystemEventRepository(
                     }
             }
 
-            // Convert to sorted list
-            // Optimization: When date is not required, events are already in sequence order
-            // from our traversal, so we can skip sorting for MutableList.
-            // PriorityQueue always needs sorting since it's a max-heap.
             val sortedEvents = if (eventCollection is PriorityQueue) {
                 eventCollection.sortedWith { a, b -> compareEventIds(a.id, b.id) }
             } else if (date != null) {
-                // Date filtering may have reordered events, so sort is needed
                 (eventCollection as MutableList<Event>).sortedWith { a, b -> compareEventIds(a.id, b.id) }
             } else {
-                // No date filter: events are already in sequence order from traversal
                 eventCollection.toList()
             }
 
@@ -306,19 +318,20 @@ class FileSystemEventRepository(
         }
     }
 
-    override suspend fun getLatestEventId(topic: String): EventId? {
-        val events = getEvents(topic)
+    override suspend fun getLatestEventId(
+        topic: String,
+        tenantId: String?,
+        namespaceId: String?
+    ): EventId? {
+        val events = getEvents(topic, tenantId = tenantId, namespaceId = namespaceId)
         return events.lastOrNull()?.id
     }
 
     private fun compareEventIds(id1: EventId, id2: EventId): Int {
-        // Compare topic names first
         if (id1.topic != id2.topic) {
             return id1.topic.compareTo(id2.topic)
         }
-
-        // Compare sequence numbers
         return id1.sequence.compareTo(id2.sequence)
     }
 }
-
+ 

@@ -4,21 +4,32 @@ import com.eventstore.domain.ports.outbound.ConsumerFactory
 import com.eventstore.domain.ports.outbound.*
 import com.eventstore.domain.services.consumer.RegisterConsumerService
 import com.eventstore.domain.services.consumer.UnregisterConsumerService
+import com.eventstore.domain.services.bootstrap.BootstrapService
 import com.eventstore.domain.services.event.GetEventsService
 import com.eventstore.domain.services.event.PublishEventsService
 import com.eventstore.domain.services.health.GetHealthStatusService
+import com.eventstore.domain.services.tenant.CreateTenantService
+import com.eventstore.domain.services.tenant.DeleteTenantService
+import com.eventstore.domain.services.tenant.GetTenantService
+import com.eventstore.domain.services.tenant.UpdateTenantService
 import com.eventstore.domain.services.topic.CreateTopicService
 import com.eventstore.domain.services.topic.GetTopicsService
 import com.eventstore.domain.services.topic.UpdateTopicSchemasService
 import com.eventstore.infrastructure.background.DispatcherManager
+import com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl
 import com.eventstore.infrastructure.external.JsonSchemaValidator
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import com.eventstore.infrastructure.persistence.FileSystemEventRepository
 import com.eventstore.infrastructure.persistence.FileSystemTopicRepository
 import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
+import com.eventstore.infrastructure.projections.InMemoryTenantRepository
+import com.eventstore.infrastructure.projections.TenantProjectionService
+import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import com.eventstore.interfaces.http.routes.consumerRoutes
 import com.eventstore.interfaces.http.routes.eventRoutes
 import com.eventstore.interfaces.http.routes.healthRoutes
+import com.eventstore.interfaces.http.routes.tenantRoutes
 import com.eventstore.interfaces.http.routes.topicRoutes
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
@@ -63,6 +74,10 @@ fun Application.configureApplication(config: Config) {
     val consumerRepository: ConsumerRepository = InMemoryConsumerRepository()
     val schemaValidator: SchemaValidator = JsonSchemaValidator(objectMapper)
     val consumerFactory: ConsumerFactory = ConsumerFactoryImpl()
+    val bootstrapService: BootstrapService = BootstrapServiceImpl(
+        eventRepository = eventRepository,
+        topicRepository = topicRepository
+    )
 
     // Initialize dispatcher manager
     val dispatcherManager = DispatcherManager(
@@ -70,8 +85,18 @@ fun Application.configureApplication(config: Config) {
         eventRepository = eventRepository
     )
 
+    // Consumer services (used for projection registration and HTTP routes)
+    val registerConsumerService =
+        RegisterConsumerService(consumerRepository, topicRepository, consumerFactory, dispatcherManager)
+    val unregisterConsumerService = UnregisterConsumerService(consumerRepository)
+
     // Create application scope for lifecycle management
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // Run bootstrap before loading schemas and dispatchers
+    runBlocking {
+        bootstrapService.run()
+    }
 
     // Load existing schemas on startup (non-blocking)
     environment.monitor.subscribe(ApplicationStarted) {
@@ -83,6 +108,20 @@ fun Application.configureApplication(config: Config) {
         }
     }
 
+    // Tenant projection consumer registration
+    val tenantProjectionRepository = InMemoryTenantRepository()
+    val tenantProjectionService = TenantProjectionService(tenantProjectionRepository)
+    val tenantTopic = SystemTopics.qualified(SystemTopics.TENANTS_TOPIC)
+
+    runBlocking {
+        registerConsumerService.execute(
+            InMemoryConsumerRegistrationRequest(
+                handler = { events -> tenantProjectionService.handleEvents(events) },
+                topics = mapOf(tenantTopic to null)
+            )
+        )
+    }
+
     // Initialize domain services
     val createTopicService = CreateTopicService(topicRepository, schemaValidator)
     val getTopicsService = GetTopicsService(topicRepository)
@@ -90,11 +129,13 @@ fun Application.configureApplication(config: Config) {
     val publishEventsService =
         PublishEventsService(topicRepository, eventRepository, schemaValidator, dispatcherManager)
     val getEventsService = GetEventsService(eventRepository, topicRepository)
-    val registerConsumerService = RegisterConsumerService(consumerRepository, topicRepository, consumerFactory, dispatcherManager)
-    val unregisterConsumerService = UnregisterConsumerService(consumerRepository)
     val getHealthStatusService = GetHealthStatusService(consumerRepository) {
         dispatcherManager.getRunningDispatchers()
     }
+    val createTenantService = CreateTenantService(eventRepository, topicRepository, tenantProjectionService, config)
+    val getTenantService = GetTenantService(tenantProjectionService)
+    val updateTenantService = UpdateTenantService(eventRepository, topicRepository, tenantProjectionService, config)
+    val deleteTenantService = DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config)
 
     // Configure Ktor plugins
     install(ContentNegotiation) {
@@ -207,6 +248,7 @@ fun Application.configureApplication(config: Config) {
         topicRoutes(createTopicService, getTopicsService, updateTopicSchemasService, dispatcherManager)
         eventRoutes(publishEventsService, getEventsService)
         consumerRoutes(registerConsumerService, unregisterConsumerService, consumerRepository)
+        tenantRoutes(createTenantService, getTenantService, updateTenantService, deleteTenantService)
         healthRoutes(getHealthStatusService)
     }
 

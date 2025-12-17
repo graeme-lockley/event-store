@@ -40,7 +40,7 @@ class FileSystemTopicRepositoryTest {
 
         repository.createTopic(name, schemas)
 
-        val configPath = tempDir.resolve("$name.json")
+        val configPath = tempDir.resolve("default").resolve("default").resolve("$name.json")
         assertTrue(Files.exists(configPath))
         assertTrue(Files.isRegularFile(configPath))
     }
@@ -143,7 +143,7 @@ class FileSystemTopicRepositoryTest {
         repository.createTopic("valid-topic", listOf(Schema(eventType = "user.created")))
 
         // Corrupt the file
-        val configPath = tempDir.resolve("valid-topic.json")
+        val configPath = tempDir.resolve("default").resolve("default").resolve("valid-topic.json")
         Files.writeString(configPath, "corrupted content")
 
         // getAllTopics should skip the corrupted file
@@ -171,7 +171,7 @@ class FileSystemTopicRepositoryTest {
         repository.createTopic(name, schemas)
 
         // Verify file exists and is readable
-        val configPath = tempDir.resolve("$name.json")
+        val configPath = tempDir.resolve("default").resolve("default").resolve("$name.json")
         assertTrue(Files.exists(configPath))
         val content = Files.readString(configPath)
         assertTrue(content.contains(name))
@@ -201,7 +201,7 @@ class FileSystemTopicRepositoryTest {
 
         repository.createTopic(name, schemas)
 
-        val configPath = tempDir.resolve("$name.json")
+        val configPath = tempDir.resolve("default").resolve("default").resolve("$name.json")
         assertTrue(Files.exists(configPath))
     }
 

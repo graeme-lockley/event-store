@@ -10,57 +10,66 @@ class InMemoryTopicRepository : TopicRepository {
     private val topics = mutableMapOf<String, Topic>()
     private val mutex = Mutex()
 
-    override suspend fun createTopic(name: String, schemas: List<Schema>): Topic {
+    override suspend fun createTopic(
+        name: String,
+        schemas: List<Schema>,
+        tenantId: String,
+        namespaceId: String
+    ): Topic {
         return mutex.withLock {
-            if (topics.containsKey(name)) {
+            val key = key(name, tenantId, namespaceId)
+            if (topics.containsKey(key)) {
                 throw com.eventstore.domain.exceptions.TopicAlreadyExistsException(name)
             }
 
-            val topic = Topic(name, 0, schemas)
-            topics[name] = topic
+            val topic = Topic(name, 0, schemas, tenantId, namespaceId)
+            topics[key] = topic
             topic
         }
     }
 
-    override suspend fun getTopic(name: String): Topic? {
+    override suspend fun getTopic(name: String, tenantId: String, namespaceId: String): Topic? {
         return mutex.withLock {
-            topics[name]
+            topics[key(name, tenantId, namespaceId)]
         }
     }
 
-    override suspend fun topicExists(name: String): Boolean {
+    override suspend fun topicExists(name: String, tenantId: String, namespaceId: String): Boolean {
         return mutex.withLock {
-            topics.containsKey(name)
+            topics.containsKey(key(name, tenantId, namespaceId))
         }
     }
 
-    override suspend fun updateSequence(name: String, sequence: Long) {
+    override suspend fun updateSequence(name: String, sequence: Long, tenantId: String, namespaceId: String) {
         mutex.withLock {
-            val current = topics[name]
+            val key = key(name, tenantId, namespaceId)
+            val current = topics[key]
                 ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(name)
 
-            topics[name] = current.copy(sequence = sequence)
+            topics[key] = current.copy(sequence = sequence)
         }
     }
 
-    override suspend fun getAndIncrementSequence(topicName: String): Long {
+    override suspend fun getAndIncrementSequence(topicName: String, tenantId: String, namespaceId: String): Long {
         return mutex.withLock {
-            val current = topics[topicName]
+            val key = key(topicName, tenantId, namespaceId)
+            val current = topics[key]
                 ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicName)
 
             val nextSequence = current.sequence + 1
-            topics[topicName] = current.copy(sequence = nextSequence)
+            topics[key] = current.copy(sequence = nextSequence)
             nextSequence
         }
     }
 
-    override suspend fun updateSchemas(name: String, schemas: List<Schema>): Topic {
+    override suspend fun updateSchemas(name: String, schemas: List<Schema>, tenantId: String, namespaceId: String): Topic {
         return mutex.withLock {
-            val current = topics[name]
+            val key = key(name, tenantId, namespaceId)
+            val current = topics[key]
                 ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(name)
 
             val updated = current.copy(schemas = schemas)
-            topics[name] = updated
+            topics[key] = updated
             updated
         }
     }
@@ -70,5 +79,8 @@ class InMemoryTopicRepository : TopicRepository {
             topics.values.toList()
         }
     }
+
+    private fun key(name: String, tenantId: String, namespaceId: String): String =
+        "$tenantId/$namespaceId/$name"
 }
 
