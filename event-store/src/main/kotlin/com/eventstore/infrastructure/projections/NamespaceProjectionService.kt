@@ -11,6 +11,7 @@ import com.eventstore.domain.ports.outbound.NamespaceRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
+import java.util.UUID
 
 class NamespaceProjectionService(
     private val namespaceRepository: NamespaceRepository
@@ -30,23 +31,36 @@ class NamespaceProjectionService(
         }
     }
 
-    suspend fun getNamespace(tenantId: String, namespaceId: String): Namespace? {
-        return namespaceRepository.findById(tenantId, namespaceId)?.takeIf { it.isActive }
+    suspend fun getNamespaceByName(tenantName: String, name: String): Namespace? {
+        return namespaceRepository.findByName(tenantName, name)?.takeIf { it.isActive }
+    }
+
+    suspend fun getNamespaceByResourceId(tenantResourceId: UUID, resourceId: UUID): Namespace? {
+        return namespaceRepository.findByResourceId(tenantResourceId, resourceId)?.takeIf { it.isActive }
     }
 
     suspend fun getAllNamespaces(): List<Namespace> =
         namespaceRepository.findAll().filter { it.isActive }
 
-    suspend fun namespaceExists(tenantId: String, namespaceId: String): Boolean =
-        getNamespace(tenantId, namespaceId) != null
+    suspend fun namespaceExistsByName(tenantName: String, name: String): Boolean =
+        getNamespaceByName(tenantName, name) != null
+
+    // Backward compatibility - deprecated
+    @Deprecated("Use getNamespaceByName instead", ReplaceWith("getNamespaceByName(tenantId, namespaceId)"))
+    suspend fun getNamespace(tenantId: String, namespaceId: String): Namespace? = getNamespaceByName(tenantId, namespaceId)
+
+    // Backward compatibility - deprecated
+    @Deprecated("Use namespaceExistsByName instead", ReplaceWith("namespaceExistsByName(tenantId, namespaceId)"))
+    suspend fun namespaceExists(tenantId: String, namespaceId: String): Boolean = namespaceExistsByName(tenantId, namespaceId)
 
     private suspend fun applyEvent(event: Event) {
         when (event.type) {
             NamespaceEventType.CREATED -> {
                 val payload = NamespaceCreatedEvent.fromPayload(event.payload)
                 val ns = Namespace(
-                    tenantId = payload.tenantId,
-                    id = payload.namespaceId,
+                    resourceId = payload.resourceId,
+                    tenantResourceId = payload.tenantResourceId,
+                    tenantName = payload.tenantName,
                     name = payload.name,
                     description = payload.description,
                     createdAt = payload.createdAt,
@@ -59,9 +73,9 @@ class NamespaceProjectionService(
 
             NamespaceEventType.UPDATED -> {
                 val payload = NamespaceUpdatedEvent.fromPayload(event.payload)
-                val existing = namespaceRepository.findById(payload.tenantId, payload.namespaceId)
+                val existing = namespaceRepository.findByResourceId(payload.tenantResourceId, payload.resourceId)
                 if (existing == null) {
-                    logger.warn("Received namespace.updated for unknown namespace ${payload.tenantId}/${payload.namespaceId}")
+                    logger.warn("Received namespace.updated for unknown namespace resourceId ${payload.resourceId}")
                     return
                 }
                 val updated = existing.copy(
@@ -75,9 +89,9 @@ class NamespaceProjectionService(
 
             NamespaceEventType.DELETED -> {
                 val payload = NamespaceDeletedEvent.fromPayload(event.payload)
-                val existing = namespaceRepository.findById(payload.tenantId, payload.namespaceId)
+                val existing = namespaceRepository.findByResourceId(payload.tenantResourceId, payload.resourceId)
                 if (existing == null) {
-                    logger.warn("Received namespace.deleted for unknown namespace ${payload.tenantId}/${payload.namespaceId}")
+                    logger.warn("Received namespace.deleted for unknown namespace resourceId ${payload.resourceId}")
                     return
                 }
                 val deleted = existing.copy(deletedAt = payload.deletedAt, updatedAt = payload.deletedAt)

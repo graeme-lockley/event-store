@@ -40,7 +40,15 @@ class CreateNamespaceServiceTest {
 
         runBlocking {
             // Seed system topics
-            topicRepository.createTopic(SystemTopics.NAMESPACES_TOPIC, emptyList(), SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID)
+            topicRepository.createTopic(
+                resourceId = java.util.UUID.randomUUID(),
+                tenantResourceId = java.util.UUID.randomUUID(),
+                namespaceResourceId = java.util.UUID.randomUUID(),
+                name = SystemTopics.NAMESPACES_TOPIC,
+                schemas = emptyList(),
+                tenantName = SystemTopics.SYSTEM_TENANT_ID,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            )
             // Seed tenant in projection
             tenantProjection.handleEvents(
                 listOf(
@@ -48,7 +56,11 @@ class CreateNamespaceServiceTest {
                         id = EventId.create(SystemTopics.TENANTS_TOPIC, 1, SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID),
                         timestamp = java.time.Instant.now(),
                         type = com.eventstore.domain.events.TenantEventType.CREATED,
-                        payload = com.eventstore.domain.events.TenantCreatedEvent("acme", "Acme", createdAt = java.time.Instant.now()).toPayload()
+                        payload = com.eventstore.domain.events.TenantCreatedEvent(
+                            resourceId = java.util.UUID.randomUUID(),
+                            name = "acme",
+                            createdAt = java.time.Instant.now()
+                        ).toPayload()
                     )
                 )
             )
@@ -58,7 +70,7 @@ class CreateNamespaceServiceTest {
     @Test
     fun `creates namespace and emits event`() = runTest {
         val ns = service.execute(CreateNamespaceRequest("acme", "billing", "Billing"))
-        assertEquals("billing", ns.id)
+        assertEquals("billing", ns.name)
         val events = eventRepository.getEvents(SystemTopics.NAMESPACES_TOPIC, tenantId = SystemTopics.SYSTEM_TENANT_ID, namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID)
         assertEquals(1, events.size)
         assertEquals(NamespaceEventType.CREATED, events.first().type)

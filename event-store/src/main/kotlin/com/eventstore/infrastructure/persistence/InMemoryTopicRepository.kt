@@ -5,44 +5,57 @@ import com.eventstore.domain.Topic
 import com.eventstore.domain.ports.outbound.TopicRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.UUID
 
 class InMemoryTopicRepository : TopicRepository {
     private val topics = mutableMapOf<String, Topic>()
     private val mutex = Mutex()
 
     override suspend fun createTopic(
+        resourceId: UUID,
+        tenantResourceId: UUID,
+        namespaceResourceId: UUID,
         name: String,
         schemas: List<Schema>,
-        tenantId: String,
-        namespaceId: String
+        tenantName: String,
+        namespaceName: String
     ): Topic {
         return mutex.withLock {
-            val key = key(name, tenantId, namespaceId)
+            val key = key(name, tenantName, namespaceName)
             if (topics.containsKey(key)) {
                 throw com.eventstore.domain.exceptions.TopicAlreadyExistsException(name)
             }
 
-            val topic = Topic(name, 0, schemas, tenantId, namespaceId)
+            val topic = Topic(
+                resourceId = resourceId,
+                tenantResourceId = tenantResourceId,
+                namespaceResourceId = namespaceResourceId,
+                name = name,
+                sequence = 0,
+                schemas = schemas,
+                tenantName = tenantName,
+                namespaceName = namespaceName
+            )
             topics[key] = topic
             topic
         }
     }
 
-    override suspend fun getTopic(name: String, tenantId: String, namespaceId: String): Topic? {
+    override suspend fun getTopic(name: String, tenantName: String, namespaceName: String): Topic? {
         return mutex.withLock {
-            topics[key(name, tenantId, namespaceId)]
+            topics[key(name, tenantName, namespaceName)]
         }
     }
 
-    override suspend fun topicExists(name: String, tenantId: String, namespaceId: String): Boolean {
+    override suspend fun topicExists(name: String, tenantName: String, namespaceName: String): Boolean {
         return mutex.withLock {
-            topics.containsKey(key(name, tenantId, namespaceId))
+            topics.containsKey(key(name, tenantName, namespaceName))
         }
     }
 
-    override suspend fun updateSequence(name: String, sequence: Long, tenantId: String, namespaceId: String) {
+    override suspend fun updateSequence(name: String, sequence: Long, tenantName: String, namespaceName: String) {
         mutex.withLock {
-            val key = key(name, tenantId, namespaceId)
+            val key = key(name, tenantName, namespaceName)
             val current = topics[key]
                 ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(name)
 
@@ -50,9 +63,9 @@ class InMemoryTopicRepository : TopicRepository {
         }
     }
 
-    override suspend fun getAndIncrementSequence(topicName: String, tenantId: String, namespaceId: String): Long {
+    override suspend fun getAndIncrementSequence(topicName: String, tenantName: String, namespaceName: String): Long {
         return mutex.withLock {
-            val key = key(topicName, tenantId, namespaceId)
+            val key = key(topicName, tenantName, namespaceName)
             val current = topics[key]
                 ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicName)
 
@@ -62,9 +75,9 @@ class InMemoryTopicRepository : TopicRepository {
         }
     }
 
-    override suspend fun updateSchemas(name: String, schemas: List<Schema>, tenantId: String, namespaceId: String): Topic {
+    override suspend fun updateSchemas(name: String, schemas: List<Schema>, tenantName: String, namespaceName: String): Topic {
         return mutex.withLock {
-            val key = key(name, tenantId, namespaceId)
+            val key = key(name, tenantName, namespaceName)
             val current = topics[key]
                 ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(name)
 
@@ -80,7 +93,7 @@ class InMemoryTopicRepository : TopicRepository {
         }
     }
 
-    private fun key(name: String, tenantId: String, namespaceId: String): String =
-        "$tenantId/$namespaceId/$name"
+    private fun key(name: String, tenantName: String, namespaceName: String): String =
+        "$tenantName/$namespaceName/$name"
 }
 

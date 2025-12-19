@@ -10,6 +10,7 @@ import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.UUID
 import kotlin.test.*
 
 /**
@@ -178,7 +179,13 @@ class TopicRepositoryTest {
             Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string")))
         )
 
-        val topic = repository.createTopic(name, schemas)
+        val topic = repository.createTopic(
+            resourceId = UUID.randomUUID(),
+            tenantResourceId = UUID.randomUUID(),
+            namespaceResourceId = UUID.randomUUID(),
+            name = name,
+            schemas = schemas
+        )
 
         assertEquals(name, topic.name)
         assertEquals(0L, topic.sequence)
@@ -189,12 +196,15 @@ class TopicRepositoryTest {
     private suspend fun testCreateDuplicateTopic(repository: TopicRepository) {
         val name = "duplicate-topic"
         val schemas = listOf(Schema(eventType = "user.created"))
+        val resourceId = UUID.randomUUID()
+        val tenantResourceId = UUID.randomUUID()
+        val namespaceResourceId = UUID.randomUUID()
 
-        repository.createTopic(name, schemas)
+        repository.createTopic(resourceId, tenantResourceId, namespaceResourceId, name, schemas)
 
         org.junit.jupiter.api.assertThrows<TopicAlreadyExistsException> {
             runTest {
-                repository.createTopic(name, schemas)
+                repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, name, schemas)
             }
         }
     }
@@ -205,7 +215,13 @@ class TopicRepositoryTest {
             Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string")))
         )
 
-        val created = repository.createTopic(name, schemas)
+        val created = repository.createTopic(
+            resourceId = UUID.randomUUID(),
+            tenantResourceId = UUID.randomUUID(),
+            namespaceResourceId = UUID.randomUUID(),
+            name = name,
+            schemas = schemas
+        )
         val retrieved = repository.getTopic(name)
 
         assertNotNull(retrieved)
@@ -222,7 +238,13 @@ class TopicRepositoryTest {
         val schemas = listOf(Schema(eventType = "user.created"))
 
         assertFalse(repository.topicExists(name))
-        repository.createTopic(name, schemas)
+        repository.createTopic(
+            resourceId = UUID.randomUUID(),
+            tenantResourceId = UUID.randomUUID(),
+            namespaceResourceId = UUID.randomUUID(),
+            name = name,
+            schemas = schemas
+        )
         assertTrue(repository.topicExists(name))
     }
 
@@ -230,7 +252,13 @@ class TopicRepositoryTest {
         val name = "sequence-topic"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(name, schemas)
+        repository.createTopic(
+            resourceId = UUID.randomUUID(),
+            tenantResourceId = UUID.randomUUID(),
+            namespaceResourceId = UUID.randomUUID(),
+            name = name,
+            schemas = schemas
+        )
         repository.updateSequence(name, 42L)
 
         val topic = repository.getTopic(name)
@@ -254,7 +282,13 @@ class TopicRepositoryTest {
             Schema(eventType = "user.updated")
         )
 
-        repository.createTopic(name, initialSchemas)
+        repository.createTopic(
+            resourceId = UUID.randomUUID(),
+            tenantResourceId = UUID.randomUUID(),
+            namespaceResourceId = UUID.randomUUID(),
+            name = name,
+            schemas = initialSchemas
+        )
         val updated = repository.updateSchemas(name, updatedSchemas)
 
         assertEquals(updatedSchemas, updated.schemas)
@@ -272,9 +306,11 @@ class TopicRepositoryTest {
     }
 
     private suspend fun testGetAllTopics(repository: TopicRepository) {
-        val topic1 = repository.createTopic("topic-1", listOf(Schema(eventType = "event1")))
-        val topic2 = repository.createTopic("topic-2", listOf(Schema(eventType = "event2")))
-        val topic3 = repository.createTopic("topic-3", listOf(Schema(eventType = "event3")))
+        val tenantResourceId = UUID.randomUUID()
+        val namespaceResourceId = UUID.randomUUID()
+        val topic1 = repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "topic-1", listOf(Schema(eventType = "event1")))
+        val topic2 = repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "topic-2", listOf(Schema(eventType = "event2")))
+        val topic3 = repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "topic-3", listOf(Schema(eventType = "event3")))
 
         val allTopics = repository.getAllTopics()
 
@@ -290,8 +326,10 @@ class TopicRepositoryTest {
     }
 
     private suspend fun testMultipleTopics(repository: TopicRepository) {
+        val tenantResourceId = UUID.randomUUID()
+        val namespaceResourceId = UUID.randomUUID()
         val topics = (1..5).map { i ->
-            repository.createTopic("topic-$i", listOf(Schema(eventType = "event$i")))
+            repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "topic-$i", listOf(Schema(eventType = "event$i")))
         }
 
         val allTopics = repository.getAllTopics()
@@ -306,7 +344,13 @@ class TopicRepositoryTest {
 
     private suspend fun testTopicWithEmptySchemas(repository: TopicRepository) {
         val name = "empty-schemas-topic"
-        val topic = repository.createTopic(name, emptyList())
+        val topic = repository.createTopic(
+            resourceId = UUID.randomUUID(),
+            tenantResourceId = UUID.randomUUID(),
+            namespaceResourceId = UUID.randomUUID(),
+            name = name,
+            schemas = emptyList()
+        )
 
         assertEquals(emptyList<Schema>(), topic.schemas)
         val retrieved = repository.getTopic(name)
@@ -322,7 +366,13 @@ class TopicRepositoryTest {
             Schema(eventType = "user.deleted", properties = mapOf("id" to mapOf("type" to "string")))
         )
 
-        val topic = repository.createTopic(name, schemas)
+        val topic = repository.createTopic(
+            resourceId = UUID.randomUUID(),
+            tenantResourceId = UUID.randomUUID(),
+            namespaceResourceId = UUID.randomUUID(),
+            name = name,
+            schemas = schemas
+        )
         assertEquals(3, topic.schemas.size)
         assertEquals(schemas, topic.schemas)
 
@@ -335,7 +385,13 @@ class TopicRepositoryTest {
         val name = "sequence-updates-topic"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(name, schemas)
+        repository.createTopic(
+            resourceId = UUID.randomUUID(),
+            tenantResourceId = UUID.randomUUID(),
+            namespaceResourceId = UUID.randomUUID(),
+            name = name,
+            schemas = schemas
+        )
 
         // Update sequence multiple times
         repository.updateSequence(name, 10L)
@@ -358,7 +414,13 @@ class TopicRepositoryTest {
         val name = "schema-updates-topic"
         val initialSchemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(name, initialSchemas)
+        repository.createTopic(
+            resourceId = UUID.randomUUID(),
+            tenantResourceId = UUID.randomUUID(),
+            namespaceResourceId = UUID.randomUUID(),
+            name = name,
+            schemas = initialSchemas
+        )
 
         // Update schemas multiple times
         val schemas1 = listOf(

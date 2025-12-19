@@ -11,6 +11,7 @@ import com.eventstore.domain.ports.outbound.TenantRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
+import java.util.UUID
 
 class TenantProjectionService(
     private val tenantRepository: TenantRepository
@@ -34,23 +35,34 @@ class TenantProjectionService(
         }
     }
 
-    suspend fun getTenant(tenantId: String): Tenant? {
-        val tenant = tenantRepository.findById(tenantId)
-        return tenant?.takeIf { it.isActive }
+    suspend fun getTenantByName(name: String): Tenant? {
+        return tenantRepository.findByName(name)?.takeIf { it.isActive }
+    }
+
+    suspend fun getTenantByResourceId(resourceId: UUID): Tenant? {
+        return tenantRepository.findByResourceId(resourceId)?.takeIf { it.isActive }
     }
 
     suspend fun getAllTenants(): List<Tenant> {
         return tenantRepository.findAll().filter { it.isActive }
     }
 
-    suspend fun tenantExists(tenantId: String): Boolean = getTenant(tenantId) != null
+    suspend fun tenantExistsByName(name: String): Boolean = getTenantByName(name) != null
+
+    // Backward compatibility - deprecated, use getTenantByName instead
+    @Deprecated("Use getTenantByName instead", ReplaceWith("getTenantByName(tenantId)"))
+    suspend fun getTenant(tenantId: String): Tenant? = getTenantByName(tenantId)
+
+    // Backward compatibility - deprecated, use tenantExistsByName instead
+    @Deprecated("Use tenantExistsByName instead", ReplaceWith("tenantExistsByName(tenantId)"))
+    suspend fun tenantExists(tenantId: String): Boolean = tenantExistsByName(tenantId)
 
     private suspend fun applyEvent(event: Event) {
         when (event.type) {
             TenantEventType.CREATED -> {
                 val payload = TenantCreatedEvent.fromPayload(event.payload)
                 val tenant = Tenant(
-                    id = payload.tenantId,
+                    resourceId = payload.resourceId,
                     name = payload.name,
                     createdAt = payload.createdAt,
                     updatedAt = null,
@@ -63,9 +75,9 @@ class TenantProjectionService(
 
             TenantEventType.UPDATED -> {
                 val payload = TenantUpdatedEvent.fromPayload(event.payload)
-                val existing = tenantRepository.findById(payload.tenantId)
+                val existing = tenantRepository.findByResourceId(payload.resourceId)
                 if (existing == null) {
-                    logger.warn("Received tenant.updated for unknown tenant ${payload.tenantId}")
+                    logger.warn("Received tenant.updated for unknown tenant resourceId ${payload.resourceId}")
                     return
                 }
 
@@ -80,9 +92,9 @@ class TenantProjectionService(
 
             TenantEventType.DELETED -> {
                 val payload = TenantDeletedEvent.fromPayload(event.payload)
-                val existing = tenantRepository.findById(payload.tenantId)
+                val existing = tenantRepository.findByResourceId(payload.resourceId)
                 if (existing == null) {
-                    logger.warn("Received tenant.deleted for unknown tenant ${payload.tenantId}")
+                    logger.warn("Received tenant.deleted for unknown tenant resourceId ${payload.resourceId}")
                     return
                 }
 

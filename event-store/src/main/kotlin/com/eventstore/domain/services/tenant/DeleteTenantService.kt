@@ -13,7 +13,7 @@ import com.eventstore.domain.tenants.SystemTopics
 import java.time.Instant
 
 data class DeleteTenantRequest(
-    val tenantId: String,
+    val tenantName: String,
     val deletedBy: String = "system",
     val reason: String? = null
 )
@@ -29,8 +29,8 @@ class DeleteTenantService(
             throw IllegalStateException("Multi-tenant support is disabled")
         }
 
-        val existing = tenantProjectionService.getTenant(request.tenantId)
-            ?: throw TenantNotFoundException(request.tenantId)
+        val existing = tenantProjectionService.getTenantByName(request.tenantName)
+            ?: throw TenantNotFoundException(request.tenantName)
 
         if (!existing.isActive) {
             return false
@@ -38,7 +38,7 @@ class DeleteTenantService(
 
         val now = Instant.now()
         val payload = TenantDeletedEvent(
-            tenantId = request.tenantId,
+            resourceId = existing.resourceId,
             deletedBy = request.deletedBy,
             deletedAt = now,
             reason = request.reason
@@ -46,8 +46,8 @@ class DeleteTenantService(
 
         val sequence = topicRepository.getAndIncrementSequence(
             topicName = SystemTopics.TENANTS_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
 
         val event = Event(

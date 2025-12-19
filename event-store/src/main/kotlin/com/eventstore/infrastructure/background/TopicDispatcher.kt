@@ -81,6 +81,9 @@ class TopicDispatcher(
         val eventsToDeliver = mutableListOf<com.eventstore.domain.Event>()
         val topicToLatestEventId = mutableMapOf<String, String>()
 
+        // Parse tenant/namespace/topic from the dispatcher's topic (which may be qualified)
+        val (simpleTopicName, tenantId, namespaceId) = parseTopicName(topic)
+
         // Check each topic the consumer is interested in
         for ((topicName, lastEventIdStr) in consumer.topics) {
             if (topicName != topic) continue
@@ -91,8 +94,10 @@ class TopicDispatcher(
                 // If EventId construction fails, it indicates data corruption and should not be silently ignored.
                 val lastEventId = lastEventIdStr?.let { EventId(it) }
                 val events = eventRepository.getEvents(
-                    topic = topicName,
-                    sinceEventId = lastEventId
+                    topic = simpleTopicName,
+                    sinceEventId = lastEventId,
+                    tenantId = tenantId,
+                    namespaceId = namespaceId
                 )
 
                 if (events.isNotEmpty()) {
@@ -138,6 +143,27 @@ class TopicDispatcher(
                 retryState.remove(consumer.id)
                 consumerRepository.delete(consumer.id)
             }
+        }
+    }
+
+    /**
+     * Parse a topic name that may be in qualified format (tenant/namespace/topic) or simple format (topic).
+     * Returns (simpleTopicName, tenantId, namespaceId).
+     * For qualified names, extracts tenant/namespace. For simple names, uses null (legacy format).
+     */
+    private fun parseTopicName(topicName: String): Triple<String, String?, String?> {
+        val parts = topicName.split("/")
+        return when (parts.size) {
+            3 -> {
+                // Qualified name: tenant/namespace/topic
+                // For "default/default/topic", we still pass "default"/"default" to match events stored with those values
+                // But if events are stored in legacy format (null/null), we need to handle that
+                val tenant = if (parts[0] == "default") null else parts[0]
+                val namespace = if (parts[1] == "default") null else parts[1]
+                Triple(parts[2], tenant, namespace)
+            }
+            1 -> Triple(parts[0], null, null) // topic (legacy format)
+            else -> Triple(topicName, null, null) // fallback to original
         }
     }
 }

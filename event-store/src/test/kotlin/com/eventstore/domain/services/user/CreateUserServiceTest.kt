@@ -39,7 +39,15 @@ class CreateUserServiceTest {
         val tenantProjection = TenantProjectionService(InMemoryTenantRepository())
         val userProjection = UserProjectionService(InMemoryUserRepository())
 
-        topicRepo.createTopic(SystemTopics.USERS_TOPIC, emptyList(), SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID)
+        topicRepo.createTopic(
+            resourceId = java.util.UUID.randomUUID(),
+            tenantResourceId = java.util.UUID.randomUUID(),
+            namespaceResourceId = java.util.UUID.randomUUID(),
+            name = SystemTopics.USERS_TOPIC,
+            schemas = emptyList(),
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+        )
 
         // Seed tenant
         val tenantEvent = Event(
@@ -52,8 +60,8 @@ class CreateUserServiceTest {
             timestamp = Instant.now(),
             type = TenantEventType.CREATED,
             payload = TenantCreatedEvent(
-                tenantId = "t-1",
-                name = "Tenant 1",
+                resourceId = java.util.UUID.randomUUID(),
+                name = "t-1",
                 createdBy = "test",
                 createdAt = Instant.now(),
                 metadata = emptyMap()

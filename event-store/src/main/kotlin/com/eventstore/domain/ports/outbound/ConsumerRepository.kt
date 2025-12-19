@@ -10,6 +10,7 @@ interface ConsumerRepository {
     suspend fun findById(id: String): Consumer?
     suspend fun findAll(): List<Consumer>
     suspend fun findByTopic(topic: String): List<Consumer>
+    suspend fun findByTenantAndNamespace(tenantName: String, namespaceName: String): List<Consumer>
     suspend fun delete(id: String): Boolean
     suspend fun count(): Int
 }

@@ -5,10 +5,10 @@ import com.eventstore.infrastructure.projections.NamespaceProjectionService
 class GetNamespaceService(
     private val namespaceProjectionService: NamespaceProjectionService
 ) {
-    suspend fun getNamespace(tenantId: String, namespaceId: String) =
-        namespaceProjectionService.getNamespace(tenantId, namespaceId)
+    suspend fun getNamespace(tenantName: String, namespaceName: String) =
+        namespaceProjectionService.getNamespaceByName(tenantName, namespaceName)
 
-    suspend fun listNamespaces(tenantId: String) =
-        namespaceProjectionService.getAllNamespaces().filter { it.tenantId == tenantId }
+    suspend fun listNamespaces(tenantName: String) =
+        namespaceProjectionService.getAllNamespaces().filter { it.tenantName == tenantName }
 }
 

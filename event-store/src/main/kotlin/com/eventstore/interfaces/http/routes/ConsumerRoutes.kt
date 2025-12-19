@@ -15,10 +15,12 @@ fun Route.consumerRoutes(
     unregisterConsumerService: UnregisterConsumerService,
     consumerRepository: ConsumerRepository
 ) {
-    route("/consumers") {
-        // POST /consumers/register - Register a consumer
+    route("/tenants/{tenantName}/namespaces/{namespaceName}/consumers") {
+        // POST /tenants/{tenantName}/namespaces/{namespaceName}/consumers/register - Register a consumer
         post("register") {
             try {
+                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val requestDto = call.receive<ConsumerRegistrationRequestDto>()
 
                 // Convert DTO to domain request
@@ -32,7 +34,7 @@ fun Route.consumerRoutes(
                     return@post
                 }
 
-                val consumerId = registerConsumerService.execute(registrationRequest)
+                val consumerId = registerConsumerService.execute(registrationRequest, tenantName, namespaceName)
 
                 call.respond(HttpStatusCode.Created, ConsumerRegistrationResponse(consumerId))
             } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
@@ -53,10 +55,12 @@ fun Route.consumerRoutes(
             }
         }
 
-        // GET /consumers - List all consumers
+        // GET /tenants/{tenantName}/namespaces/{namespaceName}/consumers - List consumers in namespace
         get {
             try {
-                val consumers = consumerRepository.findAll()
+                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val consumers = consumerRepository.findByTenantAndNamespace(tenantName, namespaceName)
                 val consumerInfo = consumers.map { consumer ->
                     ConsumerResponseMapper.toDto(consumer)
                 }
@@ -69,14 +73,16 @@ fun Route.consumerRoutes(
             }
         }
 
-        // DELETE /consumers/{id} - Unregister a consumer
+        // DELETE /tenants/{tenantName}/namespaces/{namespaceName}/consumers/{id} - Unregister a consumer
         delete("{id}") {
             try {
+                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val consumerId = call.parameters["id"]
                     ?: throw IllegalArgumentException("Consumer ID is required")
 
                 try {
-                    unregisterConsumerService.execute(consumerId)
+                    unregisterConsumerService.execute(consumerId, tenantName, namespaceName)
                     call.respond(
                         HttpStatusCode.OK,
                         mapOf("message" to "Consumer $consumerId unregistered")

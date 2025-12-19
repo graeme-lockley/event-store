@@ -54,7 +54,11 @@ class PublishEventsService(
             val tenantId = request.tenantId ?: "default"
             val namespaceId = request.namespaceId ?: "default"
             val useLegacy = tenantId == "default" && namespaceId == "default"
-            val nextSequence = topicRepository.getAndIncrementSequence(request.topic, tenantId, namespaceId)
+            val nextSequence = topicRepository.getAndIncrementSequence(
+                topicName = request.topic,
+                tenantName = tenantId,
+                namespaceName = namespaceId
+            )
             val eventId = if (useLegacy) {
                 EventId.create(request.topic, nextSequence)
             } else {

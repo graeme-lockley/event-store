@@ -37,10 +37,10 @@ class UnregisterConsumerServiceTest {
             topics = mapOf(topicName to null)
         )
 
-        val consumerId = registerConsumerService.execute(request)
+        val consumerId = registerConsumerService.execute(request, "default", "default")
 
         assertNotNull(helper.findConsumer(consumerId))
-        unregisterConsumerService.execute(consumerId)
+        unregisterConsumerService.execute(consumerId, "default", "default")
 
         assertNull(helper.findConsumer(consumerId))
     }
@@ -52,7 +52,7 @@ class UnregisterConsumerServiceTest {
         assertNull(helper.findConsumer(consumerId))
 
         assertThrows<ConsumerNotFoundException> {
-            unregisterConsumerService.execute(consumerId)
+            unregisterConsumerService.execute(consumerId, "default", "default")
         }
     }
 }

@@ -57,9 +57,11 @@ This document specifies the requirements for implementing tenant and namespace m
 ### Tenant
 
 ```kotlin
+import java.util.UUID
+
 data class Tenant(
-    val id: String,                    // Unique tenant identifier
-    val name: String,                  // Display name
+    val resourceId: UUID,        // Stable GUID, never changes (used in permissions)
+    val name: String,            // Human-readable identifier (used in URLs and for display)
     val createdAt: Instant,
     val updatedAt: Instant? = null,
     val deletedAt: Instant? = null,   // Soft delete
@@ -83,10 +85,13 @@ data class Quota(
 ### Namespace
 
 ```kotlin
+import java.util.UUID
+
 data class Namespace(
-    val tenantId: String,              // Parent tenant
-    val id: String,                    // Unique within tenant
-    val name: String,                  // Display name
+    val resourceId: UUID,        // Stable GUID, never changes (used in permissions)
+    val tenantResourceId: UUID,   // Reference to tenant's resourceId (stable)
+    val tenantName: String,      // Human-readable tenant name (for URLs/display)
+    val name: String,            // Human-readable identifier (used in URLs and for display)
     val description: String? = null,
     val createdAt: Instant,
     val updatedAt: Instant? = null,
@@ -96,23 +101,28 @@ data class Namespace(
     val isActive: Boolean
         get() = deletedAt == null
     
-    fun qualifiedName(): String = "$tenantId/$id"
+    fun qualifiedName(): String = "$tenantName/$name"
 }
 ```
 
 ### Topic (Updated)
 
 ```kotlin
+import java.util.UUID
+
 data class Topic(
-    val tenantId: String,              // Parent tenant
-    val namespaceId: String,          // Parent namespace
-    val name: String,                  // Unique within namespace
+    val resourceId: UUID,        // Stable GUID, never changes (used in permissions)
+    val tenantResourceId: UUID,   // Reference to tenant's resourceId (stable)
+    val namespaceResourceId: UUID, // Reference to namespace's resourceId (stable)
+    val tenantName: String,       // Human-readable tenant name (for URLs/display)
+    val namespaceName: String,    // Human-readable namespace name (for URLs/display)
+    val name: String,            // Human-readable topic name (used in URLs and for display)
     val sequence: Long,
     val schemas: List<Schema>,
     val createdAt: Instant? = null,
     val updatedAt: Instant? = null
 ) {
-    fun qualifiedName(): String = "$tenantId/$namespaceId/$name"
+    fun qualifiedName(): String = "$tenantName/$namespaceName/$name"
     
     fun nextSequence(): Long = sequence + 1
     
@@ -363,36 +373,38 @@ All management events are stored in:
 #### permission.granted
 ```json
 {
-  "principalId": "user-123",
+  "principalId": "550e8400-e29b-41d4-a716-446655440000",
   "principalType": "user",
   "resourceType": "topic",
-  "resourceId": "invoices",
-  "tenantId": "acme-corp",
-  "namespaceId": "billing-app",
-  "topicName": "invoices",
-  "permissions": ["event:read", "event:write"],
+  "resourceId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "tenantResourceId": "123e4567-e89b-12d3-a456-426614174000",
+  "namespaceResourceId": "223e4567-e89b-12d3-a456-426614174001",
+  "topicResourceId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "permissions": ["READ", "UPDATE"],
   "constraints": {
     "eventTypes": ["invoice.created"],
     "maxAgeDays": 30
   },
-  "grantedBy": "admin-user-1",
+  "grantedBy": "550e8400-e29b-41d4-a716-446655440001",
   "grantedAt": "2025-01-15T10:10:00Z",
   "expiresAt": "2025-12-31T23:59:59Z"
 }
 ```
 
+**Note**: `resourceId` is a stable UUID that never changes, even if the resource is renamed. When `resourceId` is `null`, the permission applies to all resources of that type.
+
 #### permission.revoked
 ```json
 {
-  "principalId": "user-123",
+  "principalId": "550e8400-e29b-41d4-a716-446655440000",
   "principalType": "user",
   "resourceType": "topic",
-  "resourceId": "invoices",
-  "tenantId": "acme-corp",
-  "namespaceId": "billing-app",
-  "topicName": "invoices",
-  "permissions": ["event:write"],
-  "revokedBy": "admin-user-1",
+  "resourceId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "tenantResourceId": "123e4567-e89b-12d3-a456-426614174000",
+  "namespaceResourceId": "223e4567-e89b-12d3-a456-426614174001",
+  "topicResourceId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "permissions": ["UPDATE"],
+  "revokedBy": "550e8400-e29b-41d4-a716-446655440001",
   "revokedAt": "2025-01-20T14:00:00Z",
   "reason": "API key rotation"
 }
@@ -491,49 +503,73 @@ DELETE /tenants/{tenantId}/users/{userId}/permissions  # Revoke permissions
 
 ## Permission Model
 
-### Permission Hierarchy
+### Simplified Permission Model
 
-Permissions follow a hierarchical structure with inheritance:
+Permissions use a simplified, generic model where the same permission types apply to different resource types. The `resourceType` and `resourceId` fields determine what resource the permission applies to.
 
-```
-tenant:admin
-  └── Inherits: All namespace:* and topic:* permissions
+### Permission Types
 
-namespace:admin
-  └── Inherits: All topic:* permissions within namespace
+#### Generic CRUD Operations (apply to any resource type)
+- `CREATE` - Create new resources
+- `READ` - Read/view resources
+- `LIST` - List resources
+- `UPDATE` - Update existing resources
+- `DELETE` - Delete resources
 
-topic:admin
-  └── Inherits: event:read, event:write, event:replay
-```
+#### Admin Permission
+- `ADMIN` - Full control over resource type (grants all CRUD operations)
 
-### Permission Categories
+#### Resource-Specific Permissions
+- `PERMISSION_GRANT` - Grant permissions to others (for tenants, namespaces, topics)
+- `PERMISSION_REVOKE` - Revoke permissions from others (for tenants, namespaces, topics)
+- `SCHEMA_MANAGE` - Manage schemas (for topics, can also be granted at namespace/tenant level with inheritance)
+- `READ_HISTORY` - Read event history (for events only)
+- `READ_EXPORT` - Export events (for events only)
+- `WRITE_ADMIN` - Admin-level write access (for events only)
+- `REPLAY` - Replay events (for events only)
+- `PURGE` - Purge events (for events only)
+- `ACTIVATE` - Activate users (for users only)
+- `SUSPEND` - Suspend users (for users only)
+- `PASSWORD_RESET` - Reset user passwords (for users only)
+- `MANAGE` - Manage consumers (for consumers only)
 
-#### Tenant Permissions
-- `tenant:create`, `tenant:read`, `tenant:list`, `tenant:update`, `tenant:delete`
-- `tenant:admin`, `tenant:permission:grant`, `tenant:permission:revoke`
-- `tenant:quota:manage`, `tenant:export`, `tenant:audit:read`
+### Permission Scoping
 
-#### Namespace Permissions
-- `namespace:create`, `namespace:read`, `namespace:list`, `namespace:update`, `namespace:delete`
-- `namespace:admin`, `namespace:permission:grant`, `namespace:permission:revoke`
+Permissions can be scoped at different levels:
 
-#### Topic Permissions
-- `topic:create`, `topic:read`, `topic:list`, `topic:update`, `topic:delete`
-- `topic:admin`, `topic:permission:grant`, `topic:schema:manage`
+1. **Global Scope** (`resourceId = null`): Permission applies to all resources of the specified type
+   ```json
+   {
+     "resourceType": "tenant",
+     "resourceId": null,
+     "permissions": ["UPDATE"]
+   }
+   ```
+   → User can update all tenants
 
-#### Event Permissions
-- `event:read`, `event:read:history`, `event:read:export`
-- `event:write`, `event:write:admin`
-- `event:delete`, `event:replay`, `event:purge`
+2. **Specific Resource Scope** (`resourceId = UUID`): Permission applies only to the specified resource
+   ```json
+   {
+     "resourceType": "tenant",
+     "resourceId": "123e4567-e89b-12d3-a456-426614174000",
+     "permissions": ["UPDATE"]
+   }
+   ```
+   → User can update only this specific tenant
 
-#### Consumer Permissions
-- `consumer:create`, `consumer:read`, `consumer:list`, `consumer:update`, `consumer:delete`
-- `consumer:admin`, `consumer:manage`
+3. **Hierarchical Inheritance**: Permissions granted at higher levels can inherit to lower levels
+   - Tenant-level `ADMIN` → inherits to all namespaces and topics in tenant
+   - Namespace-level `ADMIN` → inherits to all topics in namespace
+   - Tenant-level `SCHEMA_MANAGE` → can manage schemas for all topics in tenant
 
-#### User Permissions
-- `user:create`, `user:read`, `user:list`, `user:update`, `user:delete`
-- `user:admin`, `user:activate`, `user:suspend`
-- `user:password:reset`, `user:permission:grant`, `user:permission:revoke`
+### Stable Resource IDs
+
+All resources (Tenant, Namespace, Topic, Consumer, User) have a stable `resourceId` UUID that:
+- Never changes, even if the resource is renamed
+- Is used in permissions to avoid cascading updates when names change
+- Is separate from human-readable identifiers used in URLs
+
+**Example**: A tenant can be renamed from `"acme-corp"` to `"acme-inc"`, but its `resourceId` UUID remains the same, so permissions referencing it continue to work.
 
 ---
 

@@ -2,6 +2,13 @@ package com.eventstore.infrastructure.bootstrap
 
 import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
+import com.eventstore.domain.Permission
+import com.eventstore.domain.PrincipalType
+import com.eventstore.domain.ResourceType
+import com.eventstore.domain.events.NamespaceCreatedEvent
+import com.eventstore.domain.events.NamespaceEventType
+import com.eventstore.domain.events.PermissionEventType
+import com.eventstore.domain.events.PermissionGrantedEvent
 import com.eventstore.domain.events.TenantCreatedEvent
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.events.UserCreatedEvent
@@ -15,6 +22,7 @@ import com.eventstore.domain.tenants.SystemTopics
 import org.mindrot.jbcrypt.BCrypt
 import org.slf4j.LoggerFactory
 import java.time.Instant
+import java.util.UUID
 
 class BootstrapServiceImpl(
     private val eventRepository: EventRepository,
@@ -62,28 +70,46 @@ class BootstrapServiceImpl(
         for (topic in systemTopics) {
             if (!topicRepository.topicExists(topic, systemTenantId, managementNamespaceId)) {
                 logger.info("Creating system topic: $topic")
-                topicRepository.createTopic(topic, emptyList(), systemTenantId, managementNamespaceId)
+                // Generate resourceIds for system topics (they're in system tenant/namespace)
+                // Note: These are temporary UUIDs - the actual resourceIds will be set when tenant/namespace are created
+                val topicResourceId = UUID.randomUUID()
+                val systemTenantResourceId = UUID.randomUUID() // Temporary - will be replaced when tenant is created
+                val managementNamespaceResourceId = UUID.randomUUID() // Temporary - will be replaced when namespace is created
+                topicRepository.createTopic(
+                    resourceId = topicResourceId,
+                    tenantResourceId = systemTenantResourceId,
+                    namespaceResourceId = managementNamespaceResourceId,
+                    name = topic,
+                    schemas = emptyList(),
+                    tenantName = systemTenantId,
+                    namespaceName = managementNamespaceId
+                )
             }
         }
     }
 
     private suspend fun bootstrapSystemTenant() {
         val timestamp = Instant.now()
+        val systemTenantResourceId = UUID.randomUUID()
+        val managementNamespaceResourceId = UUID.randomUUID()
 
         val tenantCreatedEvent = TenantCreatedEvent(
-            tenantId = systemTenantId,
-            name = "System Tenant",
+            resourceId = systemTenantResourceId,
+            name = systemTenantId,
             createdBy = "bootstrap",
             createdAt = timestamp,
             metadata = emptyMap()
         )
 
-        val namespaceCreatedPayload = mapOf(
-            "tenantId" to systemTenantId,
-            "namespaceId" to managementNamespaceId,
-            "name" to "Management",
-            "createdBy" to "bootstrap",
-            "createdAt" to timestamp.toString()
+        val namespaceCreatedEvent = NamespaceCreatedEvent(
+            resourceId = managementNamespaceResourceId,
+            tenantResourceId = systemTenantResourceId,
+            tenantName = systemTenantId,
+            name = managementNamespaceId,
+            description = "System management namespace",
+            createdBy = "bootstrap",
+            createdAt = timestamp,
+            metadata = emptyMap()
         )
 
         val events = mutableListOf(
@@ -91,9 +117,9 @@ class BootstrapServiceImpl(
                 id = EventId.create(
                     topic = tenantTopicName,
                     sequence = topicRepository.getAndIncrementSequence(
-                        tenantTopicName,
-                        systemTenantId,
-                        managementNamespaceId
+                        topicName = tenantTopicName,
+                        tenantName = systemTenantId,
+                        namespaceName = managementNamespaceId
                     ),
                     tenantId = systemTenantId,
                     namespaceId = managementNamespaceId
@@ -106,16 +132,16 @@ class BootstrapServiceImpl(
                 id = EventId.create(
                     topic = namespaceTopicName,
                     sequence = topicRepository.getAndIncrementSequence(
-                        namespaceTopicName,
-                        systemTenantId,
-                        managementNamespaceId
+                        topicName = namespaceTopicName,
+                        tenantName = systemTenantId,
+                        namespaceName = managementNamespaceId
                     ),
                     tenantId = systemTenantId,
                     namespaceId = managementNamespaceId
                 ),
                 timestamp = timestamp,
-                type = "namespace.created",
-                payload = namespaceCreatedPayload
+                type = NamespaceEventType.CREATED,
+                payload = namespaceCreatedEvent.toPayload()
             )
         )
 
@@ -137,9 +163,9 @@ class BootstrapServiceImpl(
                 id = EventId.create(
                     topic = usersTopicName,
                     sequence = topicRepository.getAndIncrementSequence(
-                        usersTopicName,
-                        systemTenantId,
-                        managementNamespaceId
+                        topicName = usersTopicName,
+                        tenantName = systemTenantId,
+                        namespaceName = managementNamespaceId
                     ),
                     tenantId = systemTenantId,
                     namespaceId = managementNamespaceId
@@ -154,9 +180,9 @@ class BootstrapServiceImpl(
                 id = EventId.create(
                     topic = usersTopicName,
                     sequence = topicRepository.getAndIncrementSequence(
-                        usersTopicName,
-                        systemTenantId,
-                        managementNamespaceId
+                        topicName = usersTopicName,
+                        tenantName = systemTenantId,
+                        namespaceName = managementNamespaceId
                     ),
                     tenantId = systemTenantId,
                     namespaceId = managementNamespaceId
@@ -171,6 +197,48 @@ class BootstrapServiceImpl(
                     assignedAt = timestamp,
                     isPrimary = true
                 ).toPayload()
+            )
+        )
+
+        // Grant admin user all permissions in system tenant
+        val allPermissions = setOf(
+            Permission.CREATE, Permission.READ, Permission.LIST, Permission.UPDATE, Permission.DELETE,
+            Permission.ADMIN, Permission.PERMISSION_GRANT, Permission.PERMISSION_REVOKE,
+            Permission.SCHEMA_MANAGE, Permission.READ_HISTORY, Permission.READ_EXPORT,
+            Permission.WRITE_ADMIN, Permission.REPLAY, Permission.PURGE,
+            Permission.ACTIVATE, Permission.SUSPEND, Permission.PASSWORD_RESET, Permission.MANAGE
+        )
+        
+        val permissionGranted = PermissionGrantedEvent(
+            principalId = adminId,
+            principalType = PrincipalType.USER,
+            resourceType = ResourceType.TENANT,
+            resourceId = null,  // null = all tenants (global admin)
+            tenantResourceId = systemTenantResourceId.toString(),
+            namespaceResourceId = null,
+            topicResourceId = null,
+            permissions = allPermissions,
+            constraints = null,
+            grantedBy = "bootstrap",
+            grantedAt = timestamp,
+            expiresAt = null
+        )
+        
+        events.add(
+            Event(
+                id = EventId.create(
+                    topic = SystemTopics.PERMISSIONS_TOPIC,
+                    sequence = topicRepository.getAndIncrementSequence(
+                        SystemTopics.PERMISSIONS_TOPIC,
+                        systemTenantId,
+                        managementNamespaceId
+                    ),
+                    tenantId = systemTenantId,
+                    namespaceId = managementNamespaceId
+                ),
+                timestamp = timestamp,
+                type = PermissionEventType.GRANTED,
+                payload = permissionGranted.toPayload()
             )
         )
 

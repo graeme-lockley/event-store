@@ -13,8 +13,8 @@ class UpdateTopicSchemasService(
     suspend fun execute(
         topicName: String,
         newSchemas: List<Schema>,
-        tenantId: String = "default",
-        namespaceId: String = "default"
+        tenantName: String = "default",
+        namespaceName: String = "default"
     ): Topic {
         Schema.unique(newSchemas)
 
@@ -29,7 +29,7 @@ class UpdateTopicSchemasService(
         }
 
         // Load current topic
-        val currentTopic = topicRepository.getTopic(topicName, tenantId, namespaceId)
+        val currentTopic = topicRepository.getTopic(topicName, tenantName, namespaceName)
             ?: throw TopicNotFoundException(topicName)
 
         // Extract existing eventTypes
@@ -45,7 +45,7 @@ class UpdateTopicSchemasService(
         }
 
         // Update schemas
-        val updatedTopic = topicRepository.updateSchemas(topicName, newSchemas, tenantId, namespaceId)
+        val updatedTopic = topicRepository.updateSchemas(topicName, newSchemas, tenantName, namespaceName)
 
         // Re-register schemas with validator
         schemaValidator.registerSchemas(topicName, newSchemas)

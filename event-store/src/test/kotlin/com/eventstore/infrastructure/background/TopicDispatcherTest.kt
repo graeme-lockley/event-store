@@ -36,10 +36,13 @@ class TopicDispatcherTest {
             helper.topicRepository,
             consumerFactory,
             stubEventDispatcher
-        ).execute(registrationRequest)
+        ).execute(registrationRequest, "default", "default")
 
+        // After registration, topics are stored as qualified names (tenant/namespace/topic)
+        val qualifiedTopicName = "default/default/$topicName"
+        
         val dispatcher = TopicDispatcher(
-            topicName,
+            qualifiedTopicName,
             helper.consumerRepository,
             helper.eventRepository
         )
@@ -53,7 +56,8 @@ class TopicDispatcherTest {
         // Verify consumer was updated with last event ID
         val consumer = helper.findConsumer(consumerId)
         assertNotNull(consumer)
-        val lastEventId = consumer.topics[topicName]
+        // Consumer stores topics as qualified names
+        val lastEventId = consumer.topics[qualifiedTopicName]
         assertNotNull(lastEventId)
         assertEquals(lastEventId, deliveredEvents[0].last().id.value)
     }

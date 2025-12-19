@@ -58,9 +58,11 @@ This plan implements the critical features (CRIT-001 through CRIT-004) in a phas
 
 ```kotlin
 // Tenant.kt
+import java.util.UUID
+
 data class Tenant(
-    val id: String,
-    val name: String,
+    val resourceId: UUID,        // Stable GUID, never changes (used in permissions)
+    val name: String,            // Human-readable identifier (used in URLs and for display)
     val createdAt: Instant,
     val updatedAt: Instant? = null,
     val deletedAt: Instant? = null,
@@ -356,10 +358,13 @@ data class Config(
 **Implementation:**
 
 ```kotlin
+import java.util.UUID
+
 data class Namespace(
-    val tenantId: String,
-    val id: String,
-    val name: String,
+    val resourceId: UUID,        // Stable GUID, never changes (used in permissions)
+    val tenantResourceId: UUID,   // Reference to tenant's resourceId (stable)
+    val tenantName: String,      // Human-readable tenant name (for URLs/display)
+    val name: String,            // Human-readable identifier (used in URLs and for display)
     val description: String? = null,
     val createdAt: Instant,
     val updatedAt: Instant? = null,
@@ -368,8 +373,8 @@ data class Namespace(
 ) {
     val isActive: Boolean
         get() = deletedAt == null
-    
-    fun qualifiedName(): String = "$tenantId/$id"
+
+    fun qualifiedName(): String = "$tenantName/$name"
 }
 ```
 
@@ -844,44 +849,38 @@ data class UserTenantAssociation(
 
 ```kotlin
 enum class Permission {
-    // Tenant permissions
-    TENANT_CREATE, TENANT_READ, TENANT_LIST, TENANT_UPDATE, TENANT_DELETE,
-    TENANT_ADMIN, TENANT_PERMISSION_GRANT, TENANT_PERMISSION_REVOKE,
+    // Generic CRUD operations (apply to any resource type)
+    CREATE, READ, LIST, UPDATE, DELETE,
     
-    // Namespace permissions
-    NAMESPACE_CREATE, NAMESPACE_READ, NAMESPACE_LIST, NAMESPACE_UPDATE, NAMESPACE_DELETE,
-    NAMESPACE_ADMIN,
+    // Admin permission (full control over resource type)
+    ADMIN,
     
-    // Topic permissions
-    TOPIC_CREATE, TOPIC_READ, TOPIC_LIST, TOPIC_UPDATE, TOPIC_DELETE,
-    TOPIC_ADMIN, TOPIC_SCHEMA_MANAGE,
-    
-    // Event permissions
-    EVENT_READ, EVENT_READ_HISTORY, EVENT_READ_EXPORT,
-    EVENT_WRITE, EVENT_WRITE_ADMIN,
-    EVENT_DELETE, EVENT_REPLAY, EVENT_PURGE,
-    
-    // Consumer permissions
-    CONSUMER_CREATE, CONSUMER_READ, CONSUMER_LIST, CONSUMER_UPDATE, CONSUMER_DELETE,
-    CONSUMER_ADMIN, CONSUMER_MANAGE,
-    
-    // User permissions
-    USER_CREATE, USER_READ, USER_LIST, USER_UPDATE, USER_DELETE,
-    USER_ADMIN, USER_ACTIVATE, USER_SUSPEND,
-    USER_PASSWORD_RESET, USER_PERMISSION_GRANT, USER_PERMISSION_REVOKE
+    // Resource-specific permissions (only make sense for certain resources)
+    PERMISSION_GRANT,      // For tenants, namespaces, topics
+    PERMISSION_REVOKE,     // For tenants, namespaces, topics
+    SCHEMA_MANAGE,         // For topics (can also be granted at namespace/tenant level)
+    READ_HISTORY,          // For events only
+    READ_EXPORT,           // For events only
+    WRITE_ADMIN,           // For events only
+    REPLAY,                // For events only
+    PURGE,                 // For events only
+    ACTIVATE,              // For users only
+    SUSPEND,               // For users only
+    PASSWORD_RESET,        // For users only
+    MANAGE                 // For consumers only
 }
 
 data class PermissionGrant(
-    val principalId: String,
-    val principalType: PrincipalType, // USER, API_KEY, ROLE, GROUP
-    val resourceType: ResourceType, // TENANT, NAMESPACE, TOPIC, EVENT, CONSUMER, USER
-    val resourceId: String? = null, // Specific resource or null for all
-    val tenantId: String,
-    val namespaceId: String? = null,
-    val topicName: String? = null,
+    val principalId: String,              // UUID of user/API key/role/group
+    val principalType: PrincipalType,     // USER, API_KEY, ROLE, GROUP
+    val resourceType: ResourceType,       // TENANT, NAMESPACE, TOPIC, EVENT, CONSUMER, USER
+    val resourceId: String? = null,        // UUID of specific resource, or null for all resources of this type
+    val tenantResourceId: String,         // UUID of tenant (for context and inheritance)
+    val namespaceResourceId: String? = null, // UUID of namespace (for context and inheritance)
+    val topicResourceId: String? = null,   // UUID of topic (for context and inheritance)
     val permissions: Set<Permission>,
     val constraints: PermissionConstraints? = null,
-    val grantedBy: String,
+    val grantedBy: String,                // UUID of user who granted permission
     val grantedAt: Instant,
     val expiresAt: Instant? = null
 )
@@ -971,25 +970,48 @@ data class PermissionConstraints(
 
 ```kotlin
 class AuthorizationService(
-    private val permissionProjectionService: PermissionProjectionService
+    private val permissionProjectionService: PermissionProjectionService,
+    private val resourceResolver: ResourceResolver  // Resolves human-readable IDs to resourceIds
 ) {
     suspend fun checkPermission(
         principalId: String,
-        tenantId: String,
+        resourceType: ResourceType,
+        resourceId: String?,  // Human-readable ID from URL, will be resolved to UUID
+        requiredPermission: Permission,
+        tenantId: String,      // Human-readable tenant ID from URL
         namespaceId: String? = null,
-        topicName: String? = null,
-        requiredPermission: Permission
+        topicName: String? = null
     ): Boolean {
-        val permissions = permissionProjectionService.getPermissions(
-            principalId, tenantId, namespaceId, topicName
+        // Resolve human-readable IDs to resource UUIDs
+        val tenantResourceId = resourceResolver.resolveTenantResourceId(tenantId)
+        val namespaceResourceId = namespaceId?.let { 
+            resourceResolver.resolveNamespaceResourceId(tenantResourceId, it) 
+        }
+        val topicResourceId = topicName?.let {
+            resourceResolver.resolveTopicResourceId(
+                tenantResourceId, 
+                namespaceResourceId ?: error("Namespace required for topic"), 
+                it
+            )
+        }
+        val targetResourceId = when (resourceType) {
+            ResourceType.TENANT -> tenantResourceId
+            ResourceType.NAMESPACE -> namespaceResourceId
+            ResourceType.TOPIC -> topicResourceId
+            else -> resourceId  // For USER, CONSUMER, etc., resourceId is already UUID
+        }
+        
+        val grants = permissionProjectionService.getPermissionGrants(
+            principalId, tenantResourceId, namespaceResourceId, topicResourceId
         )
-        return permissions.contains(requiredPermission) || 
-               permissions.contains(getAdminPermission(requiredPermission))
-    }
-    
-    private fun getAdminPermission(permission: Permission): Permission? {
-        // Returns admin permission that grants this permission
-        // e.g., TENANT_ADMIN grants all tenant:* permissions
+        
+        return grants.any { grant ->
+            grant.resourceType == resourceType &&
+            grant.permissions.contains(requiredPermission) ||
+            grant.permissions.contains(Permission.ADMIN) &&
+            // Check resource scope: null = all resources, or specific match
+            (grant.resourceId == null || grant.resourceId == targetResourceId)
+        }
     }
 }
 ```
@@ -1018,11 +1040,12 @@ class AuthorizationService(
 - Stores tenant/namespace context in call attributes
 
 **Permission mapping:**
-- `POST /tenants` → `TENANT_CREATE`
-- `GET /tenants` → `TENANT_LIST`
-- `GET /tenants/{id}` → `TENANT_READ`
-- `PUT /tenants/{id}` → `TENANT_UPDATE`
-- `DELETE /tenants/{id}` → `TENANT_DELETE`
+- `POST /tenants` → `CREATE` on `ResourceType.TENANT`
+- `GET /tenants` → `LIST` on `ResourceType.TENANT`
+- `GET /tenants/{id}` → `READ` on `ResourceType.TENANT` with specific resourceId
+- `PUT /tenants/{id}` → `UPDATE` on `ResourceType.TENANT` with specific resourceId
+- `DELETE /tenants/{id}` → `DELETE` on `ResourceType.TENANT` with specific resourceId
+- `PUT /tenants/{id}/namespaces/{nsId}/topics/{topic}/schemas` → `SCHEMA_MANAGE` on `ResourceType.TOPIC`
 - etc.
 
 **Acceptance Criteria:**

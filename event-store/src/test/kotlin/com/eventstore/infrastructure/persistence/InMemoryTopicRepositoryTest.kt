@@ -6,6 +6,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
+import java.util.UUID
 import kotlin.test.assertEquals
 
 /**
@@ -18,8 +19,10 @@ class InMemoryTopicRepositoryTest {
 
     @Test
     fun `should handle concurrent topic creation`() = runTest {
+        val tenantResourceId = UUID.randomUUID()
+        val namespaceResourceId = UUID.randomUUID()
         val topics = (1..10).map { i ->
-            repository.createTopic("concurrent-topic-$i", listOf(Schema(eventType = "event$i")))
+            repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "concurrent-topic-$i", listOf(Schema(eventType = "event$i")))
         }
 
         assertEquals(10, topics.size)
@@ -30,9 +33,11 @@ class InMemoryTopicRepositoryTest {
     fun `should maintain topic isolation between instances`() = runTest {
         val repo1 = InMemoryTopicRepository()
         val repo2 = InMemoryTopicRepository()
+        val tenantResourceId = UUID.randomUUID()
+        val namespaceResourceId = UUID.randomUUID()
 
-        repo1.createTopic("topic-1", listOf(Schema(eventType = "event1")))
-        repo2.createTopic("topic-2", listOf(Schema(eventType = "event2")))
+        repo1.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "topic-1", listOf(Schema(eventType = "event1")))
+        repo2.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "topic-2", listOf(Schema(eventType = "event2")))
 
         assertEquals(1, repo1.getAllTopics().size)
         assertEquals(1, repo2.getAllTopics().size)
@@ -45,7 +50,7 @@ class InMemoryTopicRepositoryTest {
         val name = "rapid-updates-topic"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(name, schemas)
+        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, schemas)
 
         // Rapid sequence updates
         repeat(100) { i ->
@@ -60,7 +65,7 @@ class InMemoryTopicRepositoryTest {
     @Test
     fun `should handle rapid schema updates`() = runTest {
         val name = "rapid-schema-updates-topic"
-        repository.createTopic(name, listOf(Schema(eventType = "initial")))
+        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, listOf(Schema(eventType = "initial")))
 
         // Rapid schema updates
         repeat(50) { i ->
@@ -76,7 +81,7 @@ class InMemoryTopicRepositoryTest {
     @Test
     fun `should be thread-safe for concurrent operations`() = runTest {
         val name = "concurrent-ops-topic"
-        repository.createTopic(name, listOf(Schema(eventType = "user.created")))
+        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, listOf(Schema(eventType = "user.created")))
 
         // Simulate concurrent operations
         coroutineScope {
@@ -101,8 +106,10 @@ class InMemoryTopicRepositoryTest {
     @Test
     fun `should handle large number of topics`() = runTest {
         val topicCount = 1000
+        val tenantResourceId = UUID.randomUUID()
+        val namespaceResourceId = UUID.randomUUID()
         repeat(topicCount) { i ->
-            repository.createTopic("topic-$i", listOf(Schema(eventType = "event$i")))
+            repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "topic-$i", listOf(Schema(eventType = "event$i")))
         }
 
         assertEquals(topicCount, repository.getAllTopics().size)
@@ -115,7 +122,7 @@ class InMemoryTopicRepositoryTest {
             Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string")))
         )
 
-        repository.createTopic(name, initialSchemas)
+        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, initialSchemas)
         repository.updateSequence(name, 5L)
         repository.updateSchemas(
             name, listOf(

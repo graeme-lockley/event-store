@@ -15,8 +15,8 @@ import com.eventstore.domain.tenants.SystemTopics
 import java.time.Instant
 
 data class DeleteNamespaceRequest(
-    val tenantId: String,
-    val namespaceId: String,
+    val tenantName: String,
+    val namespaceName: String,
     val deletedBy: String = "system",
     val reason: String? = null
 )
@@ -33,12 +33,8 @@ class DeleteNamespaceService(
             throw IllegalStateException("Multi-tenant support is disabled")
         }
 
-        if (!tenantProjectionService.tenantExists(request.tenantId)) {
-            throw TenantNotFoundException(request.tenantId)
-        }
-
-        val existing = namespaceProjectionService.getNamespace(request.tenantId, request.namespaceId)
-            ?: throw NamespaceNotFoundException(request.namespaceId)
+        val existing = namespaceProjectionService.getNamespaceByName(request.tenantName, request.namespaceName)
+            ?: throw NamespaceNotFoundException(request.namespaceName)
 
         if (!existing.isActive) {
             return false
@@ -46,8 +42,8 @@ class DeleteNamespaceService(
 
         val now = Instant.now()
         val payload = NamespaceDeletedEvent(
-            tenantId = request.tenantId,
-            namespaceId = request.namespaceId,
+            resourceId = existing.resourceId,
+            tenantResourceId = existing.tenantResourceId,
             deletedBy = request.deletedBy,
             deletedAt = now,
             reason = request.reason
@@ -55,8 +51,8 @@ class DeleteNamespaceService(
 
         val sequence = topicRepository.getAndIncrementSequence(
             topicName = SystemTopics.NAMESPACES_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
 
         val event = Event(

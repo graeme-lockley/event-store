@@ -35,17 +35,16 @@ fun Route.tenantRoutes(
         post {
             try {
                 val body = call.receive<TenantCreateRequest>()
-                if (body.id.isBlank() || body.name.isBlank()) {
+                if (body.name.isBlank()) {
                     call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse("tenantId and name are required", "INVALID_REQUEST")
+                        ErrorResponse("name is required", "INVALID_REQUEST")
                     )
                     return@post
                 }
 
                 val created = createTenantService.execute(
                     CreateTenantRequest(
-                        tenantId = body.id,
                         name = body.name,
                         quota = body.quota?.toDomain(),
                         metadata = body.metadata
@@ -83,10 +82,10 @@ fun Route.tenantRoutes(
             }
         }
 
-        get("{tenantId}") {
+        get("{tenantName}") {
             try {
-                val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
-                val tenant = getTenantService.getTenant(tenantId) ?: throw TenantNotFoundException(tenantId)
+                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val tenant = getTenantService.getTenant(tenantName) ?: throw TenantNotFoundException(tenantName)
                 call.respond(HttpStatusCode.OK, tenant.toResponse())
             } catch (e: TenantNotFoundException) {
                 call.respond(
@@ -101,14 +100,14 @@ fun Route.tenantRoutes(
             }
         }
 
-        put("{tenantId}") {
+        put("{tenantName}") {
             try {
-                val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
+                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
                 val body = call.receive<TenantUpdateRequest>()
 
                 val updated = updateTenantService.execute(
                     UpdateTenantRequest(
-                        tenantId = tenantId,
+                        tenantName = tenantName,
                         name = body.name,
                         quota = body.quota?.toDomain(),
                         metadata = body.metadata
@@ -134,19 +133,19 @@ fun Route.tenantRoutes(
             }
         }
 
-        delete("{tenantId}") {
+        delete("{tenantName}") {
             try {
-                val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
+                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
                 val body = runCatching { call.receive<TenantDeleteRequestDto>() }.getOrNull()
 
                 deleteTenantService.execute(
                     DeleteTenantRequest(
-                        tenantId = tenantId,
+                        tenantName = tenantName,
                         reason = body?.reason
                     )
                 )
 
-                call.respond(HttpStatusCode.OK, mapOf("message" to "Tenant '$tenantId' deleted"))
+                call.respond(HttpStatusCode.OK, mapOf("message" to "Tenant '$tenantName' deleted"))
             } catch (e: TenantNotFoundException) {
                 call.respond(
                     HttpStatusCode.NotFound,
@@ -168,7 +167,7 @@ fun Route.tenantRoutes(
 }
 
 private fun Tenant.toResponse(): TenantResponse = TenantResponse(
-    id = id,
+    id = name,
     name = name,
     createdAt = createdAt.toString(),
     updatedAt = updatedAt?.toString(),
@@ -194,4 +193,3 @@ private fun Quota.toDto(): QuotaDto = QuotaDto(
     maxUsers = maxUsers,
     maxEventSizeBytes = maxEventSizeBytes
 )
-

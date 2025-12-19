@@ -13,9 +13,9 @@ import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import com.eventstore.domain.tenants.SystemTopics
 import java.time.Instant
+import java.util.UUID
 
 data class CreateTenantRequest(
-    val tenantId: String,
     val name: String,
     val quota: Quota? = null,
     val metadata: Map<String, Any> = emptyMap(),
@@ -33,13 +33,14 @@ class CreateTenantService(
             throw IllegalStateException("Multi-tenant support is disabled")
         }
 
-        if (tenantProjectionService.tenantExists(request.tenantId)) {
-            throw TenantAlreadyExistsException(request.tenantId)
+        if (tenantProjectionService.tenantExistsByName(request.name)) {
+            throw TenantAlreadyExistsException(request.name)
         }
 
         val now = Instant.now()
+        val resourceId = UUID.randomUUID()
         val tenantCreated = TenantCreatedEvent(
-            tenantId = request.tenantId,
+            resourceId = resourceId,
             name = request.name,
             quota = request.quota,
             createdBy = request.createdBy,
@@ -49,8 +50,8 @@ class CreateTenantService(
 
         val sequence = topicRepository.getAndIncrementSequence(
             topicName = SystemTopics.TENANTS_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
 
         val event = Event(
@@ -72,7 +73,7 @@ class CreateTenantService(
         )
 
         return Tenant(
-            id = request.tenantId,
+            resourceId = resourceId,
             name = request.name,
             createdAt = now,
             updatedAt = null,

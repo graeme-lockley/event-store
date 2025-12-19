@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -27,15 +28,18 @@ class NamespaceProjectionServiceTest {
 
     @Test
     fun `applies created and updated events`() = runTest {
+        val tenantResourceId = UUID.randomUUID()
+        val namespaceResourceId = UUID.randomUUID()
         val createdAt = Instant.now()
         val created = Event(
             id = EventId.create(SystemTopics.NAMESPACES_TOPIC, 1, SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID),
             timestamp = createdAt,
             type = NamespaceEventType.CREATED,
             payload = NamespaceCreatedEvent(
-                tenantId = "acme",
-                namespaceId = "billing",
-                name = "Billing",
+                resourceId = namespaceResourceId,
+                tenantResourceId = tenantResourceId,
+                tenantName = "acme",
+                name = "billing",
                 createdAt = createdAt
             ).toPayload()
         )
@@ -45,8 +49,8 @@ class NamespaceProjectionServiceTest {
             timestamp = updatedAt,
             type = NamespaceEventType.UPDATED,
             payload = NamespaceUpdatedEvent(
-                tenantId = "acme",
-                namespaceId = "billing",
+                resourceId = namespaceResourceId,
+                tenantResourceId = tenantResourceId,
                 name = "Billing App",
                 description = "desc",
                 updatedAt = updatedAt
@@ -55,23 +59,29 @@ class NamespaceProjectionServiceTest {
 
         service.handleEvents(listOf(created, updated))
 
-        val ns = service.getNamespace("acme", "billing")
+        // After update, look up by the new name
+        val ns = service.getNamespace("acme", "Billing App")
         assertNotNull(ns)
         assertEquals("Billing App", ns.name)
         assertEquals("desc", ns.description)
+        // Verify old name no longer works
+        assertNull(service.getNamespace("acme", "billing"))
     }
 
     @Test
     fun `applies delete hides namespace`() = runTest {
+        val tenantResourceId = UUID.randomUUID()
+        val namespaceResourceId = UUID.randomUUID()
         val createdAt = Instant.now()
         val created = Event(
             id = EventId.create(SystemTopics.NAMESPACES_TOPIC, 1, SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID),
             timestamp = createdAt,
             type = NamespaceEventType.CREATED,
             payload = NamespaceCreatedEvent(
-                tenantId = "acme",
-                namespaceId = "billing",
-                name = "Billing",
+                resourceId = namespaceResourceId,
+                tenantResourceId = tenantResourceId,
+                tenantName = "acme",
+                name = "billing",
                 createdAt = createdAt
             ).toPayload()
         )
@@ -81,8 +91,8 @@ class NamespaceProjectionServiceTest {
             timestamp = deletedAt,
             type = NamespaceEventType.DELETED,
             payload = NamespaceDeletedEvent(
-                tenantId = "acme",
-                namespaceId = "billing",
+                resourceId = namespaceResourceId,
+                tenantResourceId = tenantResourceId,
                 deletedAt = deletedAt
             ).toPayload()
         )

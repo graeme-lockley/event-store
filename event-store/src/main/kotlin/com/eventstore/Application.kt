@@ -39,9 +39,19 @@ import com.eventstore.infrastructure.auth.SessionManager
 import com.eventstore.infrastructure.projections.InMemoryNamespaceRepository
 import com.eventstore.infrastructure.projections.InMemoryUserRepository
 import com.eventstore.infrastructure.projections.InMemoryTenantRepository
+import com.eventstore.infrastructure.projections.InMemoryPermissionRepository
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
 import com.eventstore.infrastructure.projections.UserProjectionService
+import com.eventstore.infrastructure.projections.PermissionProjectionService
+import com.eventstore.domain.ports.outbound.ResourceResolver
+import com.eventstore.domain.services.auth.ResourceResolverImpl
+import com.eventstore.domain.services.auth.AuthorizationService
+import com.eventstore.domain.services.permission.GrantPermissionService
+import com.eventstore.domain.services.permission.RevokePermissionService
+import com.eventstore.domain.services.permission.GetPermissionsService
+import com.eventstore.interfaces.http.middleware.AuthenticationMiddleware
+import com.eventstore.interfaces.http.middleware.AuthorizationMiddleware
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import com.eventstore.interfaces.http.routes.consumerRoutes
@@ -52,6 +62,7 @@ import com.eventstore.interfaces.http.routes.tenantRoutes
 import com.eventstore.interfaces.http.routes.topicRoutes
 import com.eventstore.interfaces.http.routes.userRoutes
 import com.eventstore.interfaces.http.routes.authRoutes
+import com.eventstore.interfaces.http.routes.permissionRoutes
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.ktor.http.*
@@ -142,29 +153,65 @@ fun Application.configureApplication(config: Config) {
     val userProjectionService = UserProjectionService(userProjectionRepository)
     val usersTopic = SystemTopics.qualified(SystemTopics.USERS_TOPIC)
 
+    val permissionProjectionRepository = InMemoryPermissionRepository()
+    val permissionProjectionService = PermissionProjectionService(permissionProjectionRepository)
+    val permissionsTopic = SystemTopics.qualified(SystemTopics.PERMISSIONS_TOPIC)
+
     runBlocking {
+        // Register system consumers for projection services
+        // These consume from system topics in $system/$management namespace
         registerConsumerService.execute(
             InMemoryConsumerRegistrationRequest(
                 handler = { events -> tenantProjectionService.handleEvents(events) },
                 topics = mapOf(tenantTopic to null)
-            )
+            ),
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
         registerConsumerService.execute(
             InMemoryConsumerRegistrationRequest(
                 handler = { events -> namespaceProjectionService.handleEvents(events) },
                 topics = mapOf(namespaceTopic to null)
-            )
+            ),
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
         registerConsumerService.execute(
             InMemoryConsumerRegistrationRequest(
                 handler = { events -> userProjectionService.handleEvents(events) },
                 topics = mapOf(usersTopic to null)
-            )
+            ),
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+        )
+        registerConsumerService.execute(
+            InMemoryConsumerRegistrationRequest(
+                handler = { events -> permissionProjectionService.handleEvents(events) },
+                topics = mapOf(permissionsTopic to null)
+            ),
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
     }
 
+    // Initialize permission and authorization services (needed by other services)
+    val resourceResolver: ResourceResolver = ResourceResolverImpl(
+        tenantProjectionService = tenantProjectionService,
+        namespaceProjectionService = namespaceProjectionService,
+        topicRepository = topicRepository
+    )
+    val authorizationService = AuthorizationService(
+        permissionProjectionService = permissionProjectionService,
+        resourceResolver = resourceResolver
+    )
+
     // Initialize domain services
-    val createTopicService = CreateTopicService(topicRepository, schemaValidator)
+    val createTopicService = CreateTopicService(
+        topicRepository = topicRepository,
+        schemaValidator = schemaValidator,
+        tenantProjectionService = tenantProjectionService,
+        namespaceProjectionService = namespaceProjectionService
+    )
     val getTopicsService = GetTopicsService(topicRepository)
     val updateTopicSchemasService = UpdateTopicSchemasService(topicRepository, schemaValidator)
     val publishEventsService =
@@ -191,17 +238,34 @@ fun Application.configureApplication(config: Config) {
     val sessionManager = SessionManager()
     val authenticationService = AuthenticationService(userProjectionService, sessionManager)
 
+    // Initialize permission management services
+    val grantPermissionService = GrantPermissionService(
+        eventRepository = eventRepository,
+        topicRepository = topicRepository,
+        resourceResolver = resourceResolver,
+        tenantProjectionService = tenantProjectionService,
+        namespaceProjectionService = namespaceProjectionService
+    )
+    val revokePermissionService = RevokePermissionService(
+        eventRepository = eventRepository,
+        topicRepository = topicRepository,
+        resourceResolver = resourceResolver
+    )
+    val getPermissionsService = GetPermissionsService(
+        permissionProjectionService = permissionProjectionService,
+        resourceResolver = resourceResolver
+    )
+
     // Ensure default/default namespace exists for legacy endpoints when multi-tenant is enabled
     if (config.multiTenantEnabled) {
         runBlocking {
-            if (tenantProjectionService.tenantExists("default") &&
-                !namespaceProjectionService.namespaceExists("default", "default")) {
+            if (tenantProjectionService.tenantExistsByName("default") &&
+                !namespaceProjectionService.namespaceExistsByName("default", "default")) {
                 runCatching {
                     createNamespaceService.execute(
                         CreateNamespaceRequest(
-                            tenantId = "default",
-                            namespaceId = "default",
-                            name = "Default"
+                            tenantName = "default",
+                            name = "default"
                         )
                     )
                 }
@@ -315,8 +379,18 @@ fun Application.configureApplication(config: Config) {
         }
     }
 
+    // Install middleware
+    val authenticationMiddleware = AuthenticationMiddleware(authenticationService)
+    val authorizationMiddleware = AuthorizationMiddleware(authorizationService)
+
     // Configure routing
     routing {
+        // Install authentication middleware
+        authenticationMiddleware.install(this)
+        
+        // Install authorization middleware
+        authorizationMiddleware.install(this)
+
         topicRoutes(createTopicService, getTopicsService, updateTopicSchemasService, dispatcherManager)
         eventRoutes(publishEventsService, getEventsService)
         consumerRoutes(registerConsumerService, unregisterConsumerService, consumerRepository)
@@ -324,6 +398,7 @@ fun Application.configureApplication(config: Config) {
         namespaceRoutes(createNamespaceService, getNamespaceService, updateNamespaceService, deleteNamespaceService)
         userRoutes(createUserService, getUserService, updateUserService, deleteUserService, assignUserToTenantService, removeUserFromTenantService)
         authRoutes(authenticationService, changePasswordService)
+        permissionRoutes(grantPermissionService, revokePermissionService, getPermissionsService)
         healthRoutes(getHealthStatusService)
     }
 
@@ -340,15 +415,28 @@ fun Application.configureApplication(config: Config) {
     println("📁 Data directory: ${config.dataDir}")
     println("📁 Config directory: ${config.configDir}")
     println("📖 API Endpoints:")
-    println("   POST /topics - Create a topic with schemas")
-    println("   GET  /topics - List all topics")
-    println("   GET  /topics/{topic} - Get topic details")
-    println("   PUT  /topics/{topic} - Update schemas")
-    println("   POST /events - Publish events")
-    println("   GET  /topics/{topic}/events - Retrieve events")
-    println("   POST /consumers/register - Register a consumer")
-    println("   GET  /consumers - List consumers")
-    println("   DELETE /consumers/{id} - Unregister a consumer")
+    println("   Tenant Management:")
+    println("     POST   /tenants - Create tenant")
+    println("     GET    /tenants/{tenantName} - Get tenant")
+    println("     PUT    /tenants/{tenantName} - Update tenant")
+    println("     DELETE /tenants/{tenantName} - Delete tenant")
+    println("   Namespace Management:")
+    println("     POST   /tenants/{tenantName}/namespaces - Create namespace")
+    println("     GET    /tenants/{tenantName}/namespaces/{namespaceName} - Get namespace")
+    println("     PUT    /tenants/{tenantName}/namespaces/{namespaceName} - Update namespace")
+    println("     DELETE /tenants/{tenantName}/namespaces/{namespaceName} - Delete namespace")
+    println("   Topic Management:")
+    println("     POST   /tenants/{tenantName}/namespaces/{namespaceName}/topics - Create topic")
+    println("     GET    /tenants/{tenantName}/namespaces/{namespaceName}/topics - List topics")
+    println("     GET    /tenants/{tenantName}/namespaces/{namespaceName}/topics/{topic} - Get topic")
+    println("     PUT    /tenants/{tenantName}/namespaces/{namespaceName}/topics/{topic} - Update schemas")
+    println("   Event Operations:")
+    println("     POST   /tenants/{tenantName}/namespaces/{namespaceName}/events - Publish events")
+    println("     GET    /tenants/{tenantName}/namespaces/{namespaceName}/topics/{topic}/events - Retrieve events")
+    println("   Consumer Management:")
+    println("     POST   /tenants/{tenantName}/namespaces/{namespaceName}/consumers/register - Register consumer")
+    println("     GET    /tenants/{tenantName}/namespaces/{namespaceName}/consumers - List consumers")
+    println("     DELETE /tenants/{tenantName}/namespaces/{namespaceName}/consumers/{id} - Unregister consumer")
     println("   GET  /health - Health check")
 }
 

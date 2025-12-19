@@ -14,6 +14,7 @@ import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
 import com.eventstore.infrastructure.persistence.InMemoryEventRepository
 import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
 import java.time.Instant
+import java.util.UUID
 
 data class PopulateEventStoreState(
     val topicName: String = "user-events",
@@ -51,10 +52,12 @@ suspend fun populateEventStore(state: PopulateEventStoreState) {
         Schema(eventType = "user.updated", properties = mapOf("id" to "string", "name" to "string")),
     )
 
-    state.topicRepository.createTopic(state.topicName, topicSchemas)
+    val tenantResourceId = UUID.randomUUID()
+    val namespaceResourceId = UUID.randomUUID()
+    state.topicRepository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, state.topicName, topicSchemas)
     state.schemaValidator.registerSchemas(state.topicName, topicSchemas)
 
-    state.topicRepository.createTopic("other-user-events", topicSchemas)
+    state.topicRepository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "other-user-events", topicSchemas)
     state.schemaValidator.registerSchemas("other-user-events", topicSchemas)
 
     val requests = listOf(

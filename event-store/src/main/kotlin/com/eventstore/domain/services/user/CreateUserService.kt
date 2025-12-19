@@ -67,8 +67,8 @@ class CreateUserService(
 
         val seq = topicRepository.getAndIncrementSequence(
             topicName = SystemTopics.USERS_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
 
         val event = Event(

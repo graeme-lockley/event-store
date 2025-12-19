@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -28,6 +29,7 @@ class TenantProjectionServiceTest {
 
     @Test
     fun `applies created and updated events`() = runTest {
+        val resourceId = UUID.randomUUID()
         val createdAt = Instant.now()
         val createdEvent = Event(
             id = EventId.create(
@@ -39,8 +41,8 @@ class TenantProjectionServiceTest {
             timestamp = createdAt,
             type = TenantEventType.CREATED,
             payload = TenantCreatedEvent(
-                tenantId = "acme",
-                name = "Acme",
+                resourceId = resourceId,
+                name = "acme",
                 createdBy = "system",
                 createdAt = createdAt
             ).toPayload()
@@ -57,7 +59,7 @@ class TenantProjectionServiceTest {
             timestamp = updatedAt,
             type = TenantEventType.UPDATED,
             payload = TenantUpdatedEvent(
-                tenantId = "acme",
+                resourceId = resourceId,
                 name = "Acme Corp",
                 updatedBy = "system",
                 updatedAt = updatedAt
@@ -66,14 +68,18 @@ class TenantProjectionServiceTest {
 
         service.handleEvents(listOf(createdEvent, updatedEvent))
 
-        val tenant = service.getTenant("acme")
+        // After update, look up by the new name
+        val tenant = service.getTenant("Acme Corp")
         assertNotNull(tenant)
         assertEquals("Acme Corp", tenant.name)
         assertEquals(updatedAt, tenant.updatedAt)
+        // Verify old name no longer works
+        assertNull(service.getTenant("acme"))
     }
 
     @Test
     fun `applies delete event and hides tenant`() = runTest {
+        val resourceId = UUID.randomUUID()
         val createdAt = Instant.now()
         val createdEvent = Event(
             id = EventId.create(
@@ -85,8 +91,8 @@ class TenantProjectionServiceTest {
             timestamp = createdAt,
             type = TenantEventType.CREATED,
             payload = TenantCreatedEvent(
-                tenantId = "acme",
-                name = "Acme",
+                resourceId = resourceId,
+                name = "acme",
                 createdBy = "system",
                 createdAt = createdAt
             ).toPayload()
@@ -103,7 +109,7 @@ class TenantProjectionServiceTest {
             timestamp = deletedAt,
             type = TenantEventType.DELETED,
             payload = TenantDeletedEvent(
-                tenantId = "acme",
+                resourceId = resourceId,
                 deletedBy = "system",
                 deletedAt = deletedAt
             ).toPayload()

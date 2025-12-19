@@ -1,13 +1,17 @@
 package com.eventstore.domain
 
 import java.time.Instant
+import java.util.UUID
 
 /**
  * Domain entity representing a tenant.
+ * 
+ * - resourceId: Stable UUID that never changes (used in permissions and references)
+ * - name: Human-readable identifier used in URLs and for display (can be renamed with migration)
  */
 data class Tenant(
-    val id: String,
-    val name: String,
+    val resourceId: UUID,        // Stable GUID, never changes (used in permissions)
+    val name: String,            // Human-readable identifier (used in URLs and for display)
     val createdAt: Instant,
     val updatedAt: Instant? = null,
     val deletedAt: Instant? = null,
@@ -15,7 +19,6 @@ data class Tenant(
     val metadata: Map<String, Any> = emptyMap()
 ) {
     init {
-        require(id.isNotBlank()) { "Tenant ID is required" }
         require(name.isNotBlank()) { "Tenant name is required" }
     }
 

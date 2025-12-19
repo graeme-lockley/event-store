@@ -37,7 +37,7 @@ class RegisterConsumerServiceTest {
             topics = mapOf(topicName to null)
         )
 
-        val consumerId = service.execute(request)
+        val consumerId = service.execute(request, "default", "default")
 
         assertNotNull(consumerId)
         val consumer = helper.findConsumer(consumerId)
@@ -58,7 +58,7 @@ class RegisterConsumerServiceTest {
         )
 
         assertThrows<InvalidConsumerRegistrationException> {
-            service.execute(request)
+            service.execute(request, "default", "default")
         }
 
         assertEquals(consumers, helper.findConsumers())
@@ -74,7 +74,7 @@ class RegisterConsumerServiceTest {
         )
 
         assertThrows<TopicNotFoundException> {
-            service.execute(request)
+            service.execute(request, "default", "default")
         }
 
         assertEquals(consumers, helper.findConsumers())
@@ -91,7 +91,7 @@ class RegisterConsumerServiceTest {
         )
 
         assertThrows<TopicNotFoundException> {
-            service.execute(request)
+            service.execute(request, "default", "default")
         }
     }
 
@@ -105,7 +105,7 @@ class RegisterConsumerServiceTest {
             )
         )
 
-        val consumerId = service.execute(request)
+        val consumerId = service.execute(request, "default", "default")
 
         assertNotNull(consumerId)
     }

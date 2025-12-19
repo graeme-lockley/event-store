@@ -13,13 +13,17 @@ import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.UUID
 
 data class TopicConfig(
+    val resourceId: String? = null,  // UUID as string, nullable for backward compatibility
+    val tenantResourceId: String? = null,  // UUID as string, nullable for backward compatibility
+    val namespaceResourceId: String? = null,  // UUID as string, nullable for backward compatibility
     val name: String,
     val sequence: Long,
     val schemas: List<Schema>,
-    val tenantId: String = "default",
-    val namespaceId: String = "default"
+    val tenantId: String = "default",  // Kept for backward compatibility
+    val namespaceId: String = "default"  // Kept for backward compatibility
 )
 
 class FileSystemTopicRepository(
@@ -37,12 +41,12 @@ class FileSystemTopicRepository(
         }
     }
 
-    private fun getMutex(topicName: String, tenantId: String, namespaceId: String): Mutex {
-        return mutexes.getOrPut("$tenantId/$namespaceId/$topicName") { Mutex() }
+    private fun getMutex(topicName: String, tenantName: String, namespaceName: String): Mutex {
+        return mutexes.getOrPut("$tenantName/$namespaceName/$topicName") { Mutex() }
     }
 
-    private fun getConfigPath(topicName: String, tenantId: String, namespaceId: String): Path {
-        return configDir.resolve(tenantId).resolve(namespaceId).resolve("$topicName.json")
+    private fun getConfigPath(topicName: String, tenantName: String, namespaceName: String): Path {
+        return configDir.resolve(tenantName).resolve(namespaceName).resolve("$topicName.json")
     }
 
     private fun getLegacyConfigPath(topicName: String): Path {
@@ -58,14 +62,17 @@ class FileSystemTopicRepository(
     }
 
     override suspend fun createTopic(
+        resourceId: UUID,
+        tenantResourceId: UUID,
+        namespaceResourceId: UUID,
         name: String,
         schemas: List<Schema>,
-        tenantId: String,
-        namespaceId: String
+        tenantName: String,
+        namespaceName: String
     ): Topic {
         return withContext(Dispatchers.IO) {
             try {
-                val configPath = getConfigPath(name, tenantId, namespaceId)
+                val configPath = getConfigPath(name, tenantName, namespaceName)
                 val legacyPath = getLegacyConfigPath(name)
                 ensureParentDirectories(configPath)
 
@@ -73,11 +80,29 @@ class FileSystemTopicRepository(
                     throw com.eventstore.domain.exceptions.TopicAlreadyExistsException(name)
                 }
 
-                val config = TopicConfig(name, 0, schemas, tenantId, namespaceId)
+                val config = TopicConfig(
+                    resourceId = resourceId.toString(),
+                    tenantResourceId = tenantResourceId.toString(),
+                    namespaceResourceId = namespaceResourceId.toString(),
+                    name = name,
+                    sequence = 0,
+                    schemas = schemas,
+                    tenantId = tenantName,
+                    namespaceId = namespaceName
+                )
                 val json = objectMapper.writeValueAsString(config)
                 Files.writeString(configPath, json)
 
-                Topic(name, 0, schemas, tenantId, namespaceId)
+                Topic(
+                    resourceId = resourceId,
+                    tenantResourceId = tenantResourceId,
+                    namespaceResourceId = namespaceResourceId,
+                    name = name,
+                    sequence = 0,
+                    schemas = schemas,
+                    tenantName = tenantName,
+                    namespaceName = namespaceName
+                )
             } catch (e: com.eventstore.domain.exceptions.TopicAlreadyExistsException) {
                 throw e
             } catch (e: Exception) {
@@ -86,10 +111,10 @@ class FileSystemTopicRepository(
         }
     }
 
-    override suspend fun getTopic(name: String, tenantId: String, namespaceId: String): Topic? {
+    override suspend fun getTopic(name: String, tenantName: String, namespaceName: String): Topic? {
         return withContext(Dispatchers.IO) {
             try {
-                val scopedPath = getConfigPath(name, tenantId, namespaceId)
+                val scopedPath = getConfigPath(name, tenantName, namespaceName)
                 val pathToRead = when {
                     Files.exists(scopedPath) -> scopedPath
                     Files.exists(getLegacyConfigPath(name)) -> getLegacyConfigPath(name)
@@ -98,30 +123,52 @@ class FileSystemTopicRepository(
 
                 val json = Files.readString(pathToRead)
                 val config: TopicConfig = objectMapper.readValue(json)
-                Topic(config.name, config.sequence, config.schemas, config.tenantId, config.namespaceId)
+                // Generate resourceIds if not present (backward compatibility)
+                val resourceId = config.resourceId?.let { UUID.fromString(it) } ?: UUID.randomUUID()
+                val tenantResourceId = config.tenantResourceId?.let { UUID.fromString(it) } ?: UUID.randomUUID()
+                val namespaceResourceId = config.namespaceResourceId?.let { UUID.fromString(it) } ?: UUID.randomUUID()
+                Topic(
+                    resourceId = resourceId,
+                    tenantResourceId = tenantResourceId,
+                    namespaceResourceId = namespaceResourceId,
+                    name = config.name,
+                    sequence = config.sequence,
+                    schemas = config.schemas,
+                    tenantName = config.tenantId,
+                    namespaceName = config.namespaceId
+                )
             } catch (e: Exception) {
                 throw TopicConfigException("Failed to read topic configuration for $name", e)
             }
         }
     }
 
-    override suspend fun topicExists(name: String, tenantId: String, namespaceId: String): Boolean {
+    override suspend fun topicExists(name: String, tenantName: String, namespaceName: String): Boolean {
         return withContext(Dispatchers.IO) {
-            Files.exists(getConfigPath(name, tenantId, namespaceId)) || Files.exists(getLegacyConfigPath(name))
+            Files.exists(getConfigPath(name, tenantName, namespaceName)) || Files.exists(getLegacyConfigPath(name))
         }
     }
 
-    override suspend fun updateSequence(name: String, sequence: Long, tenantId: String, namespaceId: String) {
-        val mutex = getMutex(name, tenantId, namespaceId)
+    override suspend fun updateSequence(name: String, sequence: Long, tenantName: String, namespaceName: String) {
+        val mutex = getMutex(name, tenantName, namespaceName)
         mutex.withLock {
             withContext(Dispatchers.IO) {
                 try {
-                    val config = getTopic(name, tenantId, namespaceId)
+                    val topic = getTopic(name, tenantName, namespaceName)
                         ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(name)
 
-                    val updatedConfig = TopicConfig(config.name, sequence, config.schemas, config.tenantId, config.namespaceId)
+                    val updatedConfig = TopicConfig(
+                        resourceId = topic.resourceId.toString(),
+                        tenantResourceId = topic.tenantResourceId.toString(),
+                        namespaceResourceId = topic.namespaceResourceId.toString(),
+                        name = topic.name,
+                        sequence = sequence,
+                        schemas = topic.schemas,
+                        tenantId = topic.tenantName,
+                        namespaceId = topic.namespaceName
+                    )
                     val json = objectMapper.writeValueAsString(updatedConfig)
-                    val configPath = getConfigPath(config.name, config.tenantId, config.namespaceId)
+                    val configPath = getConfigPath(topic.name, topic.tenantName, topic.namespaceName)
                     ensureParentDirectories(configPath)
                     Files.writeString(configPath, json)
                 } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
@@ -133,24 +180,27 @@ class FileSystemTopicRepository(
         }
     }
 
-    override suspend fun getAndIncrementSequence(topicName: String, tenantId: String, namespaceId: String): Long {
-        val mutex = getMutex(topicName, tenantId, namespaceId)
+    override suspend fun getAndIncrementSequence(topicName: String, tenantName: String, namespaceName: String): Long {
+        val mutex = getMutex(topicName, tenantName, namespaceName)
         return mutex.withLock {
             withContext(Dispatchers.IO) {
                 try {
-                    val config = getTopic(topicName, tenantId, namespaceId)
+                    val topic = getTopic(topicName, tenantName, namespaceName)
                         ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicName)
 
-                    val nextSequence = config.sequence + 1
+                    val nextSequence = topic.sequence + 1
                     val updatedConfig = TopicConfig(
-                        config.name,
-                        nextSequence,
-                        config.schemas,
-                        config.tenantId,
-                        config.namespaceId
+                        resourceId = topic.resourceId.toString(),
+                        tenantResourceId = topic.tenantResourceId.toString(),
+                        namespaceResourceId = topic.namespaceResourceId.toString(),
+                        name = topic.name,
+                        sequence = nextSequence,
+                        schemas = topic.schemas,
+                        tenantId = topic.tenantName,
+                        namespaceId = topic.namespaceName
                     )
                     val json = objectMapper.writeValueAsString(updatedConfig)
-                    val configPath = getConfigPath(config.name, config.tenantId, config.namespaceId)
+                    val configPath = getConfigPath(topic.name, topic.tenantName, topic.namespaceName)
                     ensureParentDirectories(configPath)
                     Files.writeString(configPath, json)
 
@@ -167,35 +217,32 @@ class FileSystemTopicRepository(
     override suspend fun updateSchemas(
         name: String,
         schemas: List<Schema>,
-        tenantId: String,
-        namespaceId: String
+        tenantName: String,
+        namespaceName: String
     ): Topic {
-        val mutex = getMutex(name, tenantId, namespaceId)
+        val mutex = getMutex(name, tenantName, namespaceName)
         return mutex.withLock {
             withContext(Dispatchers.IO) {
                 try {
-                    val current = getTopic(name, tenantId, namespaceId)
+                    val current = getTopic(name, tenantName, namespaceName)
                         ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(name)
 
                     val updatedConfig = TopicConfig(
-                        current.name,
-                        current.sequence,
-                        schemas,
-                        current.tenantId,
-                        current.namespaceId
+                        resourceId = current.resourceId.toString(),
+                        tenantResourceId = current.tenantResourceId.toString(),
+                        namespaceResourceId = current.namespaceResourceId.toString(),
+                        name = current.name,
+                        sequence = current.sequence,
+                        schemas = schemas,
+                        tenantId = current.tenantName,
+                        namespaceId = current.namespaceName
                     )
                     val json = objectMapper.writeValueAsString(updatedConfig)
-                    val configPath = getConfigPath(current.name, current.tenantId, current.namespaceId)
+                    val configPath = getConfigPath(current.name, current.tenantName, current.namespaceName)
                     ensureParentDirectories(configPath)
                     Files.writeString(configPath, json)
 
-                    Topic(
-                        updatedConfig.name,
-                        updatedConfig.sequence,
-                        updatedConfig.schemas,
-                        updatedConfig.tenantId,
-                        updatedConfig.namespaceId
-                    )
+                    current.copy(schemas = schemas)
                 } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
                     throw e
                 } catch (e: Exception) {
@@ -218,7 +265,20 @@ class FileSystemTopicRepository(
                         try {
                             val json = Files.readString(path)
                             val config: TopicConfig = objectMapper.readValue(json)
-                            Topic(config.name, config.sequence, config.schemas, config.tenantId, config.namespaceId)
+                            // Generate resourceIds if not present (backward compatibility)
+                            val resourceId = config.resourceId?.let { UUID.fromString(it) } ?: UUID.randomUUID()
+                            val tenantResourceId = config.tenantResourceId?.let { UUID.fromString(it) } ?: UUID.randomUUID()
+                            val namespaceResourceId = config.namespaceResourceId?.let { UUID.fromString(it) } ?: UUID.randomUUID()
+                            Topic(
+                                resourceId = resourceId,
+                                tenantResourceId = tenantResourceId,
+                                namespaceResourceId = namespaceResourceId,
+                                name = config.name,
+                                sequence = config.sequence,
+                                schemas = config.schemas,
+                                tenantName = config.tenantId,
+                                namespaceName = config.namespaceId
+                            )
                         } catch (e: Exception) {
                             logger.warn("Failed to read topic configuration from ${path}: ${e.message}", e)
                             null

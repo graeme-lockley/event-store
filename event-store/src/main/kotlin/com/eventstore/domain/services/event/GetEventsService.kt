@@ -15,17 +15,17 @@ class GetEventsService(
         sinceEventId: String? = null,
         date: String? = null,
         limit: Int? = null,
-        tenantId: String = "default",
-        namespaceId: String = "default"
+        tenantName: String = "default",
+        namespaceName: String = "default"
     ): List<Event> {
         // Validate topic exists
-        if (!topicRepository.topicExists(topic, tenantId, namespaceId)) {
+        if (!topicRepository.topicExists(topic, tenantName, namespaceName)) {
             throw TopicNotFoundException(topic)
         }
 
         val sinceId = sinceEventId?.let { EventId(it) }
-        val tenantForStorage = if (tenantId == "default" && namespaceId == "default") null else tenantId
-        val namespaceForStorage = if (tenantId == "default" && namespaceId == "default") null else namespaceId
+        val tenantForStorage = if (tenantName == "default" && namespaceName == "default") null else tenantName
+        val namespaceForStorage = if (tenantName == "default" && namespaceName == "default") null else namespaceName
 
         return eventRepository.getEvents(
             topic = topic,

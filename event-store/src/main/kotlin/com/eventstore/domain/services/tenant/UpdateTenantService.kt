@@ -15,7 +15,7 @@ import com.eventstore.domain.tenants.SystemTopics
 import java.time.Instant
 
 data class UpdateTenantRequest(
-    val tenantId: String,
+    val tenantName: String,
     val name: String? = null,
     val quota: Quota? = null,
     val metadata: Map<String, Any>? = null,
@@ -33,12 +33,12 @@ class UpdateTenantService(
             throw IllegalStateException("Multi-tenant support is disabled")
         }
 
-        val existing = tenantProjectionService.getTenant(request.tenantId)
-            ?: throw TenantNotFoundException(request.tenantId)
+        val existing = tenantProjectionService.getTenantByName(request.tenantName)
+            ?: throw TenantNotFoundException(request.tenantName)
 
         val now = Instant.now()
         val eventPayload = TenantUpdatedEvent(
-            tenantId = request.tenantId,
+            resourceId = existing.resourceId,
             name = request.name,
             quota = request.quota,
             updatedBy = request.updatedBy,
@@ -48,8 +48,8 @@ class UpdateTenantService(
 
         val sequence = topicRepository.getAndIncrementSequence(
             topicName = SystemTopics.TENANTS_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
 
         val event = Event(

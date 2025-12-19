@@ -3,6 +3,7 @@ package com.eventstore.interfaces.http.middleware
 import com.eventstore.domain.services.auth.AuthenticationService
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
@@ -16,6 +17,13 @@ class AuthenticationMiddleware(
 
     fun install(route: Route) {
         route.intercept(ApplicationCallPipeline.Features) {
+            // Skip authentication for public endpoints
+            val path = call.request.path()
+            if (isPublicEndpoint(path)) {
+                proceed()
+                return@intercept
+            }
+
             val sessionId = call.request.headers["Authorization"]?.removePrefix("Bearer ")
                 ?: call.request.cookies["sessionId"]
             if (sessionId == null) {
@@ -33,6 +41,14 @@ class AuthenticationMiddleware(
 
             call.attributes.put(UserIdKey, session.userId)
         }
+    }
+
+    private fun isPublicEndpoint(path: String): Boolean {
+        return path.startsWith("/auth/login") ||
+               path.startsWith("/auth/logout") ||
+               path.startsWith("/health") ||
+               path == "/" ||
+               path == "/favicon.ico"
     }
 }
 

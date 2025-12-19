@@ -49,10 +49,13 @@ class CreateTenantServiceTest {
 
         runBlocking {
             topicRepository.createTopic(
+                resourceId = java.util.UUID.randomUUID(),
+                tenantResourceId = java.util.UUID.randomUUID(),
+                namespaceResourceId = java.util.UUID.randomUUID(),
                 name = SystemTopics.TENANTS_TOPIC,
                 schemas = emptyList(),
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantName = SystemTopics.SYSTEM_TENANT_ID,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
             )
         }
     }
@@ -62,14 +65,13 @@ class CreateTenantServiceTest {
         val quota = Quota(maxTopics = 10, maxNamespaces = 5, maxEventsPerDay = 1000, maxConsumers = 2, maxUsers = 3, maxEventSizeBytes = 512)
         val tenant = service.execute(
             CreateTenantRequest(
-                tenantId = "acme",
-                name = "Acme Corp",
+                name = "acme",
                 quota = quota,
                 metadata = mapOf("plan" to "pro")
             )
         )
 
-        assertEquals("acme", tenant.id)
+        assertEquals("acme", tenant.name)
         val events = eventRepository.getEvents(
             SystemTopics.TENANTS_TOPIC,
             tenantId = SystemTopics.SYSTEM_TENANT_ID,
@@ -90,17 +92,14 @@ class CreateTenantServiceTest {
         )
 
         assertFailsWith<IllegalStateException> {
-            disabledService.execute(CreateTenantRequest("acme", "Acme"))
+            disabledService.execute(CreateTenantRequest(name = "acme"))
         }
     }
 
     @Test
     fun `throws when tenant already exists`() = runTest {
-        val existing = Tenant(
-            id = "acme",
-            name = "Acme",
-            createdAt = java.time.Instant.now()
-        )
+        val resourceId = java.util.UUID.randomUUID()
+        val createdAt = java.time.Instant.now()
         projectionService.handleEvents(
             listOf(
                 com.eventstore.domain.Event(
@@ -110,12 +109,12 @@ class CreateTenantServiceTest {
                         tenantId = SystemTopics.SYSTEM_TENANT_ID,
                         namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
                     ),
-                    timestamp = existing.createdAt,
+                    timestamp = createdAt,
                     type = TenantEventType.CREATED,
                     payload = mapOf(
-                        "tenantId" to existing.id,
-                        "name" to existing.name,
-                        "createdAt" to existing.createdAt.toString(),
+                        "resourceId" to resourceId.toString(),
+                        "name" to "acme",
+                        "createdAt" to createdAt.toString(),
                         "createdBy" to "test",
                         "metadata" to emptyMap<String, Any>()
                     )
@@ -124,7 +123,7 @@ class CreateTenantServiceTest {
         )
 
         assertFailsWith<TenantAlreadyExistsException> {
-            service.execute(CreateTenantRequest("acme", "Acme"))
+            service.execute(CreateTenantRequest(name = "acme"))
         }
     }
 }

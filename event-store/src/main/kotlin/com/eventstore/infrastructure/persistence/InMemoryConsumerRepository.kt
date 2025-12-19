@@ -33,6 +33,18 @@ class InMemoryConsumerRepository : ConsumerRepository {
         }
     }
 
+    override suspend fun findByTenantAndNamespace(tenantName: String, namespaceName: String): List<Consumer> {
+        // Note: Consumer domain model doesn't currently store tenant/namespace directly.
+        // Topics are stored as qualified names (tenant/namespace/topic) in the topics map.
+        // Filter consumers whose topics belong to the specified tenant/namespace.
+        val prefix = "$tenantName/$namespaceName/"
+        return mutex.withLock {
+            consumers.values.filter { consumer ->
+                consumer.topics.keys.any { it.startsWith(prefix) }
+            }
+        }
+    }
+
     override suspend fun delete(id: String): Boolean {
         return mutex.withLock {
             consumers.remove(id) != null

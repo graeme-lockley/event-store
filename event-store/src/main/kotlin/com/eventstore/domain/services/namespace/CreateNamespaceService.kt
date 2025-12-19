@@ -14,10 +14,10 @@ import com.eventstore.infrastructure.projections.NamespaceProjectionService
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import com.eventstore.domain.tenants.SystemTopics
 import java.time.Instant
+import java.util.UUID
 
 data class CreateNamespaceRequest(
-    val tenantId: String,
-    val namespaceId: String,
+    val tenantName: String,
     val name: String,
     val description: String? = null,
     val metadata: Map<String, Any> = emptyMap(),
@@ -36,18 +36,19 @@ class CreateNamespaceService(
             throw IllegalStateException("Multi-tenant support is disabled")
         }
 
-        if (!tenantProjectionService.tenantExists(request.tenantId)) {
-            throw TenantNotFoundException(request.tenantId)
-        }
+        val tenant = tenantProjectionService.getTenantByName(request.tenantName)
+            ?: throw TenantNotFoundException(request.tenantName)
 
-        if (namespaceProjectionService.namespaceExists(request.tenantId, request.namespaceId)) {
-            throw NamespaceAlreadyExistsException(request.namespaceId)
+        if (namespaceProjectionService.namespaceExistsByName(request.tenantName, request.name)) {
+            throw NamespaceAlreadyExistsException(request.name)
         }
 
         val now = Instant.now()
+        val resourceId = UUID.randomUUID()
         val payload = NamespaceCreatedEvent(
-            tenantId = request.tenantId,
-            namespaceId = request.namespaceId,
+            resourceId = resourceId,
+            tenantResourceId = tenant.resourceId,
+            tenantName = request.tenantName,
             name = request.name,
             description = request.description,
             createdBy = request.createdBy,
@@ -57,8 +58,8 @@ class CreateNamespaceService(
 
         val sequence = topicRepository.getAndIncrementSequence(
             topicName = SystemTopics.NAMESPACES_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
 
         val event = Event(
@@ -81,8 +82,9 @@ class CreateNamespaceService(
         namespaceProjectionService.handleEvents(listOf(event))
 
         return Namespace(
-            tenantId = request.tenantId,
-            id = request.namespaceId,
+            resourceId = resourceId,
+            tenantResourceId = tenant.resourceId,
+            tenantName = request.tenantName,
             name = request.name,
             description = request.description,
             createdAt = now,

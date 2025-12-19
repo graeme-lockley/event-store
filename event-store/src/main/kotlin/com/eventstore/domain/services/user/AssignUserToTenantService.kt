@@ -34,7 +34,7 @@ class AssignUserToTenantService(
             throw IllegalStateException("Multi-tenant support is disabled")
         }
 
-        if (!tenantProjectionService.tenantExists(request.tenantId)) {
+        if (!tenantProjectionService.tenantExistsByName(request.tenantId)) {
             throw TenantNotFoundException(request.tenantId)
         }
 
@@ -52,8 +52,8 @@ class AssignUserToTenantService(
 
         val seq = topicRepository.getAndIncrementSequence(
             topicName = SystemTopics.USERS_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
 
         val event = Event(

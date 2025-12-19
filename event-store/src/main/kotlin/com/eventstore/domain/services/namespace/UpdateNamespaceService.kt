@@ -16,8 +16,8 @@ import com.eventstore.domain.tenants.SystemTopics
 import java.time.Instant
 
 data class UpdateNamespaceRequest(
-    val tenantId: String,
-    val namespaceId: String,
+    val tenantName: String,
+    val namespaceName: String,
     val name: String? = null,
     val description: String? = null,
     val metadata: Map<String, Any>? = null,
@@ -36,17 +36,13 @@ class UpdateNamespaceService(
             throw IllegalStateException("Multi-tenant support is disabled")
         }
 
-        if (!tenantProjectionService.tenantExists(request.tenantId)) {
-            throw TenantNotFoundException(request.tenantId)
-        }
-
-        val existing = namespaceProjectionService.getNamespace(request.tenantId, request.namespaceId)
-            ?: throw NamespaceNotFoundException(request.namespaceId)
+        val existing = namespaceProjectionService.getNamespaceByName(request.tenantName, request.namespaceName)
+            ?: throw NamespaceNotFoundException(request.namespaceName)
 
         val now = Instant.now()
         val payload = NamespaceUpdatedEvent(
-            tenantId = request.tenantId,
-            namespaceId = request.namespaceId,
+            resourceId = existing.resourceId,
+            tenantResourceId = existing.tenantResourceId,
             name = request.name,
             description = request.description,
             updatedBy = request.updatedBy,
@@ -56,8 +52,8 @@ class UpdateNamespaceService(
 
         val sequence = topicRepository.getAndIncrementSequence(
             topicName = SystemTopics.NAMESPACES_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
 
         val event = Event(

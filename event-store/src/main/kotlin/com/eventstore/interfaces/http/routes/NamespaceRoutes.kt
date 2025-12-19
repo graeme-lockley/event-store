@@ -30,23 +30,22 @@ fun Route.namespaceRoutes(
     updateNamespaceService: UpdateNamespaceService,
     deleteNamespaceService: DeleteNamespaceService
 ) {
-    route("/tenants/{tenantId}/namespaces") {
+    route("/tenants/{tenantName}/namespaces") {
         post {
             try {
-                val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
+                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
                 val body = call.receive<NamespaceCreateRequest>()
-                if (body.id.isBlank() || body.name.isBlank()) {
+                if (body.name.isBlank()) {
                     call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse("namespaceId and name are required", "INVALID_REQUEST")
+                        ErrorResponse("name is required", "INVALID_REQUEST")
                     )
                     return@post
                 }
 
                 val created = createNamespaceService.execute(
                     CreateNamespaceRequest(
-                        tenantId = tenantId,
-                        namespaceId = body.id,
+                        tenantName = tenantName,
                         name = body.name,
                         description = body.description,
                         metadata = body.metadata
@@ -66,19 +65,19 @@ fun Route.namespaceRoutes(
 
         get {
             try {
-                val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
-                val namespaces = getNamespaceService.listNamespaces(tenantId)
+                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaces = getNamespaceService.listNamespaces(tenantName)
                 call.respond(HttpStatusCode.OK, NamespaceListResponse(namespaces.map { it.toResponse() }))
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Failed to list namespaces", "NAMESPACE_LIST_FAILED"))
             }
         }
 
-        get("{namespaceId}") {
+        get("{namespaceName}") {
             try {
-                val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
-                val namespaceId = call.parameters["namespaceId"] ?: throw IllegalArgumentException("namespaceId is required")
-                val ns = getNamespaceService.getNamespace(tenantId, namespaceId) ?: throw NamespaceNotFoundException(namespaceId)
+                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val ns = getNamespaceService.getNamespace(tenantName, namespaceName) ?: throw NamespaceNotFoundException(namespaceName)
                 call.respond(HttpStatusCode.OK, ns.toResponse())
             } catch (e: NamespaceNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "Namespace not found", "NAMESPACE_NOT_FOUND"))
@@ -87,16 +86,16 @@ fun Route.namespaceRoutes(
             }
         }
 
-        put("{namespaceId}") {
+        put("{namespaceName}") {
             try {
-                val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
-                val namespaceId = call.parameters["namespaceId"] ?: throw IllegalArgumentException("namespaceId is required")
+                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val body = call.receive<NamespaceUpdateRequest>()
 
                 val updated = updateNamespaceService.execute(
                     UpdateNamespaceRequest(
-                        tenantId = tenantId,
-                        namespaceId = namespaceId,
+                        tenantName = tenantName,
+                        namespaceName = namespaceName,
                         name = body.name,
                         description = body.description,
                         metadata = body.metadata
@@ -114,20 +113,20 @@ fun Route.namespaceRoutes(
             }
         }
 
-        delete("{namespaceId}") {
+        delete("{namespaceName}") {
             try {
-                val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
-                val namespaceId = call.parameters["namespaceId"] ?: throw IllegalArgumentException("namespaceId is required")
+                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val body = runCatching { call.receive<NamespaceDeleteRequestDto>() }.getOrNull()
 
                 deleteNamespaceService.execute(
                     DeleteNamespaceRequest(
-                        tenantId = tenantId,
-                        namespaceId = namespaceId,
+                        tenantName = tenantName,
+                        namespaceName = namespaceName,
                         reason = body?.reason
                     )
                 )
-                call.respond(HttpStatusCode.OK, mapOf("message" to "Namespace '$namespaceId' deleted"))
+                call.respond(HttpStatusCode.OK, mapOf("message" to "Namespace '$namespaceName' deleted"))
             } catch (e: NamespaceNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "Namespace not found", "NAMESPACE_NOT_FOUND"))
             } catch (e: TenantNotFoundException) {
@@ -142,8 +141,8 @@ fun Route.namespaceRoutes(
 }
 
 private fun Namespace.toResponse(): NamespaceResponse = NamespaceResponse(
-    tenantId = tenantId,
-    id = id,
+    tenantId = tenantName,  // Use tenantName as tenantId for API compatibility
+    id = name,  // Use name as id for API compatibility
     name = name,
     description = description,
     createdAt = createdAt.toString(),
@@ -151,4 +150,3 @@ private fun Namespace.toResponse(): NamespaceResponse = NamespaceResponse(
     deletedAt = deletedAt?.toString(),
     metadata = metadata
 )
-
