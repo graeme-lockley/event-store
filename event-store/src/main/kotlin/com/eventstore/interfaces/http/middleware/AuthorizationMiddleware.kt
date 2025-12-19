@@ -35,7 +35,7 @@ class AuthorizationMiddleware(
             // Get userId from authentication middleware
             val userId = call.attributes.getOrNull(AuthenticationMiddleware.UserIdKey)
                 ?: run {
-                    call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Authentication required"))
+                    call.respond(HttpStatusCode.Unauthorized, com.eventstore.interfaces.http.dto.ErrorResponse("Authentication required", "AUTH_REQUIRED"))
                     finish()
                     return@intercept
                 }
@@ -80,7 +80,7 @@ class AuthorizationMiddleware(
             }
 
             if (!hasPermission) {
-                call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Permission denied"))
+                call.respond(HttpStatusCode.Forbidden, com.eventstore.interfaces.http.dto.ErrorResponse("Permission denied", "PERMISSION_DENIED"))
                 finish()
                 return@intercept
             }
@@ -183,6 +183,20 @@ class AuthorizationMiddleware(
                     HttpMethod.Get -> ResourceType.USER to Permission.READ
                     HttpMethod.Put -> ResourceType.USER to Permission.UPDATE
                     HttpMethod.Delete -> ResourceType.USER to Permission.DELETE
+                    else -> null to null
+                }
+            }
+            path.matches(Regex("/tenants/[^/]+/users/[^/]+/api-keys/?$")) -> {
+                when (method) {
+                    HttpMethod.Post -> ResourceType.USER to Permission.UPDATE  // Creating API keys for a user
+                    HttpMethod.Get -> ResourceType.USER to Permission.READ    // Listing API keys
+                    else -> null to null
+                }
+            }
+            path.matches(Regex("/tenants/[^/]+/users/[^/]+/api-keys/[^/]+/?$")) -> {
+                when (method) {
+                    HttpMethod.Get -> ResourceType.USER to Permission.READ
+                    HttpMethod.Delete -> ResourceType.USER to Permission.UPDATE
                     else -> null to null
                 }
             }

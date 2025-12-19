@@ -32,9 +32,11 @@ import com.eventstore.infrastructure.background.DispatcherManager
 import com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl
 import com.eventstore.infrastructure.external.JsonSchemaValidator
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
+import com.eventstore.infrastructure.persistence.FileSystemApiKeyRepository
 import com.eventstore.infrastructure.persistence.FileSystemEventRepository
 import com.eventstore.infrastructure.persistence.FileSystemTopicRepository
 import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
+import com.eventstore.infrastructure.auth.ApiKeyAuthenticator
 import com.eventstore.infrastructure.auth.SessionManager
 import com.eventstore.infrastructure.projections.InMemoryNamespaceRepository
 import com.eventstore.infrastructure.projections.InMemoryUserRepository
@@ -47,6 +49,9 @@ import com.eventstore.infrastructure.projections.PermissionProjectionService
 import com.eventstore.domain.ports.outbound.ResourceResolver
 import com.eventstore.domain.services.auth.ResourceResolverImpl
 import com.eventstore.domain.services.auth.AuthorizationService
+import com.eventstore.domain.services.apikey.CreateApiKeyService
+import com.eventstore.domain.services.apikey.GetApiKeyService
+import com.eventstore.domain.services.apikey.RevokeApiKeyService
 import com.eventstore.domain.services.permission.GrantPermissionService
 import com.eventstore.domain.services.permission.RevokePermissionService
 import com.eventstore.domain.services.permission.GetPermissionsService
@@ -54,6 +59,7 @@ import com.eventstore.interfaces.http.middleware.AuthenticationMiddleware
 import com.eventstore.interfaces.http.middleware.AuthorizationMiddleware
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
+import com.eventstore.interfaces.http.routes.apiKeyRoutes
 import com.eventstore.interfaces.http.routes.consumerRoutes
 import com.eventstore.interfaces.http.routes.eventRoutes
 import com.eventstore.interfaces.http.routes.healthRoutes
@@ -63,6 +69,9 @@ import com.eventstore.interfaces.http.routes.topicRoutes
 import com.eventstore.interfaces.http.routes.userRoutes
 import com.eventstore.interfaces.http.routes.authRoutes
 import com.eventstore.interfaces.http.routes.permissionRoutes
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.ktor.http.*
@@ -95,6 +104,9 @@ fun Application.configureApplication(config: Config) {
     // Configure Jackson ObjectMapper
     val objectMapper = jacksonObjectMapper().apply {
         registerKotlinModule()
+        registerModule(JavaTimeModule())
+        disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     }
 
     // Initialize infrastructure components
@@ -238,6 +250,13 @@ fun Application.configureApplication(config: Config) {
     val sessionManager = SessionManager()
     val authenticationService = AuthenticationService(userProjectionService, sessionManager)
 
+    // Initialize API key components
+    val apiKeyRepository: com.eventstore.domain.ports.outbound.ApiKeyRepository = FileSystemApiKeyRepository(configDir, objectMapper)
+    val createApiKeyService = CreateApiKeyService(apiKeyRepository, userProjectionService)
+    val getApiKeyService = GetApiKeyService(apiKeyRepository)
+    val revokeApiKeyService = RevokeApiKeyService(apiKeyRepository)
+    val apiKeyAuthenticator = ApiKeyAuthenticator(apiKeyRepository)
+
     // Initialize permission management services
     val grantPermissionService = GrantPermissionService(
         eventRepository = eventRepository,
@@ -380,7 +399,7 @@ fun Application.configureApplication(config: Config) {
     }
 
     // Install middleware
-    val authenticationMiddleware = AuthenticationMiddleware(authenticationService)
+    val authenticationMiddleware = AuthenticationMiddleware(authenticationService, apiKeyAuthenticator)
     val authorizationMiddleware = AuthorizationMiddleware(authorizationService)
 
     // Configure routing
@@ -397,6 +416,7 @@ fun Application.configureApplication(config: Config) {
         tenantRoutes(createTenantService, getTenantService, updateTenantService, deleteTenantService)
         namespaceRoutes(createNamespaceService, getNamespaceService, updateNamespaceService, deleteNamespaceService)
         userRoutes(createUserService, getUserService, updateUserService, deleteUserService, assignUserToTenantService, removeUserFromTenantService)
+        apiKeyRoutes(createApiKeyService, getApiKeyService, revokeApiKeyService)
         authRoutes(authenticationService, changePasswordService)
         permissionRoutes(grantPermissionService, revokePermissionService, getPermissionsService)
         healthRoutes(getHealthStatusService)
@@ -437,6 +457,27 @@ fun Application.configureApplication(config: Config) {
     println("     POST   /tenants/{tenantName}/namespaces/{namespaceName}/consumers/register - Register consumer")
     println("     GET    /tenants/{tenantName}/namespaces/{namespaceName}/consumers - List consumers")
     println("     DELETE /tenants/{tenantName}/namespaces/{namespaceName}/consumers/{id} - Unregister consumer")
+    println("   User Management:")
+    println("     POST   /tenants/{tenantId}/users - Create user")
+    println("     GET    /tenants/{tenantId}/users - List users")
+    println("     GET    /tenants/{tenantId}/users/{userId} - Get user")
+    println("     PUT    /tenants/{tenantId}/users/{userId} - Update user")
+    println("     DELETE /tenants/{tenantId}/users/{userId} - Delete user")
+    println("     POST   /tenants/{tenantId}/users/{userId}/tenants - Assign user to tenant")
+    println("     DELETE /tenants/{tenantId}/users/{userId}/tenants/{tenantId} - Remove user from tenant")
+    println("   API Key Management:")
+    println("     POST   /tenants/{tenantId}/users/{userId}/api-keys - Create API key")
+    println("     GET    /tenants/{tenantId}/users/{userId}/api-keys - List API keys")
+    println("     GET    /tenants/{tenantId}/users/{userId}/api-keys/{keyId} - Get API key")
+    println("     DELETE /tenants/{tenantId}/users/{userId}/api-keys/{keyId} - Revoke API key")
+    println("   Authentication:")
+    println("     POST   /auth/login - Login")
+    println("     POST   /auth/logout - Logout")
+    println("     POST   /auth/password/change - Change password")
+    println("   Permission Management:")
+    println("     GET    /tenants/{tenantName}/users/{userId}/permissions - Get permissions")
+    println("     POST   /tenants/{tenantName}/users/{userId}/permissions - Grant permissions")
+    println("     DELETE /tenants/{tenantName}/users/{userId}/permissions - Revoke permissions")
     println("   GET  /health - Health check")
 }
 
@@ -444,4 +485,5 @@ data class RateBucket(
     val count: AtomicInteger,
     val resetAt: Long
 )
+
 

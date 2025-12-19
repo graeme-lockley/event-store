@@ -31,6 +31,7 @@ dependencies {
     // Jackson for JSON processing
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2")
     
     // Ktor Client for HTTP delivery
     implementation("io.ktor:ktor-client-core:2.3.8")
