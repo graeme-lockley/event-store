@@ -37,6 +37,7 @@ dependencies {
     implementation("io.ktor:ktor-client-cio:2.3.8")
     implementation("io.ktor:ktor-client-content-negotiation:2.3.8")
     implementation("io.ktor:ktor-serialization-jackson:2.3.8")
+    implementation("org.mindrot:jbcrypt:0.4")
     
     // Logging
     implementation("org.slf4j:slf4j-api:2.0.9")

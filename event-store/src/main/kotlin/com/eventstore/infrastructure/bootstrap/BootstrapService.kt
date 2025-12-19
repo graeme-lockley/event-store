@@ -4,10 +4,15 @@ import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
 import com.eventstore.domain.events.TenantCreatedEvent
 import com.eventstore.domain.events.TenantEventType
+import com.eventstore.domain.events.UserCreatedEvent
+import com.eventstore.domain.events.UserEventType
+import com.eventstore.domain.events.UserTenantAssignedEvent
+import com.eventstore.domain.UserStatus
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.services.bootstrap.BootstrapService
 import com.eventstore.domain.tenants.SystemTopics
+import org.mindrot.jbcrypt.BCrypt
 import org.slf4j.LoggerFactory
 import java.time.Instant
 
@@ -23,6 +28,7 @@ class BootstrapServiceImpl(
 
     private val tenantTopicName = SystemTopics.TENANTS_TOPIC
     private val namespaceTopicName = SystemTopics.NAMESPACES_TOPIC
+    private val usersTopicName = SystemTopics.USERS_TOPIC
     private val systemTopics = listOf(
         tenantTopicName,
         namespaceTopicName,
@@ -80,7 +86,7 @@ class BootstrapServiceImpl(
             "createdAt" to timestamp.toString()
         )
 
-        val events = listOf(
+        val events = mutableListOf(
             Event(
                 id = EventId.create(
                     topic = tenantTopicName,
@@ -110,6 +116,61 @@ class BootstrapServiceImpl(
                 timestamp = timestamp,
                 type = "namespace.created",
                 payload = namespaceCreatedPayload
+            )
+        )
+
+        val adminEmail = System.getenv("SYSTEM_ADMIN_EMAIL") ?: "admin@system"
+        val adminPassword = System.getenv("SYSTEM_ADMIN_PASSWORD") ?: "admin123"
+        val adminId = "admin-system"
+        val adminCreated = UserCreatedEvent(
+            userId = adminId,
+            email = adminEmail,
+            name = "System Admin",
+            passwordHash = BCrypt.hashpw(adminPassword, BCrypt.gensalt()),
+            status = UserStatus.ACTIVE,
+            createdBy = "bootstrap",
+            createdAt = timestamp,
+            metadata = emptyMap()
+        )
+        events.add(
+            Event(
+                id = EventId.create(
+                    topic = usersTopicName,
+                    sequence = topicRepository.getAndIncrementSequence(
+                        usersTopicName,
+                        systemTenantId,
+                        managementNamespaceId
+                    ),
+                    tenantId = systemTenantId,
+                    namespaceId = managementNamespaceId
+                ),
+                timestamp = timestamp,
+                type = UserEventType.CREATED,
+                payload = adminCreated.toPayload()
+            )
+        )
+        events.add(
+            Event(
+                id = EventId.create(
+                    topic = usersTopicName,
+                    sequence = topicRepository.getAndIncrementSequence(
+                        usersTopicName,
+                        systemTenantId,
+                        managementNamespaceId
+                    ),
+                    tenantId = systemTenantId,
+                    namespaceId = managementNamespaceId
+                ),
+                timestamp = timestamp,
+                type = UserEventType.TENANT_ASSIGNED,
+                payload = UserTenantAssignedEvent(
+                    userId = adminId,
+                    tenantId = systemTenantId,
+                    role = "admin",
+                    assignedBy = "bootstrap",
+                    assignedAt = timestamp,
+                    isPrimary = true
+                ).toPayload()
             )
         )
 

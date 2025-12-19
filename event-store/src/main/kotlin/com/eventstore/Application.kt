@@ -17,9 +17,17 @@ import com.eventstore.domain.services.namespace.DeleteNamespaceService
 import com.eventstore.domain.services.namespace.GetNamespaceService
 import com.eventstore.domain.services.namespace.UpdateNamespaceService
 import com.eventstore.domain.services.namespace.CreateNamespaceRequest
+import com.eventstore.domain.services.auth.AuthenticationService
 import com.eventstore.domain.services.topic.CreateTopicService
 import com.eventstore.domain.services.topic.GetTopicsService
 import com.eventstore.domain.services.topic.UpdateTopicSchemasService
+import com.eventstore.domain.services.user.AssignUserToTenantService
+import com.eventstore.domain.services.user.ChangePasswordService
+import com.eventstore.domain.services.user.CreateUserService
+import com.eventstore.domain.services.user.DeleteUserService
+import com.eventstore.domain.services.user.GetUserService
+import com.eventstore.domain.services.user.RemoveUserFromTenantService
+import com.eventstore.domain.services.user.UpdateUserService
 import com.eventstore.infrastructure.background.DispatcherManager
 import com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl
 import com.eventstore.infrastructure.external.JsonSchemaValidator
@@ -27,10 +35,13 @@ import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import com.eventstore.infrastructure.persistence.FileSystemEventRepository
 import com.eventstore.infrastructure.persistence.FileSystemTopicRepository
 import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
+import com.eventstore.infrastructure.auth.SessionManager
 import com.eventstore.infrastructure.projections.InMemoryNamespaceRepository
+import com.eventstore.infrastructure.projections.InMemoryUserRepository
 import com.eventstore.infrastructure.projections.InMemoryTenantRepository
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
+import com.eventstore.infrastructure.projections.UserProjectionService
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import com.eventstore.interfaces.http.routes.consumerRoutes
@@ -39,6 +50,8 @@ import com.eventstore.interfaces.http.routes.healthRoutes
 import com.eventstore.interfaces.http.routes.namespaceRoutes
 import com.eventstore.interfaces.http.routes.tenantRoutes
 import com.eventstore.interfaces.http.routes.topicRoutes
+import com.eventstore.interfaces.http.routes.userRoutes
+import com.eventstore.interfaces.http.routes.authRoutes
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.ktor.http.*
@@ -125,6 +138,10 @@ fun Application.configureApplication(config: Config) {
     val namespaceProjectionService = NamespaceProjectionService(namespaceProjectionRepository)
     val namespaceTopic = SystemTopics.qualified(SystemTopics.NAMESPACES_TOPIC)
 
+    val userProjectionRepository = InMemoryUserRepository()
+    val userProjectionService = UserProjectionService(userProjectionRepository)
+    val usersTopic = SystemTopics.qualified(SystemTopics.USERS_TOPIC)
+
     runBlocking {
         registerConsumerService.execute(
             InMemoryConsumerRegistrationRequest(
@@ -136,6 +153,12 @@ fun Application.configureApplication(config: Config) {
             InMemoryConsumerRegistrationRequest(
                 handler = { events -> namespaceProjectionService.handleEvents(events) },
                 topics = mapOf(namespaceTopic to null)
+            )
+        )
+        registerConsumerService.execute(
+            InMemoryConsumerRegistrationRequest(
+                handler = { events -> userProjectionService.handleEvents(events) },
+                topics = mapOf(usersTopic to null)
             )
         )
     }
@@ -158,6 +181,15 @@ fun Application.configureApplication(config: Config) {
     val getNamespaceService = GetNamespaceService(namespaceProjectionService)
     val updateNamespaceService = UpdateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config)
     val deleteNamespaceService = DeleteNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config)
+    val createUserService = CreateUserService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)
+    val getUserService = GetUserService(userProjectionService)
+    val updateUserService = UpdateUserService(eventRepository, topicRepository, userProjectionService, config)
+    val deleteUserService = DeleteUserService(eventRepository, topicRepository, userProjectionService, config)
+    val changePasswordService = ChangePasswordService(eventRepository, topicRepository, userProjectionService, config)
+    val assignUserToTenantService = AssignUserToTenantService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)
+    val removeUserFromTenantService = RemoveUserFromTenantService(eventRepository, topicRepository, userProjectionService, config)
+    val sessionManager = SessionManager()
+    val authenticationService = AuthenticationService(userProjectionService, sessionManager)
 
     // Ensure default/default namespace exists for legacy endpoints when multi-tenant is enabled
     if (config.multiTenantEnabled) {
@@ -290,6 +322,8 @@ fun Application.configureApplication(config: Config) {
         consumerRoutes(registerConsumerService, unregisterConsumerService, consumerRepository)
         tenantRoutes(createTenantService, getTenantService, updateTenantService, deleteTenantService)
         namespaceRoutes(createNamespaceService, getNamespaceService, updateNamespaceService, deleteNamespaceService)
+        userRoutes(createUserService, getUserService, updateUserService, deleteUserService, assignUserToTenantService, removeUserFromTenantService)
+        authRoutes(authenticationService, changePasswordService)
         healthRoutes(getHealthStatusService)
     }
 
