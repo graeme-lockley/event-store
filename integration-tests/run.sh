@@ -55,6 +55,15 @@ main() {
     # Trap to ensure cleanup on exit
     trap stop_event_store EXIT
     
+    # Setup test context (tenant, namespace, API key)
+    echo -e "${YELLOW}Setting up test context...${NC}"
+    if ! setup_test_context; then
+        echo -e "${RED}Failed to set up test context${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}✓ Test context setup complete${NC}"
+    echo ""
+    
     # Run test scenarios
     local failed=0
     local passed=0

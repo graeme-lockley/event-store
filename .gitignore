@@ -120,3 +120,8 @@ run_tests.sh
 # Integration test data
 integration-tests/test-data/
 cli/es
+
+# Gradle
+.gradle/
+build/
+*.iml

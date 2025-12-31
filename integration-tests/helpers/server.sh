@@ -15,10 +15,11 @@ start_event_store() {
     rm -rf "$EVENT_STORE_DATA_DIR" "$EVENT_STORE_CONFIG_DIR"
     mkdir -p "$EVENT_STORE_DATA_DIR" "$EVENT_STORE_CONFIG_DIR"
     
-    # Start server in background
+    # Start server in background with test API key creation enabled
     PORT=$EVENT_STORE_PORT \
     DATA_DIR="$EVENT_STORE_DATA_DIR" \
     CONFIG_DIR="$EVENT_STORE_CONFIG_DIR" \
+    CREATE_TEST_API_KEY=true \
     java -jar "$EVENT_STORE_JAR" \
         > /dev/null 2>&1 &
     
@@ -36,6 +37,7 @@ start_event_store() {
     # Export for use in other scripts
     export EVENT_STORE_PID
     export SERVER_URL="http://localhost:$EVENT_STORE_PORT"
+    export EVENT_STORE_CONFIG_DIR
     
     return 0
 }

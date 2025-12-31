@@ -21,7 +21,7 @@ var registerCmd = &cobra.Command{
 	Long:  `Register a new consumer that will receive events from specified topics via webhook.`,
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		cfg := cmd.GetConfig()
-		apiClient := client.NewClient(cfg.Server.URL)
+		apiClient := client.NewClient(cfg.Server.URL, cmd.GetAPIKey())
 
 		if registerCallback == "" {
 			return fmt.Errorf("callback URL is required (use --callback)")
@@ -59,8 +59,17 @@ var registerCmd = &cobra.Command{
 			return fmt.Errorf("at least one topic is required")
 		}
 
+		tenantID := cmd.GetTenantID()
+		namespaceID := cmd.GetNamespaceID()
+		if tenantID == "" {
+			return fmt.Errorf("tenant ID is required (use --tenant or set default with 'es context set --tenant <id>')")
+		}
+		if namespaceID == "" {
+			return fmt.Errorf("namespace ID is required (use --namespace or set default with 'es context set --namespace <id>')")
+		}
+
 		// Register consumer
-		consumerID, err := apiClient.RegisterConsumer(registerCallback, topicsMap)
+		consumerID, err := apiClient.RegisterConsumer(tenantID, namespaceID, registerCallback, topicsMap)
 		if err != nil {
 			if cfg.Output.Format == "json" {
 				return output.PrintErrorJSON(err)

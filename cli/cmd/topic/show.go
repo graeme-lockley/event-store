@@ -1,6 +1,8 @@
 package topic
 
 import (
+	"fmt"
+
 	"github.com/event-store/cli/cmd"
 	"github.com/event-store/cli/internal/client"
 	"github.com/event-store/cli/internal/output"
@@ -14,9 +16,18 @@ var showCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		cfg := cmd.GetConfig()
-		apiClient := client.NewClient(cfg.Server.URL)
+		apiClient := client.NewClient(cfg.Server.URL, cmd.GetAPIKey())
 
-		topic, err := apiClient.GetTopic(args[0])
+		tenantID := cmd.GetTenantID()
+		namespaceID := cmd.GetNamespaceID()
+		if tenantID == "" {
+			return fmt.Errorf("tenant ID is required (use --tenant or set default with 'es context set --tenant <id>')")
+		}
+		if namespaceID == "" {
+			return fmt.Errorf("namespace ID is required (use --namespace or set default with 'es context set --namespace <id>')")
+		}
+
+		topic, err := apiClient.GetTopic(tenantID, namespaceID, args[0])
 		if err != nil {
 			if cfg.Output.Format == "json" {
 				return output.PrintErrorJSON(err)

@@ -22,7 +22,7 @@ var createCmd = &cobra.Command{
 	Long:  `Create a new topic with schemas. Schemas define the structure of events for the topic.`,
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		cfg := cmd.GetConfig()
-		apiClient := client.NewClient(cfg.Server.URL)
+		apiClient := client.NewClient(cfg.Server.URL, cmd.GetAPIKey())
 
 		if createName == "" {
 			return fmt.Errorf("topic name is required (use --name)")
@@ -48,8 +48,17 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("at least one schema is required")
 		}
 
+		tenantID := cmd.GetTenantID()
+		namespaceID := cmd.GetNamespaceID()
+		if tenantID == "" {
+			return fmt.Errorf("tenant ID is required (use --tenant or set default with 'es context set --tenant <id>')")
+		}
+		if namespaceID == "" {
+			return fmt.Errorf("namespace ID is required (use --namespace or set default with 'es context set --namespace <id>')")
+		}
+
 		// Create topic
-		if err := apiClient.CreateTopic(createName, schemas); err != nil {
+		if err := apiClient.CreateTopic(tenantID, namespaceID, createName, schemas); err != nil {
 			if cfg.Output.Format == "json" {
 				return output.PrintErrorJSON(err)
 			}

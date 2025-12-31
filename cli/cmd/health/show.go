@@ -13,7 +13,7 @@ var showCmd = &cobra.Command{
 	Long:  `Show the current health status of the event store server.`,
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		cfg := cmd.GetConfig()
-		apiClient := client.NewClient(cfg.Server.URL)
+		apiClient := client.NewClient(cfg.Server.URL, cmd.GetAPIKey())
 
 		health, err := apiClient.GetHealth()
 		if err != nil {

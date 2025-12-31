@@ -13,6 +13,10 @@ var (
 	serverURL    string
 	outputFormat string
 	configPath   string
+	tenantID     string
+	namespaceID  string
+	username     string
+	apiKey       string
 	cfg          *config.Config
 )
 
@@ -61,6 +65,10 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&serverURL, "server-url", "s", "", "Event store server URL (default: http://localhost:8000)")
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "", "Output format: table, json, or csv (default: table)")
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "", "Config file path (default: ~/.es/config.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&tenantID, "tenant", "t", "", "Tenant ID (overrides config default)")
+	rootCmd.PersistentFlags().StringVarP(&namespaceID, "namespace", "n", "", "Namespace ID (overrides config default)")
+	rootCmd.PersistentFlags().StringVarP(&username, "username", "u", "", "Username (overrides config default)")
+	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "API key (overrides config default)")
 
 	// Bind flags to viper for config file support
 	viper.BindPFlag("server.url", rootCmd.PersistentFlags().Lookup("server-url"))
@@ -70,4 +78,62 @@ func init() {
 // GetConfig returns the loaded configuration
 func GetConfig() *config.Config {
 	return cfg
+}
+
+// GetTenantID returns the tenant ID from flag or config default
+func GetTenantID() string {
+	if tenantID != "" {
+		return tenantID
+	}
+	if cfg != nil && cfg.Server.TenantID != "" {
+		return cfg.Server.TenantID
+	}
+	return ""
+}
+
+// GetNamespaceID returns the namespace ID from flag or config default
+func GetNamespaceID() string {
+	if namespaceID != "" {
+		return namespaceID
+	}
+	if cfg != nil && cfg.Server.NamespaceID != "" {
+		return cfg.Server.NamespaceID
+	}
+	return ""
+}
+
+// GetUsername returns the username from flag or config default
+func GetUsername() string {
+	if username != "" {
+		return username
+	}
+	if cfg != nil && cfg.Server.Username != "" {
+		return cfg.Server.Username
+	}
+	return ""
+}
+
+// GetAPIKey returns the API key from flag or config default
+func GetAPIKey() string {
+	if apiKey != "" {
+		return apiKey
+	}
+	if cfg != nil && cfg.Server.APIKey != "" {
+		return cfg.Server.APIKey
+	}
+	return ""
+}
+
+// SaveContext saves tenant, namespace, username, and API key to config file
+func SaveContext(tenantID, namespaceID, username, apiKey string) error {
+	if cfg == nil {
+		return fmt.Errorf("config not loaded")
+	}
+
+	cfg.Server.TenantID = tenantID
+	cfg.Server.NamespaceID = namespaceID
+	cfg.Server.Username = username
+	cfg.Server.APIKey = apiKey
+
+	return config.SaveConfig(cfg, configPath)
 }

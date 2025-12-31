@@ -1,5 +1,6 @@
 package com.eventstore.infrastructure.bootstrap
 
+import com.eventstore.domain.ApiKey
 import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
 import com.eventstore.domain.Permission
@@ -15,18 +16,26 @@ import com.eventstore.domain.events.UserCreatedEvent
 import com.eventstore.domain.events.UserEventType
 import com.eventstore.domain.events.UserTenantAssignedEvent
 import com.eventstore.domain.UserStatus
+import com.eventstore.domain.ports.outbound.ApiKeyRepository
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.services.bootstrap.BootstrapService
 import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.infrastructure.auth.ApiKeyGenerator
+import com.eventstore.infrastructure.auth.ApiKeyHasher
 import org.mindrot.jbcrypt.BCrypt
 import org.slf4j.LoggerFactory
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.time.Instant
 import java.util.UUID
 
 class BootstrapServiceImpl(
     private val eventRepository: EventRepository,
-    private val topicRepository: TopicRepository
+    private val topicRepository: TopicRepository,
+    private val apiKeyRepository: ApiKeyRepository? = null,
+    private val configDir: java.nio.file.Path? = null,
+    private val createTestApiKey: Boolean = false
 ) : BootstrapService {
 
     private val logger = LoggerFactory.getLogger(BootstrapServiceImpl::class.java)
@@ -247,6 +256,53 @@ class BootstrapServiceImpl(
             tenantId = systemTenantId,
             namespaceId = managementNamespaceId
         )
+
+        // Create test API key if requested
+        if (createTestApiKey && apiKeyRepository != null && configDir != null) {
+            createTestApiKey(adminId, configDir, apiKeyRepository)
+        }
+    }
+
+    private suspend fun createTestApiKey(
+        userId: String,
+        configDir: java.nio.file.Path,
+        apiKeyRepository: ApiKeyRepository
+    ) {
+        try {
+            logger.info("Creating test API key for user: $userId")
+            val plainKey = ApiKeyGenerator.generate()
+            val keyHash = ApiKeyHasher.hash(plainKey)
+
+            val apiKey = ApiKey(
+                id = UUID.randomUUID().toString(),
+                userId = userId,
+                keyHash = keyHash,
+                name = "test-api-key",
+                description = "Test API key created during bootstrap for integration tests",
+                createdAt = Instant.now(),
+                expiresAt = null,
+                scopes = null
+            )
+
+            // Save API key (this is a suspend function and will complete synchronously)
+            apiKeyRepository.save(apiKey)
+            
+            // Verify the key was saved by looking it up
+            val savedKey = apiKeyRepository.findByKeyHash(keyHash)
+            if (savedKey == null) {
+                logger.warn("Test API key was saved but could not be retrieved immediately - this may indicate a timing issue")
+            } else {
+                logger.info("Test API key successfully saved and verified (ID: ${savedKey.id})")
+            }
+
+            // Write the plain API key to a file for tests to read
+            val testApiKeyFile = configDir.resolve("test-api-key.txt")
+            Files.write(testApiKeyFile, plainKey.toByteArray())
+            logger.info("Test API key written to: $testApiKeyFile")
+        } catch (e: Exception) {
+            logger.error("Failed to create test API key", e)
+            // Don't fail bootstrap if test API key creation fails
+        }
     }
 }
 

@@ -150,3 +150,5 @@ private fun Namespace.toResponse(): NamespaceResponse = NamespaceResponse(
     deletedAt = deletedAt?.toString(),
     metadata = metadata
 )
+
+

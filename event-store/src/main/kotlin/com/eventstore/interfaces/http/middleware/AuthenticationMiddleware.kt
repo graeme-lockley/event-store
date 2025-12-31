@@ -10,6 +10,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
+import kotlinx.coroutines.runBlocking
 
 class AuthenticationMiddleware(
     private val authenticationService: AuthenticationService,
@@ -42,7 +43,10 @@ class AuthenticationMiddleware(
             // Check if it's an API key (starts with "es_")
             if (bearerToken != null && bearerToken.startsWith("es_") && apiKeyAuthenticator != null) {
                 try {
-                    val authResult = apiKeyAuthenticator.authenticate(bearerToken)
+                    // Use runBlocking to call suspend function from interceptor
+                    val authResult = runBlocking {
+                        apiKeyAuthenticator.authenticate(bearerToken)
+                    }
                     call.attributes.put(UserIdKey, authResult.userId)
                     call.attributes.put(ApiKeyIdKey, authResult.apiKeyId)
                     proceed()
@@ -52,7 +56,7 @@ class AuthenticationMiddleware(
                     finish()
                     return@intercept
                 } catch (e: Exception) {
-                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Authentication failed", "AUTH_FAILED"))
+                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Authentication failed: ${e.message}", "AUTH_FAILED"))
                     finish()
                     return@intercept
                 }

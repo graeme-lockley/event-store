@@ -82,3 +82,51 @@ func PrintEventPublishResponseJSON(eventIDs []string) error {
 		"eventIds": eventIDs,
 	})
 }
+
+// PrintTenantJSON prints a tenant as JSON
+func PrintTenantJSON(tenant *client.Tenant) error {
+	return PrintJSON(tenant)
+}
+
+// PrintTenantsListJSON prints a list of tenants as JSON
+func PrintTenantsListJSON(tenants []client.Tenant) error {
+	return PrintJSON(map[string]interface{}{
+		"tenants": tenants,
+	})
+}
+
+// PrintNamespaceJSON prints a namespace as JSON
+func PrintNamespaceJSON(namespace *client.Namespace) error {
+	return PrintJSON(namespace)
+}
+
+// PrintNamespacesListJSON prints a list of namespaces as JSON
+func PrintNamespacesListJSON(namespaces []client.Namespace) error {
+	return PrintJSON(map[string]interface{}{
+		"namespaces": namespaces,
+	})
+}
+
+// PrintUserJSON prints a user as JSON
+func PrintUserJSON(user *client.User) error {
+	return PrintJSON(user)
+}
+
+// PrintUsersListJSON prints a list of users as JSON
+func PrintUsersListJSON(users []client.User) error {
+	return PrintJSON(map[string]interface{}{
+		"users": users,
+	})
+}
+
+// PrintAPIKeyJSON prints an API key as JSON
+func PrintAPIKeyJSON(apiKey *client.APIKey) error {
+	return PrintJSON(apiKey)
+}
+
+// PrintAPIKeysListJSON prints a list of API keys as JSON
+func PrintAPIKeysListJSON(apiKeys []client.APIKey) error {
+	return PrintJSON(map[string]interface{}{
+		"apiKeys": apiKeys,
+	})
+}

@@ -12,3 +12,5 @@ interface UserRepository {
     suspend fun getAssociations(userId: String): List<UserTenantAssociation>
 }
 
+
+

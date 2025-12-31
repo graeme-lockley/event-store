@@ -16,7 +16,11 @@ type Config struct {
 
 // ServerConfig contains server connection settings
 type ServerConfig struct {
-	URL string `mapstructure:"url"`
+	URL         string `mapstructure:"url"`
+	TenantID    string `mapstructure:"tenantId,omitempty"`
+	NamespaceID string `mapstructure:"namespaceId,omitempty"`
+	Username    string `mapstructure:"username,omitempty"`
+	APIKey      string `mapstructure:"apiKey,omitempty"`
 }
 
 // OutputConfig contains output format settings
@@ -88,6 +92,18 @@ func SaveConfig(cfg *Config, configPath string) error {
 	viper.SetConfigType("yaml")
 
 	viper.Set("server.url", cfg.Server.URL)
+	if cfg.Server.TenantID != "" {
+		viper.Set("server.tenantId", cfg.Server.TenantID)
+	}
+	if cfg.Server.NamespaceID != "" {
+		viper.Set("server.namespaceId", cfg.Server.NamespaceID)
+	}
+	if cfg.Server.Username != "" {
+		viper.Set("server.username", cfg.Server.Username)
+	}
+	if cfg.Server.APIKey != "" {
+		viper.Set("server.apiKey", cfg.Server.APIKey)
+	}
 	viper.Set("output.format", cfg.Output.Format)
 
 	return viper.WriteConfig()

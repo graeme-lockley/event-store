@@ -249,3 +249,134 @@ func PrintEventPublishResponseCSV(eventIDs []string) error {
 
 	return nil
 }
+
+// PrintTenantCSV prints a tenant in CSV format
+func PrintTenantCSV(tenant *client.Tenant) error {
+	writer := csv.NewWriter(os.Stdout)
+	defer writer.Flush()
+
+	if err := writer.Write([]string{"ID", "Name", "Created At", "Updated At", "Deleted At"}); err != nil {
+		return err
+	}
+
+	return writer.Write([]string{tenant.ID, tenant.Name, tenant.CreatedAt, tenant.UpdatedAt, tenant.DeletedAt})
+}
+
+// PrintTenantsListCSV prints a list of tenants in CSV format
+func PrintTenantsListCSV(tenants []client.Tenant) error {
+	writer := csv.NewWriter(os.Stdout)
+	defer writer.Flush()
+
+	if err := writer.Write([]string{"ID", "Name", "Created At"}); err != nil {
+		return err
+	}
+
+	for _, tenant := range tenants {
+		if err := writer.Write([]string{tenant.ID, tenant.Name, tenant.CreatedAt}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// PrintNamespaceCSV prints a namespace in CSV format
+func PrintNamespaceCSV(namespace *client.Namespace) error {
+	writer := csv.NewWriter(os.Stdout)
+	defer writer.Flush()
+
+	if err := writer.Write([]string{"Tenant ID", "ID", "Name", "Description", "Created At"}); err != nil {
+		return err
+	}
+
+	return writer.Write([]string{namespace.TenantID, namespace.ID, namespace.Name, namespace.Description, namespace.CreatedAt})
+}
+
+// PrintNamespacesListCSV prints a list of namespaces in CSV format
+func PrintNamespacesListCSV(namespaces []client.Namespace) error {
+	writer := csv.NewWriter(os.Stdout)
+	defer writer.Flush()
+
+	if err := writer.Write([]string{"Tenant ID", "ID", "Name", "Description", "Created At"}); err != nil {
+		return err
+	}
+
+	for _, namespace := range namespaces {
+		if err := writer.Write([]string{namespace.TenantID, namespace.ID, namespace.Name, namespace.Description, namespace.CreatedAt}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// PrintUserCSV prints a user in CSV format
+func PrintUserCSV(user *client.User) error {
+	writer := csv.NewWriter(os.Stdout)
+	defer writer.Flush()
+
+	if err := writer.Write([]string{"ID", "Email", "Name", "Status", "Created At"}); err != nil {
+		return err
+	}
+
+	return writer.Write([]string{user.ID, user.Email, user.Name, user.Status, user.CreatedAt})
+}
+
+// PrintUsersListCSV prints a list of users in CSV format
+func PrintUsersListCSV(users []client.User) error {
+	writer := csv.NewWriter(os.Stdout)
+	defer writer.Flush()
+
+	if err := writer.Write([]string{"ID", "Email", "Name", "Status", "Created At"}); err != nil {
+		return err
+	}
+
+	for _, user := range users {
+		if err := writer.Write([]string{user.ID, user.Email, user.Name, user.Status, user.CreatedAt}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// PrintAPIKeyCSV prints an API key in CSV format
+func PrintAPIKeyCSV(apiKey *client.APIKey) error {
+	writer := csv.NewWriter(os.Stdout)
+	defer writer.Flush()
+
+	if err := writer.Write([]string{"ID", "User ID", "Name", "Description", "Created At", "Expires At", "Is Active"}); err != nil {
+		return err
+	}
+
+	row := []string{apiKey.ID, apiKey.UserID, apiKey.Name, apiKey.Description, apiKey.CreatedAt, apiKey.ExpiresAt, strconv.FormatBool(apiKey.IsActive)}
+	if err := writer.Write(row); err != nil {
+		return err
+	}
+
+	if apiKey.Key != "" {
+		if err := writer.Write([]string{"Key", apiKey.Key}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// PrintAPIKeysListCSV prints a list of API keys in CSV format
+func PrintAPIKeysListCSV(apiKeys []client.APIKey) error {
+	writer := csv.NewWriter(os.Stdout)
+	defer writer.Flush()
+
+	if err := writer.Write([]string{"ID", "User ID", "Name", "Description", "Created At", "Expires At", "Is Active"}); err != nil {
+		return err
+	}
+
+	for _, apiKey := range apiKeys {
+		if err := writer.Write([]string{apiKey.ID, apiKey.UserID, apiKey.Name, apiKey.Description, apiKey.CreatedAt, apiKey.ExpiresAt, strconv.FormatBool(apiKey.IsActive)}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

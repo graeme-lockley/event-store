@@ -23,7 +23,16 @@ Examples:
 	Args: cobra.ExactArgs(2),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		cfg := cmd.GetConfig()
-		apiClient := client.NewClient(cfg.Server.URL)
+		apiClient := client.NewClient(cfg.Server.URL, cmd.GetAPIKey())
+
+		tenantID := cmd.GetTenantID()
+		namespaceID := cmd.GetNamespaceID()
+		if tenantID == "" {
+			return fmt.Errorf("tenant ID is required (use --tenant or set default with 'es context set --tenant <id>')")
+		}
+		if namespaceID == "" {
+			return fmt.Errorf("namespace ID is required (use --namespace or set default with 'es context set --namespace <id>')")
+		}
 
 		topic := args[0]
 		eventID := args[1]
@@ -34,7 +43,7 @@ Examples:
 			Limit: 100, // Fetch a reasonable batch to find the event
 		}
 
-		events, err := apiClient.GetEvents(topic, query)
+		events, err := apiClient.GetEvents(tenantID, namespaceID, topic, query)
 		if err != nil {
 			if cfg.Output.Format == "json" {
 				return output.PrintErrorJSON(err)
@@ -61,7 +70,7 @@ Examples:
 			// For now, let's try a different approach - fetch from the beginning
 			// with a larger limit
 			query.Limit = 10000
-			allEvents, err := apiClient.GetEvents(topic, query)
+			allEvents, err := apiClient.GetEvents(tenantID, namespaceID, topic, query)
 			if err != nil {
 				err := fmt.Errorf("event '%s' not found in topic '%s'", eventID, topic)
 				if cfg.Output.Format == "json" {

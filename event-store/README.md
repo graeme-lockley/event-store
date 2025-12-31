@@ -1,330 +1,303 @@
-# 🚀 Event Store Backend (Kotlin)
+# Event Store Backend
 
-A lightweight, file-backed, API-driven message recording and delivery system built with Kotlin, Gradle, and Ktor using pure hexagonal architecture (Ports & Adapters).
+Kotlin-based event store backend implementing a multi-tenant, file-backed event storage and delivery system using hexagonal architecture.
 
-## ✨ Features
+## Purpose
 
-- **File-backed storage** with per-event files organized by topic, date, and grouping
-- **JSON Schema validation** for all incoming events using networknt/json-schema-validator
-- **Topic-based partitioning** with explicit topic creation and configuration
-- **Asynchronous event dispatching** with background dispatchers per topic using Kotlin coroutines
-- **Ephemeral consumer registration** with automatic removal on failure
-- **Globally unique event IDs** in format `<topic>-<sequence>`
-- **Near-instantaneous delivery** via consumer nudge mechanism
-- **Pure Hexagonal Architecture** (Ports & Adapters pattern)
+The Event Store backend provides:
+- **Event storage** - Persistent, file-backed storage of events organized by tenant, namespace, and topic
+- **Event delivery** - Asynchronous webhook-based delivery to registered consumers
+- **Schema validation** - JSON Schema validation for all published events
+- **Multi-tenancy** - Tenant and namespace isolation for data separation
+- **REST API** - HTTP endpoints for all operations
 
-## 🏗 Architecture
+## Architecture
 
-The implementation follows **pure hexagonal architecture** (Ports & Adapters pattern) with the following structure:
+The implementation follows **Hexagonal Architecture** (Ports & Adapters pattern), ensuring the domain layer is independent of infrastructure and frameworks.
+
+### Code Structure
 
 ```
-event-store/
-├── src/main/kotlin/com/eventstore/
-│   ├── Application.kt              # Entry point and Ktor setup
-│   ├── Config.kt                   # Configuration from environment
-│   ├── domain/                     # Domain (the hexagon - core business logic)
-│   │   ├── Event.kt                # Domain entities
-│   │   ├── Topic.kt
-│   │   ├── Consumer.kt
-│   │   ├── Schema.kt
-│   │   ├── EventId.kt
-│   │   ├── exceptions/             # Domain exceptions
-│   │   ├── services/              # Domain services (use cases)
-│   │   │   ├── topic/
-│   │   │   │   ├── CreateTopicService.kt
-│   │   │   │   ├── GetTopicsService.kt
-│   │   │   │   └── UpdateTopicSchemasService.kt
-│   │   │   ├── event/
-│   │   │   │   ├── PublishEventsService.kt
-│   │   │   │   └── GetEventsService.kt
-│   │   │   ├── consumer/
-│   │   │   │   ├── RegisterConsumerService.kt
-│   │   │   │   └── UnregisterConsumerService.kt
-│   │   │   └── health/
-│   │   │       └── GetHealthStatusService.kt
-│   │   └── ports/                  # Ports (interfaces)
-│   │       └── outbound/          # Outbound ports (what domain needs)
-│   │           ├── TopicRepository.kt
-│   │           ├── EventRepository.kt
-│   │           ├── ConsumerRepository.kt
-│   │           ├── SchemaValidator.kt
-│   │           └── ConsumerDeliveryService.kt
-│   ├── infrastructure/             # Infrastructure (adapters)
-│   │   ├── persistence/           # Adapters implementing repository ports
-│   │   ├── external/              # Adapters implementing service ports
-│   │   └── background/           # Background dispatchers
-│   └── interfaces/                 # Primary adapters (HTTP API)
-│       ├── routes/                 # Ktor routes (inbound adapter)
-│       └── dto/                   # Data transfer objects
-└── build.gradle.kts
+src/main/kotlin/com/eventstore/
+├── Application.kt              # Entry point and Ktor server setup
+├── Config.kt                   # Configuration from environment variables
+│
+├── domain/                     # Domain Layer (Core Business Logic)
+│   ├── Event.kt                # Domain entities
+│   ├── Topic.kt
+│   ├── Consumer.kt
+│   ├── Schema.kt
+│   ├── Tenant.kt
+│   ├── Namespace.kt
+│   ├── User.kt
+│   ├── ApiKey.kt
+│   ├── Permission.kt
+│   │
+│   ├── services/              # Domain Services (Use Cases)
+│   │   ├── topic/
+│   │   │   ├── CreateTopicService.kt
+│   │   │   ├── GetTopicsService.kt
+│   │   │   └── UpdateTopicSchemasService.kt
+│   │   ├── event/
+│   │   │   ├── PublishEventsService.kt
+│   │   │   └── GetEventsService.kt
+│   │   ├── consumer/
+│   │   │   ├── RegisterConsumerService.kt
+│   │   │   └── UnregisterConsumerService.kt
+│   │   ├── tenant/
+│   │   ├── namespace/
+│   │   ├── user/
+│   │   ├── apikey/
+│   │   ├── auth/
+│   │   └── permission/
+│   │
+│   ├── ports/                  # Ports (Interfaces)
+│   │   └── outbound/          # Outbound Ports (What domain needs)
+│   │       ├── TopicRepository.kt
+│   │       ├── EventRepository.kt
+│   │       ├── ConsumerRepository.kt
+│   │       ├── SchemaValidator.kt
+│   │       └── ConsumerDeliveryService.kt
+│   │
+│   └── exceptions/             # Domain exceptions
+│
+├── infrastructure/             # Infrastructure Layer (Adapters)
+│   ├── persistence/           # Repository implementations
+│   │   ├── FileSystemTopicRepository.kt
+│   │   ├── FileSystemEventRepository.kt
+│   │   ├── FileSystemApiKeyRepository.kt
+│   │   └── InMemoryConsumerRepository.kt
+│   │
+│   ├── external/              # External service adapters
+│   │   └── JsonSchemaValidator.kt
+│   │
+│   ├── background/            # Background processing
+│   │   └── DispatcherManager.kt
+│   │
+│   ├── projections/          # Read model projections
+│   │   ├── TenantProjectionService.kt
+│   │   ├── NamespaceProjectionService.kt
+│   │   ├── UserProjectionService.kt
+│   │   └── PermissionProjectionService.kt
+│   │
+│   └── auth/                  # Authentication adapters
+│       ├── SessionManager.kt
+│       └── ApiKeyAuthenticator.kt
+│
+└── interfaces/                 # Interface Layer (Primary Adapters)
+    ├── http/
+    │   ├── routes/            # Ktor HTTP routes
+    │   │   ├── TopicRoutes.kt
+    │   │   ├── EventRoutes.kt
+    │   │   ├── ConsumerRoutes.kt
+    │   │   ├── TenantRoutes.kt
+    │   │   ├── NamespaceRoutes.kt
+    │   │   ├── UserRoutes.kt
+    │   │   ├── ApiKeyRoutes.kt
+    │   │   ├── AuthRoutes.kt
+    │   │   ├── PermissionRoutes.kt
+    │   │   └── HealthRoutes.kt
+    │   │
+    │   ├── dto/               # Data Transfer Objects
+    │   │   ├── EventRequest.kt
+    │   │   ├── TopicRequest.kt
+    │   │   └── ...
+    │   │
+    │   └── middleware/         # HTTP middleware
+    │       ├── AuthenticationMiddleware.kt
+    │       └── AuthorizationMiddleware.kt
 ```
 
-### Hexagonal Architecture Principles
+### Architecture Principles
 
-- **Domain (Core)**: Contains business logic, entities, domain services, and ports (interfaces). The domain defines what it needs through ports.
-- **Infrastructure (Adapters)**: Implements the ports defined by the domain. Can be swapped without changing domain code.
-- **Interfaces (Primary Adapters)**: Entry points like HTTP routes that drive the application.
+1. **Domain Independence**: Domain code has zero dependencies on frameworks or infrastructure
+2. **Port-Driven Design**: Domain defines what it needs through ports (interfaces)
+3. **Adapter Implementation**: Infrastructure implements ports, can be swapped without changing domain
+4. **Testability**: Domain can be tested with mock adapters
 
-The domain is independent and defines its needs through ports. Infrastructure provides implementations of those ports.
-
-## 🚀 Quick Start
+## Building and Running
 
 ### Prerequisites
 
-- Java 17 or higher
-- Gradle 8.5 or higher (wrapper included)
+- Java 17+
+- Gradle 8.5+ (wrapper included)
 
-### Build the Project
+### Build
 
 ```bash
-./gradlew build
+# From repository root
+./gradlew :event-store:build
+
+# Or from this directory
+cd event-store
+../gradlew build
 ```
 
-### Run the Event Store
+### Run
 
 ```bash
-./gradlew run
-```
+# Run from Gradle
+./gradlew :event-store:run
 
-Or build and run the JAR directly:
-
-```bash
-./gradlew jar
+# Or run the JAR
+./gradlew :event-store:jar
 java -jar build/libs/event-store-1.0.0.jar
 ```
 
-The JAR includes all dependencies (fat JAR) and can be run standalone.
+### Configuration
 
-The server will start on port 8000 (or the port specified in the `PORT` environment variable).
+Environment variables:
 
-### Environment Variables
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8000` | HTTP server port |
+| `DATA_DIR` | `./data` | Event storage directory |
+| `CONFIG_DIR` | `./config` | Topic/tenant configuration directory |
+| `MAX_BODY_BYTES` | `1048576` | Maximum request body size (1MB) |
+| `RATE_LIMIT_PER_MINUTE` | `600` | Rate limit per IP per route |
+| `MULTI_TENANT_ENABLED` | `false` | Enable multi-tenant mode |
+| `AUTH_ENABLED` | `false` | Enable authentication |
+| `CREATE_TEST_API_KEY` | `false` | Create test API key on startup |
 
-- `PORT` - Server port (default: 8000)
-- `DATA_DIR` - Event storage directory (default: `./data`)
-- `CONFIG_DIR` - Topic config directory (default: `./config`)
-- `MAX_BODY_BYTES` - Max request body size in bytes (default: 1048576)
-- `RATE_LIMIT_PER_MINUTE` - Rate limit per IP per route (default: 600)
+## API Endpoints
 
-### Create a Topic
+All endpoints are prefixed with tenant and namespace when multi-tenancy is enabled:
+`/tenants/{tenantName}/namespaces/{namespaceName}/...`
 
-```bash
-curl -X POST http://localhost:8000/topics \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "user-events",
-    "schemas": [
-      {
-        "eventType": "user.created",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "email": { "type": "string" }
-        },
-        "required": ["id", "name", "email"]
+### Tenant Management
+
+```
+POST   /tenants                              # Create tenant
+GET    /tenants/{tenantName}                 # Get tenant
+PUT    /tenants/{tenantName}                 # Update tenant
+DELETE /tenants/{tenantName}                 # Delete tenant
+```
+
+### Namespace Management
+
+```
+POST   /tenants/{tenantName}/namespaces                    # Create namespace
+GET    /tenants/{tenantName}/namespaces/{namespaceName}    # Get namespace
+PUT    /tenants/{tenantName}/namespaces/{namespaceName}    # Update namespace
+DELETE /tenants/{tenantName}/namespaces/{namespaceName}    # Delete namespace
+```
+
+### Topic Management
+
+```
+POST   /tenants/{tenantName}/namespaces/{namespaceName}/topics           # Create topic
+GET    /tenants/{tenantName}/namespaces/{namespaceName}/topics           # List topics
+GET    /tenants/{tenantName}/namespaces/{namespaceName}/topics/{topic}   # Get topic
+PUT    /tenants/{tenantName}/namespaces/{namespaceName}/topics/{topic}   # Update schemas
+```
+
+**Create Topic Request:**
+```json
+{
+  "name": "user-events",
+  "schemas": [
+    {
+      "eventType": "user.created",
+      "type": "object",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" }
       },
-      {
-        "eventType": "user.updated",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" }
-        },
-        "required": ["id"]
-      }
-    ]
-  }'
-```
-
-### Publish Events
-
-```bash
-curl -X POST http://localhost:8000/events \
-  -H "Content-Type: application/json" \
-  -d '[
-    {
-      "topic": "user-events",
-      "type": "user.created",
-      "payload": {
-        "id": "123",
-        "name": "Alice Johnson",
-        "email": "alice@example.com"
-      }
-    },
-    {
-      "topic": "user-events",
-      "type": "user.updated",
-      "payload": {
-        "id": "123",
-        "name": "Alice Smith"
-      }
-    }
-  ]'
-```
-
-### Register a Consumer
-
-```bash
-curl -X POST http://localhost:8000/consumers/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "callback": "https://your-service.com/webhook",
-    "topics": {
-      "user-events": null
-    }
-  }'
-```
-
-### Retrieve Events
-
-```bash
-# Get all events from a topic
-curl http://localhost:8000/topics/user-events/events
-
-# Get events since a specific event ID
-curl "http://localhost:8000/topics/user-events/events?sinceEventId=user-events-5"
-
-# Get events from a specific date
-curl "http://localhost:8000/topics/user-events/events?date=2025-01-15"
-
-# Limit the number of events
-curl "http://localhost:8000/topics/user-events/events?limit=10"
-```
-
-## 📋 API Reference
-
-### Topics
-
-#### `POST /topics`
-
-Create a new topic with schemas.
-
-**Request Body:**
-
-```json
-{
-  "name": "topic-name",
-  "schemas": [
-    {
-      "eventType": "event.type",
-      "type": "object",
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "properties": { ... },
-      "required": [ ... ]
+      "required": ["id", "name"]
     }
   ]
 }
 ```
 
-#### `GET /topics`
+### Event Operations
 
-List all topics.
-
-#### `GET /topics/{topic}`
-
-Get topic details.
-
-#### `PUT /topics/{topic}`
-
-Update schemas for an existing topic. Schema updates are **additive only** - you cannot remove schemas, only add or update them.
-
-**Request Body:**
-
-```json
-{
-  "schemas": [
-    {
-      "eventType": "event.type",
-      "type": "object",
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "properties": { ... },
-      "required": [ ... ]
-    }
-  ]
-}
+```
+POST   /tenants/{tenantName}/namespaces/{namespaceName}/events                    # Publish events
+GET    /tenants/{tenantName}/namespaces/{namespaceName}/topics/{topic}/events     # Retrieve events
 ```
 
-**Note:** All existing `eventType`s must be present in the update request. New schemas can be added, and existing schemas are updated by matching `eventType`.
-
-### Events
-
-#### `POST /events`
-
-Publish one or more events.
-
-**Request Body:**
-
+**Publish Events Request:**
 ```json
 [
   {
-    "topic": "topic-name",
-    "type": "event.type",
-    "payload": { ... }
+    "topic": "user-events",
+    "type": "user.created",
+    "payload": {
+      "id": "123",
+      "name": "Alice"
+    }
   }
 ]
 ```
 
-**Response:**
-
-```json
-{
-  "eventIds": ["topic-name-1", "topic-name-2"]
-}
-```
-
-#### `GET /topics/{topic}/events`
-
-Retrieve events from a topic.
-
-**Query Parameters:**
-
+**Query Parameters for GET events:**
 - `sinceEventId` - Get events after this ID
 - `date` - Get events from this date (YYYY-MM-DD)
 - `limit` - Maximum number of events to return
 
-### Consumers
+### Consumer Management
 
-#### `POST /consumers/register`
+```
+POST   /tenants/{tenantName}/namespaces/{namespaceName}/consumers/register        # Register consumer
+GET    /tenants/{tenantName}/namespaces/{namespaceName}/consumers                 # List consumers
+DELETE /tenants/{tenantName}/namespaces/{namespaceName}/consumers/{id}            # Unregister consumer
+```
 
-Register a new consumer.
-
-**Request Body:**
-
+**Register Consumer Request:**
 ```json
 {
   "callback": "https://your-service.com/webhook",
   "topics": {
-    "topic-name": "last-event-id-or-null"
+    "user-events": null
   }
 }
 ```
 
-**Response:**
+### User Management
 
-```json
-{
-  "consumerId": "uuid"
-}
+```
+POST   /tenants/{tenantId}/users                           # Create user
+GET    /tenants/{tenantId}/users                           # List users
+GET    /tenants/{tenantId}/users/{userId}                  # Get user
+PUT    /tenants/{tenantId}/users/{userId}                  # Update user
+DELETE /tenants/{tenantId}/users/{userId}                  # Delete user
+POST   /tenants/{tenantId}/users/{userId}/tenants           # Assign user to tenant
+DELETE /tenants/{tenantId}/users/{userId}/tenants/{tenantId}  # Remove user from tenant
 ```
 
-#### `GET /consumers`
+### API Key Management
 
-List all registered consumers.
+```
+POST   /tenants/{tenantId}/users/{userId}/api-keys         # Create API key
+GET    /tenants/{tenantId}/users/{userId}/api-keys         # List API keys
+GET    /tenants/{tenantId}/users/{userId}/api-keys/{keyId}  # Get API key
+DELETE /tenants/{tenantId}/users/{userId}/api-keys/{keyId} # Revoke API key
+```
 
-#### `DELETE /consumers/{id}`
+### Authentication
 
-Unregister a consumer.
+```
+POST   /auth/login                    # Login (session-based)
+POST   /auth/logout                   # Logout
+POST   /auth/password/change          # Change password
+```
+
+### Permission Management
+
+```
+GET    /tenants/{tenantName}/users/{userId}/permissions    # Get permissions
+POST   /tenants/{tenantName}/users/{userId}/permissions    # Grant permissions
+DELETE /tenants/{tenantName}/users/{userId}/permissions   # Revoke permissions
+```
 
 ### Health
 
-#### `GET /health`
-
-Health check endpoint.
+```
+GET    /health                        # Health check
+```
 
 **Response:**
-
 ```json
 {
   "status": "healthy",
@@ -333,51 +306,76 @@ Health check endpoint.
 }
 ```
 
-## 🔧 Configuration
+For complete API documentation, see [docs/API.md](../docs/API.md).
 
-### Environment Variables
+## Testing
 
-- `PORT` - Server port (default: 8000)
-- `DATA_DIR` - Event storage directory (default: `./data`)
-- `CONFIG_DIR` - Topic config directory (default: `./config`)
-- `MAX_BODY_BYTES` - Max request body size (default: 1048576)
-- `RATE_LIMIT_PER_MINUTE` - Rate limit (default: 600)
+### Unit Tests
 
-### File Structure
+```bash
+# Run all unit tests
+./gradlew :event-store:test
 
-- `config/` - Topic configuration files
-- `data/` - Event storage directory
+# Run with coverage
+./gradlew :event-store:test jacocoTestReport
+```
 
-## 📁 File Storage Structure
+### Integration Tests
 
-Each event is stored in its own file organized by:
+See [event-store-integration/README.md](../event-store-integration/README.md) for integration testing utilities.
+
+## File Storage Structure
+
+Events are stored as individual JSON files organized hierarchically:
 
 ```
 data/
-├── user-events/
-│   ├── 2025-01-15/
-│   │   ├── 0000/
-│   │   │   ├── user-events-1.json
-│   │   │   ├── user-events-2.json
-│   │   ├── 0001/
-│   │   │   ├── user-events-1001.json
-├── audit-events/
-│   ├── 2025-01-15/
-│   │   ├── 0000/
-│   │   │   ├── audit-events-1.json
+└── {tenant}/
+    └── {namespace}/
+        └── {topic}/
+            └── YYYY-MM-DD/
+                └── {group}/
+                    └── {topic}-{sequence}.json
 ```
 
-## 🧪 Testing
-
-Run the test suite:
-
-```bash
-./gradlew test
+Example:
+```
+data/
+└── acme-corp/
+    └── production/
+        └── user-events/
+            └── 2025-01-15/
+                └── 0000/
+                    ├── user-events-1.json
+                    ├── user-events-2.json
+                    └── ...
 ```
 
-## 🔄 Consumer Webhook Format
+## Technology Stack
 
-When events are delivered to consumers, the webhook receives:
+- **Kotlin** 1.9.22
+- **Ktor** 2.3.8 - Web framework
+- **Kotlinx Coroutines** 1.7.3 - Asynchronous programming
+- **Jackson** 2.15.2 - JSON serialization
+- **networknt/json-schema-validator** 1.0.87 - Schema validation
+- **SLF4J + Logback** - Logging
+- **Gradle** 8.5 - Build system
+- **JUnit 5** - Testing
+
+## Key Concepts
+
+### Event IDs
+
+Event IDs follow the pattern: `<topic>-<sequence>`
+
+Examples:
+- `user-events-1`
+- `audit-events-42`
+- `notifications-1001`
+
+### Consumer Webhook Format
+
+When events are delivered to consumers:
 
 ```json
 {
@@ -393,79 +391,16 @@ When events are delivered to consumers, the webhook receives:
 }
 ```
 
-## 🚫 Consumer Removal
+### Consumer Removal
 
 Consumers are automatically removed if:
-
-- The callback returns a non-2xx status code
-- The callback throws an error or times out
-- The callback fails to respond within 30 seconds
+- Callback returns non-2xx status code
+- Callback times out (30 seconds)
 - After 5 failed delivery attempts with exponential backoff
 
-## 🔍 Event ID Format
+## Related Documentation
 
-Event IDs follow the pattern: `<topic>-<sequence>`
-
-Examples:
-
-- `user-events-1`
-- `audit-events-42`
-- `notifications-1001`
-
-## 📝 Logging
-
-The system logs:
-
-- Topic creation and schema registration
-- Event publishing with IDs
-- Consumer registration and removal
-- Event delivery attempts and failures
-- Dispatcher start/stop events
-
-## 🛠 Technology Stack
-
-- **Kotlin** 1.9.22
-- **Ktor** 2.3.8 - Web framework
-- **Kotlinx Coroutines** - Asynchronous programming
-- **Jackson** - JSON serialization
-- **networknt/json-schema-validator** - JSON Schema validation
-- **SLF4J + Logback** - Logging
-- **Gradle** 8.5 - Build system
-
-## 🏛 Architecture Principles
-
-This implementation follows **Pure Hexagonal Architecture** (Ports & Adapters):
-
-- **Domain (Core)**: 
-  - Pure business logic with no framework dependencies
-  - Domain entities (Event, Topic, Consumer, Schema)
-  - Domain services (business use cases)
-  - Ports (interfaces) defining what the domain needs from outside
-- **Infrastructure (Adapters)**: 
-  - Implements the ports defined by the domain
-  - File system repositories, HTTP clients, validators
-  - Can be swapped without changing domain code
-- **Interfaces (Primary Adapters)**: 
-  - HTTP routes (Ktor) that drive the application
-  - DTOs for API communication
-
-### Key Benefits:
-
-- **Domain Independence**: Domain code has no dependencies on infrastructure
-- **Testability**: Domain can be tested with mock adapters
-- **Flexibility**: Easy to swap implementations (e.g., database instead of files)
-- **Maintainability**: Clear separation of concerns, changes isolated to specific layers
-- **Port-Driven**: Domain defines what it needs (ports), infrastructure provides it (adapters)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📄 License
-
-This project is open source and available under the MIT License.
-
+- **[../README.md](../README.md)** - Project overview and build instructions
+- **[../event-store-integration/README.md](../event-store-integration/README.md)** - Integration testing guide
+- **[../docs/API.md](../docs/API.md)** - Complete API reference
+- **[../docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md)** - Deployment guide

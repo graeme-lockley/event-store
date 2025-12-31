@@ -42,7 +42,7 @@ Examples:
   es event publish --json '[{"topic":"user-events","type":"user.created","payload":{"id":"1","name":"Alice"}}]'`,
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		cfg := cmd.GetConfig()
-		apiClient := client.NewClient(cfg.Server.URL)
+		apiClient := client.NewClient(cfg.Server.URL, cmd.GetAPIKey())
 
 		var events []client.EventPublishRequest
 
@@ -67,8 +67,17 @@ Examples:
 			return fmt.Errorf("at least one event must be provided")
 		}
 
+		tenantID := cmd.GetTenantID()
+		namespaceID := cmd.GetNamespaceID()
+		if tenantID == "" {
+			return fmt.Errorf("tenant ID is required (use --tenant or set default with 'es context set --tenant <id>')")
+		}
+		if namespaceID == "" {
+			return fmt.Errorf("namespace ID is required (use --namespace or set default with 'es context set --namespace <id>')")
+		}
+
 		// Publish events
-		eventIDs, err := apiClient.PublishEvents(events)
+		eventIDs, err := apiClient.PublishEvents(tenantID, namespaceID, events)
 		if err != nil {
 			if cfg.Output.Format == "json" {
 				return output.PrintErrorJSON(err)

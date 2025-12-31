@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/event-store/cli/cmd"
 	"github.com/event-store/cli/internal/client"
 	"github.com/event-store/cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var updateSchemasFile string
@@ -20,7 +20,7 @@ var updateCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		cfg := cmd.GetConfig()
-		apiClient := client.NewClient(cfg.Server.URL)
+		apiClient := client.NewClient(cfg.Server.URL, cmd.GetAPIKey())
 
 		topicName := args[0]
 
@@ -44,8 +44,17 @@ var updateCmd = &cobra.Command{
 			return fmt.Errorf("at least one schema is required")
 		}
 
+		tenantID := cmd.GetTenantID()
+		namespaceID := cmd.GetNamespaceID()
+		if tenantID == "" {
+			return fmt.Errorf("tenant ID is required (use --tenant or set default with 'es context set --tenant <id>')")
+		}
+		if namespaceID == "" {
+			return fmt.Errorf("namespace ID is required (use --namespace or set default with 'es context set --namespace <id>')")
+		}
+
 		// Update topic schemas
-		if err := apiClient.UpdateTopicSchemas(topicName, schemas); err != nil {
+		if err := apiClient.UpdateTopicSchemas(tenantID, namespaceID, topicName, schemas); err != nil {
 			if cfg.Output.Format == "json" {
 				return output.PrintErrorJSON(err)
 			}

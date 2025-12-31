@@ -118,9 +118,21 @@ fun Application.configureApplication(config: Config) {
     val consumerRepository: ConsumerRepository = InMemoryConsumerRepository()
     val schemaValidator: SchemaValidator = JsonSchemaValidator(objectMapper)
     val consumerFactory: ConsumerFactory = ConsumerFactoryImpl()
+    
+    // Initialize API key repository early for bootstrap if needed
+    val apiKeyRepository: com.eventstore.domain.ports.outbound.ApiKeyRepository? = 
+        if (config.createTestApiKey) {
+            FileSystemApiKeyRepository(configDir, objectMapper)
+        } else {
+            null
+        }
+    
     val bootstrapService: BootstrapService = BootstrapServiceImpl(
         eventRepository = eventRepository,
-        topicRepository = topicRepository
+        topicRepository = topicRepository,
+        apiKeyRepository = apiKeyRepository,
+        configDir = if (config.createTestApiKey) configDir else null,
+        createTestApiKey = config.createTestApiKey
     )
 
     // Initialize dispatcher manager
@@ -250,12 +262,13 @@ fun Application.configureApplication(config: Config) {
     val sessionManager = SessionManager()
     val authenticationService = AuthenticationService(userProjectionService, sessionManager)
 
-    // Initialize API key components
-    val apiKeyRepository: com.eventstore.domain.ports.outbound.ApiKeyRepository = FileSystemApiKeyRepository(configDir, objectMapper)
-    val createApiKeyService = CreateApiKeyService(apiKeyRepository, userProjectionService)
-    val getApiKeyService = GetApiKeyService(apiKeyRepository)
-    val revokeApiKeyService = RevokeApiKeyService(apiKeyRepository)
-    val apiKeyAuthenticator = ApiKeyAuthenticator(apiKeyRepository)
+    // Initialize API key components (reuse if created for bootstrap, otherwise create new)
+    val apiKeyRepositoryForApp: com.eventstore.domain.ports.outbound.ApiKeyRepository = 
+        apiKeyRepository ?: FileSystemApiKeyRepository(configDir, objectMapper)
+    val createApiKeyService = CreateApiKeyService(apiKeyRepositoryForApp, userProjectionService)
+    val getApiKeyService = GetApiKeyService(apiKeyRepositoryForApp)
+    val revokeApiKeyService = RevokeApiKeyService(apiKeyRepositoryForApp)
+    val apiKeyAuthenticator = ApiKeyAuthenticator(apiKeyRepositoryForApp)
 
     // Initialize permission management services
     val grantPermissionService = GrantPermissionService(

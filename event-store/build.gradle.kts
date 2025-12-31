@@ -1,15 +1,5 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
-    kotlin("jvm") version "1.9.22"
     application
-}
-
-group = "com.eventstore"
-version = "1.0.0"
-
-repositories {
-    mavenCentral()
 }
 
 dependencies {
@@ -50,22 +40,6 @@ dependencies {
     testImplementation("io.ktor:ktor-server-test-host:2.3.8")
     testImplementation("io.ktor:ktor-client-content-negotiation:2.3.8")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs = listOf("-Xjsr305=strict")
-    }
-}
-
-tasks.withType<JavaCompile> {
-    sourceCompatibility = "17"
-    targetCompatibility = "17"
 }
 
 application {

@@ -6,3 +6,5 @@ class TenantAlreadyExistsException(tenantId: String) :
 class TenantNotFoundException(tenantId: String) :
     RuntimeException("Tenant with id '$tenantId' not found")
 
+
+

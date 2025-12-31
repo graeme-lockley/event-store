@@ -10,3 +10,5 @@ class GetUserService(
     suspend fun list() = userProjectionService.getAllUsers()
 }
 
+
+

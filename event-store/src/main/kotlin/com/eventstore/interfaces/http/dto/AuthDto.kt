@@ -16,3 +16,5 @@ data class ChangePasswordRequestDto(
     val newPassword: String
 )
 
+
+

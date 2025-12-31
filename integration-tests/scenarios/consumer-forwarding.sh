@@ -31,7 +31,7 @@ start_consumer_listener() {
     
     # Start the listener in background
     local log_file="/tmp/listener-$port.log"
-    "$CLI_BIN" "${args[@]}" > "$log_file" 2>&1 &
+    es "${args[@]}" > "$log_file" 2>&1 &
     local pid=$!
     
     # Wait for server to be ready

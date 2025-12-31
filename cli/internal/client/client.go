@@ -13,13 +13,15 @@ import (
 // Client represents an HTTP client for the event store API
 type Client struct {
 	baseURL    string
+	apiKey     string
 	httpClient *http.Client
 }
 
 // NewClient creates a new event store API client
-func NewClient(baseURL string) *Client {
+func NewClient(baseURL, apiKey string) *Client {
 	return &Client{
 		baseURL: baseURL,
+		apiKey:  apiKey,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -119,6 +121,149 @@ type EventsQuery struct {
 	Limit        int
 }
 
+// Quota represents quota settings for a tenant
+type Quota struct {
+	MaxTopics        int   `json:"maxTopics"`
+	MaxNamespaces    int   `json:"maxNamespaces"`
+	MaxEventsPerDay  int64 `json:"maxEventsPerDay"`
+	MaxConsumers     int   `json:"maxConsumers"`
+	MaxUsers         int   `json:"maxUsers"`
+	MaxEventSizeBytes int64 `json:"maxEventSizeBytes"`
+}
+
+// Tenant represents a tenant in the event store
+type Tenant struct {
+	ID        string                 `json:"id"`
+	Name      string                 `json:"name"`
+	CreatedAt string                 `json:"createdAt"`
+	UpdatedAt string                 `json:"updatedAt,omitempty"`
+	DeletedAt string                 `json:"deletedAt,omitempty"`
+	Quota     *Quota                 `json:"quota,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata"`
+}
+
+// TenantCreateRequest represents a request to create a tenant
+type TenantCreateRequest struct {
+	ID       string                 `json:"id"`
+	Name     string                 `json:"name"`
+	Quota    *Quota                 `json:"quota,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// TenantUpdateRequest represents a request to update a tenant
+type TenantUpdateRequest struct {
+	Name     string                 `json:"name,omitempty"`
+	Quota    *Quota                 `json:"quota,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// TenantListResponse represents the response from GET /tenants
+type TenantListResponse struct {
+	Tenants []Tenant `json:"tenants"`
+}
+
+// Namespace represents a namespace in the event store
+type Namespace struct {
+	TenantID    string                 `json:"tenantId"`
+	ID          string                 `json:"id"`
+	Name        string                 `json:"name"`
+	Description string                 `json:"description,omitempty"`
+	CreatedAt   string                 `json:"createdAt"`
+	UpdatedAt   string                 `json:"updatedAt,omitempty"`
+	DeletedAt   string                 `json:"deletedAt,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata"`
+}
+
+// NamespaceCreateRequest represents a request to create a namespace
+type NamespaceCreateRequest struct {
+	ID          string                 `json:"id"`
+	Name        string                 `json:"name"`
+	Description string                 `json:"description,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// NamespaceUpdateRequest represents a request to update a namespace
+type NamespaceUpdateRequest struct {
+	Name        string                 `json:"name,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// NamespaceListResponse represents the response from GET /tenants/{tenantId}/namespaces
+type NamespaceListResponse struct {
+	Namespaces []Namespace `json:"namespaces"`
+}
+
+// User represents a user in the event store
+type User struct {
+	ID             string                 `json:"id"`
+	Email          string                 `json:"email"`
+	Name           string                 `json:"name"`
+	Status         string                 `json:"status"`
+	CreatedAt      string                 `json:"createdAt"`
+	UpdatedAt      string                 `json:"updatedAt,omitempty"`
+	LastLoginAt    string                 `json:"lastLoginAt,omitempty"`
+	EmailVerified  bool                   `json:"emailVerified"`
+	PrimaryTenantID string                `json:"primaryTenantId,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata"`
+}
+
+// UserCreateRequest represents a request to create a user
+type UserCreateRequest struct {
+	Email          string                 `json:"email"`
+	Name           string                 `json:"name"`
+	Password       string                 `json:"password"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	PrimaryTenantID string                `json:"primaryTenantId,omitempty"`
+}
+
+// UserUpdateRequest represents a request to update a user
+type UserUpdateRequest struct {
+	Email    string                 `json:"email,omitempty"`
+	Name     string                 `json:"name,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// UserListResponse represents the response from GET /tenants/{tenantId}/users
+type UserListResponse struct {
+	Users []User `json:"users"`
+}
+
+// AssignUserTenantRequest represents a request to assign a user to a tenant
+type AssignUserTenantRequest struct {
+	TenantID  string `json:"tenantId"`
+	Role      string `json:"role,omitempty"`
+	IsPrimary bool   `json:"isPrimary,omitempty"`
+}
+
+// APIKey represents an API key in the event store
+type APIKey struct {
+	ID          string   `json:"id"`
+	UserID      string   `json:"userId"`
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
+	CreatedAt   string   `json:"createdAt"`
+	ExpiresAt   string   `json:"expiresAt,omitempty"`
+	LastUsedAt  string   `json:"lastUsedAt,omitempty"`
+	RevokedAt   string   `json:"revokedAt,omitempty"`
+	Scopes      []string `json:"scopes,omitempty"`
+	IsActive    bool     `json:"isActive"`
+	Key         string   `json:"key,omitempty"` // Only present on creation
+}
+
+// CreateAPIKeyRequest represents a request to create an API key
+type CreateAPIKeyRequest struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
+	ExpiresAt   string   `json:"expiresAt,omitempty"` // ISO 8601 format
+	Scopes      []string `json:"scopes,omitempty"`
+}
+
+// APIKeyListResponse represents the response from GET /tenants/{tenantId}/users/{userId}/api-keys
+type APIKeyListResponse struct {
+	APIKeys []APIKey `json:"apiKeys"`
+}
+
 // request performs an HTTP request and returns the response body
 func (c *Client) request(method, endpoint string, body interface{}) ([]byte, error) {
 	var reqBody io.Reader
@@ -136,6 +281,9 @@ func (c *Client) request(method, endpoint string, body interface{}) ([]byte, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	if c.apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -160,8 +308,9 @@ func (c *Client) request(method, endpoint string, body interface{}) ([]byte, err
 }
 
 // GetTopics lists all topics
-func (c *Client) GetTopics() ([]Topic, error) {
-	respBody, err := c.request("GET", "/topics", nil)
+func (c *Client) GetTopics(tenantID, namespaceID string) ([]Topic, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID) + "/topics"
+	respBody, err := c.request("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -175,8 +324,8 @@ func (c *Client) GetTopics() ([]Topic, error) {
 }
 
 // GetTopic gets detailed information about a specific topic
-func (c *Client) GetTopic(name string) (*Topic, error) {
-	endpoint := "/topics/" + url.PathEscape(name)
+func (c *Client) GetTopic(tenantID, namespaceID, name string) (*Topic, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID) + "/topics/" + url.PathEscape(name)
 	respBody, err := c.request("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
@@ -191,30 +340,32 @@ func (c *Client) GetTopic(name string) (*Topic, error) {
 }
 
 // CreateTopic creates a new topic with schemas
-func (c *Client) CreateTopic(name string, schemas []Schema) error {
+func (c *Client) CreateTopic(tenantID, namespaceID, name string, schemas []Schema) error {
 	req := TopicCreationRequest{
 		Name:    name,
 		Schemas: schemas,
 	}
 
-	_, err := c.request("POST", "/topics", req)
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID) + "/topics"
+	_, err := c.request("POST", endpoint, req)
 	return err
 }
 
 // UpdateTopicSchemas updates schemas for an existing topic
-func (c *Client) UpdateTopicSchemas(name string, schemas []Schema) error {
+func (c *Client) UpdateTopicSchemas(tenantID, namespaceID, name string, schemas []Schema) error {
 	req := TopicUpdateRequest{
 		Schemas: schemas,
 	}
 
-	endpoint := "/topics/" + url.PathEscape(name)
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID) + "/topics/" + url.PathEscape(name)
 	_, err := c.request("PUT", endpoint, req)
 	return err
 }
 
 // GetConsumers lists all registered consumers
-func (c *Client) GetConsumers() ([]Consumer, error) {
-	respBody, err := c.request("GET", "/consumers", nil)
+func (c *Client) GetConsumers(tenantID, namespaceID string) ([]Consumer, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID) + "/consumers"
+	respBody, err := c.request("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +380,7 @@ func (c *Client) GetConsumers() ([]Consumer, error) {
 
 // RegisterConsumer registers a new consumer
 // topics map: empty string or "null" means null (start from beginning), otherwise the event ID
-func (c *Client) RegisterConsumer(callback string, topics map[string]string) (string, error) {
+func (c *Client) RegisterConsumer(tenantID, namespaceID, callback string, topics map[string]string) (string, error) {
 	// Convert map[string]string to map[string]*string for proper null handling
 	topicsWithNull := make(map[string]*string)
 	for topic, eventID := range topics {
@@ -248,7 +399,8 @@ func (c *Client) RegisterConsumer(callback string, topics map[string]string) (st
 		Topics:   topicsWithNull,
 	}
 
-	respBody, err := c.request("POST", "/consumers/register", req)
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID) + "/consumers/register"
+	respBody, err := c.request("POST", endpoint, req)
 	if err != nil {
 		return "", err
 	}
@@ -262,15 +414,15 @@ func (c *Client) RegisterConsumer(callback string, topics map[string]string) (st
 }
 
 // DeleteConsumer unregisters a consumer
-func (c *Client) DeleteConsumer(id string) error {
-	endpoint := "/consumers/" + url.PathEscape(id)
+func (c *Client) DeleteConsumer(tenantID, namespaceID, id string) error {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID) + "/consumers/" + url.PathEscape(id)
 	_, err := c.request("DELETE", endpoint, nil)
 	return err
 }
 
 // GetEvents retrieves events from a topic
-func (c *Client) GetEvents(topic string, query *EventsQuery) ([]Event, error) {
-	endpoint := "/topics/" + url.PathEscape(topic) + "/events"
+func (c *Client) GetEvents(tenantID, namespaceID, topic string, query *EventsQuery) ([]Event, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID) + "/topics/" + url.PathEscape(topic) + "/events"
 
 	// Build query parameters
 	params := url.Values{}
@@ -331,8 +483,9 @@ type EventPublishResponse struct {
 }
 
 // PublishEvents publishes one or more events
-func (c *Client) PublishEvents(events []EventPublishRequest) ([]string, error) {
-	respBody, err := c.request("POST", "/events", events)
+func (c *Client) PublishEvents(tenantID, namespaceID string, events []EventPublishRequest) ([]string, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID) + "/events"
+	respBody, err := c.request("POST", endpoint, events)
 	if err != nil {
 		return nil, err
 	}
@@ -343,4 +496,285 @@ func (c *Client) PublishEvents(events []EventPublishRequest) ([]string, error) {
 	}
 
 	return resp.EventIDs, nil
+}
+
+// CreateTenant creates a new tenant
+func (c *Client) CreateTenant(req TenantCreateRequest) (*Tenant, error) {
+	respBody, err := c.request("POST", "/tenants", req)
+	if err != nil {
+		return nil, err
+	}
+
+	var tenant Tenant
+	if err := json.Unmarshal(respBody, &tenant); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &tenant, nil
+}
+
+// ListTenants lists all tenants
+func (c *Client) ListTenants() ([]Tenant, error) {
+	respBody, err := c.request("GET", "/tenants", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp TenantListResponse
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return resp.Tenants, nil
+}
+
+// GetTenant gets tenant details
+func (c *Client) GetTenant(tenantID string) (*Tenant, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID)
+	respBody, err := c.request("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var tenant Tenant
+	if err := json.Unmarshal(respBody, &tenant); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &tenant, nil
+}
+
+// UpdateTenant updates a tenant
+func (c *Client) UpdateTenant(tenantID string, req TenantUpdateRequest) (*Tenant, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID)
+	respBody, err := c.request("PUT", endpoint, req)
+	if err != nil {
+		return nil, err
+	}
+
+	var tenant Tenant
+	if err := json.Unmarshal(respBody, &tenant); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &tenant, nil
+}
+
+// DeleteTenant deletes a tenant (soft delete)
+func (c *Client) DeleteTenant(tenantID string, reason string) error {
+	endpoint := "/tenants/" + url.PathEscape(tenantID)
+	var body interface{}
+	if reason != "" {
+		body = map[string]string{"reason": reason}
+	}
+	_, err := c.request("DELETE", endpoint, body)
+	return err
+}
+
+// CreateNamespace creates a new namespace
+func (c *Client) CreateNamespace(tenantID string, req NamespaceCreateRequest) (*Namespace, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces"
+	respBody, err := c.request("POST", endpoint, req)
+	if err != nil {
+		return nil, err
+	}
+
+	var namespace Namespace
+	if err := json.Unmarshal(respBody, &namespace); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &namespace, nil
+}
+
+// ListNamespaces lists namespaces in a tenant
+func (c *Client) ListNamespaces(tenantID string) ([]Namespace, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces"
+	respBody, err := c.request("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp NamespaceListResponse
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return resp.Namespaces, nil
+}
+
+// GetNamespace gets namespace details
+func (c *Client) GetNamespace(tenantID, namespaceID string) (*Namespace, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID)
+	respBody, err := c.request("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var namespace Namespace
+	if err := json.Unmarshal(respBody, &namespace); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &namespace, nil
+}
+
+// UpdateNamespace updates a namespace
+func (c *Client) UpdateNamespace(tenantID, namespaceID string, req NamespaceUpdateRequest) (*Namespace, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID)
+	respBody, err := c.request("PUT", endpoint, req)
+	if err != nil {
+		return nil, err
+	}
+
+	var namespace Namespace
+	if err := json.Unmarshal(respBody, &namespace); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &namespace, nil
+}
+
+// DeleteNamespace deletes a namespace
+func (c *Client) DeleteNamespace(tenantID, namespaceID string, reason string) error {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/namespaces/" + url.PathEscape(namespaceID)
+	var body interface{}
+	if reason != "" {
+		body = map[string]string{"reason": reason}
+	}
+	_, err := c.request("DELETE", endpoint, body)
+	return err
+}
+
+// CreateUser creates a new user
+func (c *Client) CreateUser(tenantID string, req UserCreateRequest) (*User, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/users"
+	respBody, err := c.request("POST", endpoint, req)
+	if err != nil {
+		return nil, err
+	}
+
+	var user User
+	if err := json.Unmarshal(respBody, &user); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &user, nil
+}
+
+// ListUsers lists users in a tenant
+func (c *Client) ListUsers(tenantID string) ([]User, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/users"
+	respBody, err := c.request("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp UserListResponse
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return resp.Users, nil
+}
+
+// GetUser gets user details
+func (c *Client) GetUser(tenantID, userID string) (*User, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/users/" + url.PathEscape(userID)
+	respBody, err := c.request("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var user User
+	if err := json.Unmarshal(respBody, &user); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &user, nil
+}
+
+// UpdateUser updates a user
+func (c *Client) UpdateUser(tenantID, userID string, req UserUpdateRequest) (*User, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/users/" + url.PathEscape(userID)
+	respBody, err := c.request("PUT", endpoint, req)
+	if err != nil {
+		return nil, err
+	}
+
+	var user User
+	if err := json.Unmarshal(respBody, &user); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &user, nil
+}
+
+// DeleteUser removes user from tenant
+func (c *Client) DeleteUser(tenantID, userID string) error {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/users/" + url.PathEscape(userID)
+	_, err := c.request("DELETE", endpoint, nil)
+	return err
+}
+
+// AssignUserToTenant assigns a user to a tenant
+func (c *Client) AssignUserToTenant(tenantID, userID string, req AssignUserTenantRequest) error {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/users/" + url.PathEscape(userID) + "/tenants"
+	_, err := c.request("POST", endpoint, req)
+	return err
+}
+
+// CreateAPIKey creates a new API key for a user
+func (c *Client) CreateAPIKey(tenantID, userID string, req CreateAPIKeyRequest) (*APIKey, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/users/" + url.PathEscape(userID) + "/api-keys"
+	respBody, err := c.request("POST", endpoint, req)
+	if err != nil {
+		return nil, err
+	}
+
+	var apiKey APIKey
+	if err := json.Unmarshal(respBody, &apiKey); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &apiKey, nil
+}
+
+// ListAPIKeys lists API keys for a user
+func (c *Client) ListAPIKeys(tenantID, userID string) ([]APIKey, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/users/" + url.PathEscape(userID) + "/api-keys"
+	respBody, err := c.request("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp APIKeyListResponse
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return resp.APIKeys, nil
+}
+
+// GetAPIKey gets API key details
+func (c *Client) GetAPIKey(tenantID, userID, keyID string) (*APIKey, error) {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/users/" + url.PathEscape(userID) + "/api-keys/" + url.PathEscape(keyID)
+	respBody, err := c.request("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var apiKey APIKey
+	if err := json.Unmarshal(respBody, &apiKey); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return &apiKey, nil
+}
+
+// RevokeAPIKey revokes an API key
+func (c *Client) RevokeAPIKey(tenantID, userID, keyID string) error {
+	endpoint := "/tenants/" + url.PathEscape(tenantID) + "/users/" + url.PathEscape(userID) + "/api-keys/" + url.PathEscape(keyID)
+	_, err := c.request("DELETE", endpoint, nil)
+	return err
 }

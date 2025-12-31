@@ -16,11 +16,20 @@ var deleteCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		cfg := cmd.GetConfig()
-		apiClient := client.NewClient(cfg.Server.URL)
+		apiClient := client.NewClient(cfg.Server.URL, cmd.GetAPIKey())
+
+		tenantID := cmd.GetTenantID()
+		namespaceID := cmd.GetNamespaceID()
+		if tenantID == "" {
+			return fmt.Errorf("tenant ID is required (use --tenant or set default with 'es context set --tenant <id>')")
+		}
+		if namespaceID == "" {
+			return fmt.Errorf("namespace ID is required (use --namespace or set default with 'es context set --namespace <id>')")
+		}
 
 		consumerID := args[0]
 
-		if err := apiClient.DeleteConsumer(consumerID); err != nil {
+		if err := apiClient.DeleteConsumer(tenantID, namespaceID, consumerID); err != nil {
 			if cfg.Output.Format == "json" {
 				return output.PrintErrorJSON(err)
 			}
