@@ -52,23 +52,6 @@ enum class ResourceType {
 }
 
 /**
- * Constraints that can be applied to permissions.
- */
-data class PermissionConstraints(
-    val eventTypes: Set<String>? = null,
-    val maxAgeDays: Int? = null,
-    val timeBased: TimeBasedConstraint? = null
-)
-
-/**
- * Time-based constraint for permissions.
- */
-data class TimeBasedConstraint(
-    val startTime: String? = null,  // ISO 8601 time
-    val endTime: String? = null     // ISO 8601 time
-)
-
-/**
  * Represents a permission grant to a principal for a specific resource.
  *
  * - resourceId: UUID of specific resource, or null for all resources of this type
@@ -85,7 +68,6 @@ data class PermissionGrant(
     val namespaceResourceId: String? = null, // UUID of namespace (for context and inheritance)
     val topicResourceId: String? = null,   // UUID of topic (for context and inheritance)
     val permissions: Set<Permission>,
-    val constraints: PermissionConstraints? = null,
     val grantedBy: String,                // UUID of user who granted permission
     val grantedAt: java.time.Instant,
     val expiresAt: java.time.Instant? = null

@@ -381,10 +381,6 @@ All management events are stored in:
   "namespaceResourceId": "223e4567-e89b-12d3-a456-426614174001",
   "topicResourceId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   "permissions": ["READ", "UPDATE"],
-  "constraints": {
-    "eventTypes": ["invoice.created"],
-    "maxAgeDays": 30
-  },
   "grantedBy": "550e8400-e29b-41d4-a716-446655440001",
   "grantedAt": "2025-01-15T10:10:00Z",
   "expiresAt": "2025-12-31T23:59:59Z"

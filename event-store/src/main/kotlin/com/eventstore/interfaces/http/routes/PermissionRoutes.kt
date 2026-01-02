@@ -149,7 +149,6 @@ fun Route.permissionRoutes(
                         namespaceName = body.namespaceName,
                         topicName = body.topicName,
                         permissions = permissions.toSet(),
-                        constraints = null,
                         expiresAt = expiresAt,
                         grantedBy = currentUserId
                     )

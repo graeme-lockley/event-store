@@ -3,7 +3,6 @@ package com.eventstore.domain.services.permission
 import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
 import com.eventstore.domain.Permission
-import com.eventstore.domain.PermissionConstraints
 import com.eventstore.domain.PrincipalType
 import com.eventstore.domain.ResourceType
 import com.eventstore.domain.events.PermissionEventType
@@ -26,7 +25,6 @@ data class GrantPermissionRequest(
     val namespaceName: String? = null,
     val topicName: String? = null,
     val permissions: Set<Permission>,
-    val constraints: PermissionConstraints? = null,
     val expiresAt: Instant? = null,
     val grantedBy: String
 )
@@ -76,7 +74,6 @@ class GrantPermissionService(
             namespaceResourceId = namespaceResourceId?.toString(),
             topicResourceId = topicResourceId?.toString(),
             permissions = request.permissions,
-            constraints = request.constraints,
             grantedBy = request.grantedBy,
             grantedAt = now,
             expiresAt = request.expiresAt

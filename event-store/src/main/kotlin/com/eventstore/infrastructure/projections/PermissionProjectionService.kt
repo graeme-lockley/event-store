@@ -154,7 +154,6 @@ class PermissionProjectionService(
                     namespaceResourceId = payload.namespaceResourceId,
                     topicResourceId = payload.topicResourceId,
                     permissions = payload.permissions,
-                    constraints = payload.constraints,
                     grantedBy = payload.grantedBy,
                     grantedAt = payload.grantedAt,
                     expiresAt = payload.expiresAt

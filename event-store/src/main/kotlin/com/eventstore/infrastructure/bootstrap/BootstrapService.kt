@@ -227,7 +227,6 @@ class BootstrapServiceImpl(
             namespaceResourceId = null,
             topicResourceId = null,
             permissions = allPermissions,
-            constraints = null,
             grantedBy = "bootstrap",
             grantedAt = timestamp,
             expiresAt = null

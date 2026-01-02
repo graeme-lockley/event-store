@@ -1,10 +1,8 @@
 package com.eventstore.domain.events
 
 import com.eventstore.domain.Permission
-import com.eventstore.domain.PermissionConstraints
 import com.eventstore.domain.PrincipalType
 import com.eventstore.domain.ResourceType
-import com.eventstore.domain.TimeBasedConstraint
 import java.time.Instant
 
 object PermissionEventType {
@@ -26,7 +24,6 @@ data class PermissionGrantedEvent(
     val namespaceResourceId: String? = null, // UUID of namespace (for context and inheritance)
     val topicResourceId: String? = null,   // UUID of topic (for context and inheritance)
     val permissions: Set<Permission>,
-    val constraints: PermissionConstraints? = null,
     val grantedBy: String,                // UUID of user who granted permission
     val grantedAt: Instant,
     val expiresAt: Instant? = null
@@ -46,7 +43,6 @@ data class PermissionGrantedEvent(
         resourceId?.let { payload["resourceId"] = it }
         namespaceResourceId?.let { payload["namespaceResourceId"] = it }
         topicResourceId?.let { payload["topicResourceId"] = it }
-        constraints?.let { payload["constraints"] = constraintsToMap(it) }
         expiresAt?.let { payload["expiresAt"] = it.toString() }
         return payload
     }
@@ -67,7 +63,6 @@ data class PermissionGrantedEvent(
             val permissions = (payload["permissions"] as? List<*>)?.map { 
                 Permission.valueOf(it as String) 
             }?.toSet() ?: error("permissions missing")
-            val constraints = (payload["constraints"] as? Map<*, *>)?.let { mapToConstraints(it) }
             val grantedBy = payload["grantedBy"] as? String ?: error("grantedBy missing")
             val grantedAt = parseInstant(payload["grantedAt"])
             val expiresAt = (payload["expiresAt"] as? String)?.let { Instant.parse(it) }
@@ -81,7 +76,6 @@ data class PermissionGrantedEvent(
                 namespaceResourceId = namespaceResourceId,
                 topicResourceId = topicResourceId,
                 permissions = permissions,
-                constraints = constraints,
                 grantedBy = grantedBy,
                 grantedAt = grantedAt,
                 expiresAt = expiresAt
@@ -157,37 +151,6 @@ data class PermissionRevokedEvent(
             )
         }
     }
-}
-
-private fun constraintsToMap(constraints: PermissionConstraints): Map<String, Any> {
-    val map = mutableMapOf<String, Any>()
-    constraints.eventTypes?.let { map["eventTypes"] = it.toList() }
-    constraints.maxAgeDays?.let { map["maxAgeDays"] = it }
-    constraints.timeBased?.let { 
-        val timeMap = mutableMapOf<String, Any>()
-        it.startTime?.let { timeMap["startTime"] = it }
-        it.endTime?.let { timeMap["endTime"] = it }
-        if (timeMap.isNotEmpty()) {
-            map["timeBased"] = timeMap
-        }
-    }
-    return map
-}
-
-private fun mapToConstraints(map: Map<*, *>): PermissionConstraints {
-    val eventTypes = (map["eventTypes"] as? List<*>)?.map { it as String }?.toSet()
-    val maxAgeDays = (map["maxAgeDays"] as? Number)?.toInt()
-    val timeBased = (map["timeBased"] as? Map<*, *>)?.let {
-        TimeBasedConstraint(
-            startTime = it["startTime"] as? String,
-            endTime = it["endTime"] as? String
-        )
-    }
-    return PermissionConstraints(
-        eventTypes = eventTypes,
-        maxAgeDays = maxAgeDays,
-        timeBased = timeBased
-    )
 }
 
 private fun parseInstant(value: Any?): Instant {
