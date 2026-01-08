@@ -19,6 +19,8 @@ import com.eventstore.domain.services.tenant.CreateTenantRequest
 import com.eventstore.domain.services.tenant.CreateTenantService
 import com.eventstore.domain.services.tenant.DeleteTenantRequest
 import com.eventstore.domain.services.tenant.DeleteTenantService
+import com.eventstore.domain.services.tenant.UpdateTenantRequest
+import com.eventstore.domain.services.tenant.UpdateTenantService
 import com.eventstore.domain.services.topic.CreateTopicService
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.background.AsyncDispatcherManager
@@ -73,6 +75,9 @@ class Application(
 
     val deleteTenantService: DeleteTenantService =
         DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager)
+
+    val updateTenantService: UpdateTenantService =
+        UpdateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager)
 
     val createNamespaceService: CreateNamespaceService =
         CreateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config)
@@ -151,6 +156,23 @@ class Application(
                 tenantName = tenantName,
                 deletedBy = deletedBy,
                 reason = reason
+            )
+        )
+
+    suspend fun updateTenant(
+        tenantName: String,
+        name: String? = null,
+        quota: Quota? = null,
+        metadata: Map<String, Any>? = null,
+        updatedBy: String = "system"
+    ): Tenant =
+        updateTenantService.execute(
+            UpdateTenantRequest(
+                tenantName = tenantName,
+                name = name,
+                quota = quota,
+                metadata = metadata,
+                updatedBy = updatedBy
             )
         )
 
