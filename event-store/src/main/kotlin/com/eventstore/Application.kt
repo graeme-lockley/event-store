@@ -219,7 +219,7 @@ fun Application.configureApplication(config: Config) {
     val createTenantService = CreateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager)
     val getTenantService = GetTenantService(tenantProjectionService)
     val updateTenantService = UpdateTenantService(eventRepository, topicRepository, tenantProjectionService, config)
-    val deleteTenantService = DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config)
+    val deleteTenantService = DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager)
     val createNamespaceService = CreateNamespaceService(
         eventRepository,
         topicRepository,

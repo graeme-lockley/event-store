@@ -6,6 +6,7 @@ import com.eventstore.domain.EventId
 import com.eventstore.domain.events.TenantDeletedEvent
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.exceptions.TenantNotFoundException
+import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.tenants.SystemTopics
@@ -22,7 +23,8 @@ class DeleteTenantService(
     private val eventRepository: EventRepository,
     private val topicRepository: TopicRepository,
     private val tenantProjectionService: TenantProjectionService,
-    private val config: Config
+    private val config: Config,
+    private val eventDispatcher: EventDispatcher
 ) {
     suspend fun execute(request: DeleteTenantRequest): Boolean {
         if (!config.multiTenantEnabled) {
@@ -63,6 +65,7 @@ class DeleteTenantService(
         )
 
         eventRepository.storeEvents(listOf(event))
+        eventDispatcher.notifyEventsPublished(setOf(event.id.qualifiedTopic))
 
         return true
     }
