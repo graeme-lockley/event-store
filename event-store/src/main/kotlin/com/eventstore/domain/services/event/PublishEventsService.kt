@@ -69,11 +69,7 @@ class PublishEventsService(
         }
 
         // Store all events in bulk for better atomicity
-        val storedEvents = eventRepository.storeEvents(
-            events,
-            tenantId = events.firstOrNull()?.id?.tenantId,
-            namespaceId = events.firstOrNull()?.id?.namespaceId
-        )
+        val storedEvents = eventRepository.storeEvents(events)
 
         // Notify dispatcher that events have been published
         val topicsWithEvents = requests.map { it.topic }.toSet()

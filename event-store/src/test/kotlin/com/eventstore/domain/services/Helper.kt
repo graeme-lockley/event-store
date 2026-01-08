@@ -1,5 +1,7 @@
 package com.eventstore.domain.services
 
+import com.eventstore.Config
+import com.eventstore.domain.Application
 import com.eventstore.domain.EventId
 import com.eventstore.domain.Schema
 import com.eventstore.domain.exceptions.TopicNotFoundException
@@ -102,4 +104,21 @@ suspend fun createEventStore(topicName: String = "user-events"): PopulateEventSt
     val state = PopulateEventStoreState(topicName)
     populateEventStore(state)
     return state
+}
+
+fun createApplication(): Application {
+    val application = Application(
+        bootstrap = true,
+        config = Config(
+            port = 0,
+            dataDir = "./data",
+            configDir = "./config",
+            maxBodyBytes = 1024,
+            rateLimitPerMinute = 10,
+            multiTenantEnabled = true,
+            authEnabled = false
+        )
+    )
+
+    return application
 }

@@ -9,7 +9,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class DispatcherManager(
+class AsyncDispatcherManager(
     private val consumerRepository: ConsumerRepository,
     private val eventRepository: EventRepository
 ) : EventDispatcher {

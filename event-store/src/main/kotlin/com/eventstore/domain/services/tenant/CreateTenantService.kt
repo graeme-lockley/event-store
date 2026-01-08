@@ -8,6 +8,7 @@ import com.eventstore.domain.Tenant
 import com.eventstore.domain.events.TenantCreatedEvent
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.exceptions.TenantAlreadyExistsException
+import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.tenants.SystemTopics
@@ -26,7 +27,8 @@ class CreateTenantService(
     private val eventRepository: EventRepository,
     private val topicRepository: TopicRepository,
     private val tenantProjectionService: TenantProjectionService,
-    private val config: Config
+    private val config: Config,
+    private val eventDispatcher: EventDispatcher
 ) {
     suspend fun execute(request: CreateTenantRequest): Tenant {
         if (!config.multiTenantEnabled) {
@@ -66,11 +68,8 @@ class CreateTenantService(
             payload = tenantCreated.toPayload()
         )
 
-        eventRepository.storeEvents(
-            listOf(event),
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
+        eventRepository.storeEvents(listOf(event))
+        eventDispatcher.notifyEventsPublished(setOf(event.id.qualifiedTopic))
 
         return Tenant(
             resourceId = resourceId,

@@ -64,11 +64,7 @@ class UpdateTenantService(
             payload = eventPayload.toPayload()
         )
 
-        eventRepository.storeEvents(
-            listOf(event),
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
+        eventRepository.storeEvents(listOf(event))
 
         return existing.copy(
             name = request.name ?: existing.name,

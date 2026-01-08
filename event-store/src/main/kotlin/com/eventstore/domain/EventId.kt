@@ -31,6 +31,13 @@ data class EventId(val value: String) {
             value.substringBeforeLast("-")
         }
 
+    val qualifiedTopic: String
+        get() = if (TENANT_PATTERN.matches(value)) {
+            value.substringBeforeLast("-")
+        } else {
+            "default/default/${topic}"
+        }
+
     val sequence: Long
         get() = value.substringAfterLast("-").toLong()
 

@@ -15,7 +15,7 @@ fun Route.topicRoutes(
     createTopicService: CreateTopicService,
     getTopicsService: GetTopicsService,
     updateTopicSchemasService: UpdateTopicSchemasService,
-    dispatcherManager: com.eventstore.infrastructure.background.DispatcherManager
+    dispatcherManager: com.eventstore.infrastructure.background.AsyncDispatcherManager
 ) {
     route("/tenants/{tenantName}/namespaces/{namespaceName}/topics") {
         post {

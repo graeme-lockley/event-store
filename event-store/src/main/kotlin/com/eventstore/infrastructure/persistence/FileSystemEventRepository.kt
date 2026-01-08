@@ -39,24 +39,23 @@ class FileSystemEventRepository(
     private fun resolveBaseDir(
         topic: String,
         tenantId: String?,
-        namespaceId: String?,
-        eventId: EventId? = null
-    ): Path {
-        val resolvedTenant = tenantId ?: eventId?.tenantId
-        val resolvedNamespace = namespaceId ?: eventId?.namespaceId
-
-        return if (resolvedTenant != null && resolvedNamespace != null) {
-            dataDir.resolve(resolvedTenant).resolve(resolvedNamespace).resolve(topic)
+        namespaceId: String?
+    ): Path =
+        if (tenantId != null && namespaceId != null) {
+            dataDir.resolve(tenantId).resolve(namespaceId).resolve(topic)
         } else {
             dataDir.resolve(topic)
         }
-    }
+
+    private fun resolveBaseDir(
+        topic: String,
+        eventId: EventId?
+    ): Path =
+        resolveBaseDir(topic, eventId?.tenantId, eventId?.namespaceId)
 
     private fun getEventFilePath(
         topic: String,
-        eventId: EventId,
-        tenantId: String?,
-        namespaceId: String?
+        eventId: EventId
     ): Path {
         val sequence = eventId.sequence
 
@@ -69,7 +68,7 @@ class FileSystemEventRepository(
         val group3 = String.format("%02d", (sequence / 100) % 100)
 
         val fileName = "${eventId.value}.json"
-        return resolveBaseDir(topic, tenantId, namespaceId, eventId)
+        return resolveBaseDir(topic, eventId)
             .resolve(group1)
             .resolve(group2)
             .resolve(group3)
@@ -81,14 +80,12 @@ class FileSystemEventRepository(
         type: String,
         payload: Map<String, Any>,
         eventId: EventId,
-        timestamp: Instant,
-        tenantId: String?,
-        namespaceId: String?
+        timestamp: Instant
     ): Event {
         return withContext(Dispatchers.IO) {
             try {
                 val event = Event(eventId, timestamp, type, payload)
-                val filePath = getEventFilePath(topic, eventId, tenantId, namespaceId)
+                val filePath = getEventFilePath(topic, eventId)
 
                 Files.createDirectories(filePath.parent)
 
@@ -111,9 +108,7 @@ class FileSystemEventRepository(
     }
 
     override suspend fun storeEvents(
-        events: List<Event>,
-        tenantId: String?,
-        namespaceId: String?
+        events: List<Event>
     ): List<Event> {
         if (events.isEmpty()) {
             return emptyList()
@@ -125,7 +120,7 @@ class FileSystemEventRepository(
 
             try {
                 for (event in events) {
-                    val filePath = getEventFilePath(event.id.topic, event.id, tenantId, namespaceId)
+                    val filePath = getEventFilePath(event.id.topic, event.id)
 
                     Files.createDirectories(filePath.parent)
 
@@ -149,7 +144,7 @@ class FileSystemEventRepository(
                             Files.delete(path)
                         }
                     } catch (cleanupException: Exception) {
-                        logger.warn("Failed to cleanup event file ${path} after bulk storage failure: ${cleanupException.message}")
+                        logger.warn("Failed to cleanup event file $path after bulk storage failure: ${cleanupException.message}")
                     }
                 }
                 throw EventStorageException(
@@ -162,13 +157,11 @@ class FileSystemEventRepository(
 
     override suspend fun getEvent(
         topic: String,
-        eventId: EventId,
-        tenantId: String?,
-        namespaceId: String?
+        eventId: EventId
     ): Event? {
         return withContext(Dispatchers.IO) {
             try {
-                val filePath = getEventFilePath(topic, eventId, tenantId, namespaceId)
+                val filePath = getEventFilePath(topic, eventId)
 
                 if (!Files.exists(filePath)) {
                     return@withContext null
@@ -198,7 +191,11 @@ class FileSystemEventRepository(
         namespaceId: String?
     ): List<Event> {
         return withContext(Dispatchers.IO) {
-            val topicDir = resolveBaseDir(topic, tenantId, namespaceId, sinceEventId)
+            val topicDir =
+                if (sinceEventId == null)
+                    resolveBaseDir(topic, tenantId, namespaceId)
+                else
+                    resolveBaseDir(topic, sinceEventId)
 
             if (!Files.exists(topicDir)) {
                 return@withContext emptyList()

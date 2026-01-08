@@ -18,13 +18,11 @@ class InMemoryEventRepository : EventRepository {
         type: String,
         payload: Map<String, Any>,
         eventId: EventId,
-        timestamp: Instant,
-        tenantId: String?,
-        namespaceId: String?
+        timestamp: Instant
     ): Event {
         return mutex.withLock {
             val event = Event(eventId, timestamp, type, payload)
-            val key = topicKey(topic, tenantId, namespaceId, eventId)
+            val key = topicKey(topic, eventId.tenantId, eventId.namespaceId, eventId)
             val events = eventsByTopic.getOrPut(key) { mutableListOf() }
             events.add(event)
             event
@@ -32,9 +30,7 @@ class InMemoryEventRepository : EventRepository {
     }
 
     override suspend fun storeEvents(
-        events: List<Event>,
-        tenantId: String?,
-        namespaceId: String?
+        events: List<Event>
     ): List<Event> {
         if (events.isEmpty()) {
             return emptyList()
@@ -44,7 +40,7 @@ class InMemoryEventRepository : EventRepository {
             val storedEvents = mutableListOf<Event>()
             try {
                 for (event in events) {
-                    val key = topicKey(event.id.topic, tenantId, namespaceId, event.id)
+                    val key = topicKey(event.id.topic, event.id.tenantId, event.id.namespaceId, event.id)
                     val eventsList = eventsByTopic.getOrPut(key) { mutableListOf() }
                     eventsList.add(event)
                     storedEvents.add(event)
@@ -53,7 +49,7 @@ class InMemoryEventRepository : EventRepository {
             } catch (e: Exception) {
                 // Rollback: remove events that were added
                 for (event in storedEvents) {
-                    val key = topicKey(event.id.topic, tenantId, namespaceId, event.id)
+                    val key = topicKey(event.id.topic, event.id.tenantId, event.id.namespaceId, event.id)
                     eventsByTopic[key]?.remove(event)
                 }
                 throw e
@@ -63,12 +59,10 @@ class InMemoryEventRepository : EventRepository {
 
     override suspend fun getEvent(
         topic: String,
-        eventId: EventId,
-        tenantId: String?,
-        namespaceId: String?
+        eventId: EventId
     ): Event? {
         return mutex.withLock {
-            val key = topicKey(topic, tenantId, namespaceId, eventId)
+            val key = topicKey(topic, eventId.tenantId, eventId.namespaceId, eventId)
             eventsByTopic[key]?.firstOrNull { it.id == eventId }
         }
     }

@@ -66,11 +66,8 @@ class DeleteNamespaceService(
             payload = payload.toPayload()
         )
 
-        eventRepository.storeEvents(
-            listOf(event),
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
+        eventRepository.storeEvents(listOf(event))
+        // TODO: the following line is an error
         namespaceProjectionService.handleEvents(listOf(event))
 
         return true

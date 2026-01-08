@@ -84,11 +84,7 @@ class RevokePermissionService(
             payload = event.toPayload()
         )
 
-        eventRepository.storeEvents(
-            listOf(storedEvent),
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
+        eventRepository.storeEvents(listOf(storedEvent))
 
         return event
     }

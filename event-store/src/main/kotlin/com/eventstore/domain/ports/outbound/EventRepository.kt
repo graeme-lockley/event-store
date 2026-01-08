@@ -12,22 +12,16 @@ interface EventRepository {
         type: String,
         payload: Map<String, Any>,
         eventId: EventId,
-        timestamp: java.time.Instant,
-        tenantId: String? = null,
-        namespaceId: String? = null
+        timestamp: java.time.Instant
     ): Event
 
     suspend fun storeEvents(
-        events: List<Event>,
-        tenantId: String? = null,
-        namespaceId: String? = null
+        events: List<Event>
     ): List<Event>
 
     suspend fun getEvent(
         topic: String,
-        eventId: EventId,
-        tenantId: String? = null,
-        namespaceId: String? = null
+        eventId: EventId
     ): Event?
 
     suspend fun getEvents(

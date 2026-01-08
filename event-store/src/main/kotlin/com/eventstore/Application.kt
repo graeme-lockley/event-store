@@ -29,7 +29,7 @@ import com.eventstore.domain.services.user.*
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.auth.ApiKeyAuthenticator
 import com.eventstore.infrastructure.auth.SessionManager
-import com.eventstore.infrastructure.background.DispatcherManager
+import com.eventstore.infrastructure.background.AsyncDispatcherManager
 import com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl
 import com.eventstore.infrastructure.external.JsonSchemaValidator
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
@@ -108,7 +108,7 @@ fun Application.configureApplication(config: Config) {
     )
 
     // Initialize dispatcher manager
-    val dispatcherManager = DispatcherManager(
+    val dispatcherManager = AsyncDispatcherManager(
         consumerRepository = consumerRepository,
         eventRepository = eventRepository
     )
@@ -216,7 +216,7 @@ fun Application.configureApplication(config: Config) {
     val getHealthStatusService = GetHealthStatusService(consumerRepository) {
         dispatcherManager.getRunningDispatchers()
     }
-    val createTenantService = CreateTenantService(eventRepository, topicRepository, tenantProjectionService, config)
+    val createTenantService = CreateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager)
     val getTenantService = GetTenantService(tenantProjectionService)
     val updateTenantService = UpdateTenantService(eventRepository, topicRepository, tenantProjectionService, config)
     val deleteTenantService = DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config)

@@ -67,7 +67,7 @@ class InMemoryTopicRepository : TopicRepository {
         return mutex.withLock {
             val key = key(topicName, tenantName, namespaceName)
             val current = topics[key]
-                ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicName)
+                ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(key)
 
             val nextSequence = current.sequence + 1
             topics[key] = current.copy(sequence = nextSequence)

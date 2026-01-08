@@ -236,11 +236,7 @@ class BootstrapServiceImpl(
             )
         )
 
-        eventRepository.storeEvents(
-            events,
-            tenantId = systemTenantId,
-            namespaceId = managementNamespaceId
-        )
+        eventRepository.storeEvents(events)
 
         // Create test API key if requested
         if (createTestApiKey && apiKeyRepository != null && configDir != null) {
