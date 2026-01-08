@@ -50,6 +50,3 @@ class CreateApiKeyService(
         return apiKey to plainKey
     }
 }
-
-
-
