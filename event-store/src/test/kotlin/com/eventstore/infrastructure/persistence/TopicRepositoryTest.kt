@@ -10,7 +10,7 @@ import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
+import java.util.*
 import kotlin.test.*
 
 /**
@@ -308,9 +308,27 @@ class TopicRepositoryTest {
     private suspend fun testGetAllTopics(repository: TopicRepository) {
         val tenantResourceId = UUID.randomUUID()
         val namespaceResourceId = UUID.randomUUID()
-        val topic1 = repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "topic-1", listOf(Schema(eventType = "event1")))
-        val topic2 = repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "topic-2", listOf(Schema(eventType = "event2")))
-        val topic3 = repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "topic-3", listOf(Schema(eventType = "event3")))
+        val topic1 = repository.createTopic(
+            UUID.randomUUID(),
+            tenantResourceId,
+            namespaceResourceId,
+            "topic-1",
+            listOf(Schema(eventType = "event1"))
+        )
+        val topic2 = repository.createTopic(
+            UUID.randomUUID(),
+            tenantResourceId,
+            namespaceResourceId,
+            "topic-2",
+            listOf(Schema(eventType = "event2"))
+        )
+        val topic3 = repository.createTopic(
+            UUID.randomUUID(),
+            tenantResourceId,
+            namespaceResourceId,
+            "topic-3",
+            listOf(Schema(eventType = "event3"))
+        )
 
         val allTopics = repository.getAllTopics()
 
@@ -329,7 +347,13 @@ class TopicRepositoryTest {
         val tenantResourceId = UUID.randomUUID()
         val namespaceResourceId = UUID.randomUUID()
         val topics = (1..5).map { i ->
-            repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "topic-$i", listOf(Schema(eventType = "event$i")))
+            repository.createTopic(
+                UUID.randomUUID(),
+                tenantResourceId,
+                namespaceResourceId,
+                "topic-$i",
+                listOf(Schema(eventType = "event$i"))
+            )
         }
 
         val allTopics = repository.getAllTopics()

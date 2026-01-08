@@ -26,7 +26,10 @@ fun Route.authRoutes(
                 call.response.cookies.append("sessionId", session.id, httpOnly = true)
                 call.respond(HttpStatusCode.OK, LoginResponse(session.id, session.userId, tenants))
             } catch (e: InvalidCredentialsException) {
-                call.respond(HttpStatusCode.Unauthorized, ErrorResponse(e.message ?: "Invalid credentials", "INVALID_CREDENTIALS"))
+                call.respond(
+                    HttpStatusCode.Unauthorized,
+                    ErrorResponse(e.message ?: "Invalid credentials", "INVALID_CREDENTIALS")
+                )
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Login failed", "LOGIN_FAILED"))
             }
@@ -59,11 +62,16 @@ fun Route.authRoutes(
                 )
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Password changed"))
             } catch (e: InvalidCredentialsException) {
-                call.respond(HttpStatusCode.Unauthorized, ErrorResponse(e.message ?: "Invalid credentials", "INVALID_CREDENTIALS"))
+                call.respond(
+                    HttpStatusCode.Unauthorized,
+                    ErrorResponse(e.message ?: "Invalid credentials", "INVALID_CREDENTIALS")
+                )
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Failed to change password", "PASSWORD_CHANGE_FAILED"))
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(e.message ?: "Failed to change password", "PASSWORD_CHANGE_FAILED")
+                )
             }
         }
     }
 }
- 

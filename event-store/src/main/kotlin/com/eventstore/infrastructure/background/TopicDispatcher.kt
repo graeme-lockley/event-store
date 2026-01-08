@@ -124,7 +124,7 @@ class TopicDispatcher(
                 updatedConsumer = updatedConsumer.withUpdatedLastEventId(topicName, latestEventId)
             }
             consumerRepository.save(updatedConsumer)
-            
+
             // Reset retry state on success
             retryState.remove(consumer.id)
         } else {
@@ -162,6 +162,7 @@ class TopicDispatcher(
                 val namespace = if (parts[1] == "default") null else parts[1]
                 Triple(parts[2], tenant, namespace)
             }
+
             1 -> Triple(parts[0], null, null) // topic (legacy format)
             else -> Triple(topicName, null, null) // fallback to original
         }

@@ -1,7 +1,5 @@
 package com.eventstore.domain.services
 
-import com.eventstore.domain.services.event.EventRequest
-
 import com.eventstore.domain.EventId
 import com.eventstore.domain.Schema
 import com.eventstore.domain.exceptions.TopicNotFoundException
@@ -9,12 +7,13 @@ import com.eventstore.domain.ports.outbound.ConsumerRepository
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.services.event.EventRequest
 import com.eventstore.infrastructure.external.JsonSchemaValidator
 import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
 import com.eventstore.infrastructure.persistence.InMemoryEventRepository
 import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 data class PopulateEventStoreState(
     val topicName: String = "user-events",
@@ -54,10 +53,22 @@ suspend fun populateEventStore(state: PopulateEventStoreState) {
 
     val tenantResourceId = UUID.randomUUID()
     val namespaceResourceId = UUID.randomUUID()
-    state.topicRepository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, state.topicName, topicSchemas)
+    state.topicRepository.createTopic(
+        UUID.randomUUID(),
+        tenantResourceId,
+        namespaceResourceId,
+        state.topicName,
+        topicSchemas
+    )
     state.schemaValidator.registerSchemas(state.topicName, topicSchemas)
 
-    state.topicRepository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, "other-user-events", topicSchemas)
+    state.topicRepository.createTopic(
+        UUID.randomUUID(),
+        tenantResourceId,
+        namespaceResourceId,
+        "other-user-events",
+        topicSchemas
+    )
     state.schemaValidator.registerSchemas("other-user-events", topicSchemas)
 
     val requests = listOf(

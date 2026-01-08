@@ -35,7 +35,10 @@ class AuthorizationMiddleware(
             // Get userId from authentication middleware
             val userId = call.attributes.getOrNull(AuthenticationMiddleware.UserIdKey)
                 ?: run {
-                    call.respond(HttpStatusCode.Unauthorized, com.eventstore.interfaces.http.dto.ErrorResponse("Authentication required", "AUTH_REQUIRED"))
+                    call.respond(
+                        HttpStatusCode.Unauthorized,
+                        com.eventstore.interfaces.http.dto.ErrorResponse("Authentication required", "AUTH_REQUIRED")
+                    )
                     finish()
                     return@intercept
                 }
@@ -80,7 +83,10 @@ class AuthorizationMiddleware(
             }
 
             if (!hasPermission) {
-                call.respond(HttpStatusCode.Forbidden, com.eventstore.interfaces.http.dto.ErrorResponse("Permission denied", "PERMISSION_DENIED"))
+                call.respond(
+                    HttpStatusCode.Forbidden,
+                    com.eventstore.interfaces.http.dto.ErrorResponse("Permission denied", "PERMISSION_DENIED")
+                )
                 finish()
                 return@intercept
             }
@@ -91,10 +97,10 @@ class AuthorizationMiddleware(
 
     private fun isPublicEndpoint(path: String): Boolean {
         return path.startsWith("/auth/login") ||
-               path.startsWith("/auth/logout") ||
-               path.startsWith("/health") ||
-               path == "/" ||
-               path == "/favicon.ico"
+                path.startsWith("/auth/logout") ||
+                path.startsWith("/health") ||
+                path == "/" ||
+                path == "/favicon.ico"
     }
 
     private fun extractContextAndPermission(
@@ -120,6 +126,7 @@ class AuthorizationMiddleware(
                     else -> null to null
                 }
             }
+
             path.matches(Regex("/tenants/[^/]+/?$")) -> {
                 when (method) {
                     HttpMethod.Get -> ResourceType.TENANT to Permission.READ
@@ -128,6 +135,7 @@ class AuthorizationMiddleware(
                     else -> null to null
                 }
             }
+
             path.matches(Regex("/tenants/[^/]+/namespaces/?$")) -> {
                 when (method) {
                     HttpMethod.Post -> ResourceType.NAMESPACE to Permission.CREATE
@@ -135,6 +143,7 @@ class AuthorizationMiddleware(
                     else -> null to null
                 }
             }
+
             path.matches(Regex("/tenants/[^/]+/namespaces/[^/]+/?$")) -> {
                 when (method) {
                     HttpMethod.Get -> ResourceType.NAMESPACE to Permission.READ
@@ -143,6 +152,7 @@ class AuthorizationMiddleware(
                     else -> null to null
                 }
             }
+
             path.matches(Regex("/tenants/[^/]+/namespaces/[^/]+/topics/?$")) -> {
                 when (method) {
                     HttpMethod.Post -> ResourceType.TOPIC to Permission.CREATE
@@ -150,6 +160,7 @@ class AuthorizationMiddleware(
                     else -> null to null
                 }
             }
+
             path.matches(Regex("/tenants/[^/]+/namespaces/[^/]+/topics/[^/]+/?$")) -> {
                 when (method) {
                     HttpMethod.Get -> ResourceType.TOPIC to Permission.READ
@@ -158,12 +169,14 @@ class AuthorizationMiddleware(
                     else -> null to null
                 }
             }
+
             path.matches(Regex("/tenants/[^/]+/namespaces/[^/]+/topics/[^/]+/schemas")) -> {
                 when (method) {
                     HttpMethod.Put -> ResourceType.TOPIC to Permission.SCHEMA_MANAGE
                     else -> null to null
                 }
             }
+
             path.matches(Regex("/tenants/[^/]+/namespaces/[^/]+/events")) -> {
                 when (method) {
                     HttpMethod.Post -> ResourceType.EVENT to Permission.CREATE
@@ -171,6 +184,7 @@ class AuthorizationMiddleware(
                     else -> null to null
                 }
             }
+
             path.matches(Regex("/tenants/[^/]+/users")) -> {
                 when (method) {
                     HttpMethod.Post -> ResourceType.USER to Permission.CREATE
@@ -178,6 +192,7 @@ class AuthorizationMiddleware(
                     else -> null to null
                 }
             }
+
             path.matches(Regex("/tenants/[^/]+/users/[^/]+")) -> {
                 when (method) {
                     HttpMethod.Get -> ResourceType.USER to Permission.READ
@@ -186,6 +201,7 @@ class AuthorizationMiddleware(
                     else -> null to null
                 }
             }
+
             path.matches(Regex("/tenants/[^/]+/users/[^/]+/api-keys/?$")) -> {
                 when (method) {
                     HttpMethod.Post -> ResourceType.USER to Permission.UPDATE  // Creating API keys for a user
@@ -193,6 +209,7 @@ class AuthorizationMiddleware(
                     else -> null to null
                 }
             }
+
             path.matches(Regex("/tenants/[^/]+/users/[^/]+/api-keys/[^/]+/?$")) -> {
                 when (method) {
                     HttpMethod.Get -> ResourceType.USER to Permission.READ
@@ -200,6 +217,7 @@ class AuthorizationMiddleware(
                     else -> null to null
                 }
             }
+
             else -> null to null
         }
 

@@ -19,8 +19,10 @@ fun Route.consumerRoutes(
         // POST /tenants/{tenantName}/namespaces/{namespaceName}/consumers/register - Register a consumer
         post("register") {
             try {
-                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val tenantName =
+                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName =
+                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val requestDto = call.receive<ConsumerRegistrationRequestDto>()
 
                 // Convert DTO to domain request
@@ -58,8 +60,10 @@ fun Route.consumerRoutes(
         // GET /tenants/{tenantName}/namespaces/{namespaceName}/consumers - List consumers in namespace
         get {
             try {
-                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val tenantName =
+                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName =
+                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val consumers = consumerRepository.findByTenantAndNamespace(tenantName, namespaceName)
                 val consumerInfo = consumers.map { consumer ->
                     ConsumerResponseMapper.toDto(consumer)
@@ -76,8 +80,10 @@ fun Route.consumerRoutes(
         // DELETE /tenants/{tenantName}/namespaces/{namespaceName}/consumers/{id} - Unregister a consumer
         delete("{id}") {
             try {
-                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val tenantName =
+                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName =
+                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val consumerId = call.parameters["id"]
                     ?: throw IllegalArgumentException("Consumer ID is required")
 

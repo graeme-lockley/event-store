@@ -1,73 +1,47 @@
 package com.eventstore.interfaces.http.routes
 
-import com.eventstore.Config
-import com.eventstore.domain.User
-import com.eventstore.domain.UserStatus
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
-import com.eventstore.domain.Permission
-import com.eventstore.domain.PrincipalType
-import com.eventstore.domain.ResourceType
+import com.eventstore.domain.*
 import com.eventstore.domain.events.PermissionEventType
 import com.eventstore.domain.events.PermissionGrantedEvent
-import com.eventstore.domain.events.TenantEventType
-import com.eventstore.domain.events.TenantCreatedEvent
-import com.eventstore.domain.tenants.SystemTopics
-import com.eventstore.domain.exceptions.ApiKeyNotFoundException
-import com.eventstore.domain.exceptions.UserNotFoundException
-import com.eventstore.infrastructure.auth.ApiKeyAuthenticator
-import com.eventstore.infrastructure.auth.SessionManager
-import com.eventstore.infrastructure.persistence.FileSystemApiKeyRepository
-import com.eventstore.infrastructure.persistence.InMemoryApiKeyRepository
-import com.eventstore.infrastructure.projections.InMemoryUserRepository
-import com.eventstore.infrastructure.projections.UserProjectionService
+import com.eventstore.domain.ports.outbound.ResourceResolver
 import com.eventstore.domain.services.apikey.CreateApiKeyService
 import com.eventstore.domain.services.apikey.GetApiKeyService
 import com.eventstore.domain.services.apikey.RevokeApiKeyService
 import com.eventstore.domain.services.auth.AuthenticationService
-import com.eventstore.interfaces.http.dto.ApiKeyListResponseDto
-import com.eventstore.interfaces.http.dto.ApiKeyResponseDto
-import com.eventstore.interfaces.http.dto.ApiKeyRevokeResponseDto
-import com.eventstore.interfaces.http.dto.CreateApiKeyRequestDto
-import com.eventstore.interfaces.http.dto.ErrorResponse
+import com.eventstore.domain.services.auth.AuthorizationService
+import com.eventstore.domain.services.auth.ResourceResolverImpl
+import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.infrastructure.auth.ApiKeyAuthenticator
+import com.eventstore.infrastructure.auth.SessionManager
+import com.eventstore.infrastructure.persistence.FileSystemApiKeyRepository
+import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
+import com.eventstore.infrastructure.projections.*
+import com.eventstore.interfaces.http.dto.*
 import com.eventstore.interfaces.http.middleware.AuthenticationMiddleware
 import com.eventstore.interfaces.http.middleware.AuthorizationMiddleware
-import com.eventstore.domain.services.auth.AuthorizationService
-import com.eventstore.domain.ports.outbound.ResourceResolver
-import com.eventstore.infrastructure.projections.InMemoryTenantRepository
-import com.eventstore.infrastructure.projections.InMemoryNamespaceRepository
-import com.eventstore.infrastructure.projections.InMemoryPermissionRepository
-import com.eventstore.infrastructure.projections.TenantProjectionService
-import com.eventstore.infrastructure.projections.NamespaceProjectionService
-import com.eventstore.infrastructure.projections.PermissionProjectionService
-import com.eventstore.domain.services.auth.ResourceResolverImpl
-import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import io.ktor.client.call.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.client.call.body
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.http.*
+import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
-import io.ktor.server.testing.TestApplicationBuilder
-import io.ktor.serialization.jackson.*
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
 class ApiKeyRoutesTest {
     @TempDir
@@ -99,10 +73,10 @@ class ApiKeyRoutesTest {
             configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         }
         apiKeyRepository = FileSystemApiKeyRepository(tempDir, objectMapper)
-        
+
         val userRepository = InMemoryUserRepository()
         userProjectionService = UserProjectionService(userRepository)
-        
+
         // Create test users
         runBlocking {
             val user1 = User(
@@ -136,7 +110,7 @@ class ApiKeyRoutesTest {
         val namespaceProjectionService = NamespaceProjectionService(InMemoryNamespaceRepository())
         permissionProjectionService = PermissionProjectionService(InMemoryPermissionRepository())
         val topicRepository = InMemoryTopicRepository()
-        
+
         // Create test tenant
         runBlocking {
             val tenantEvent = Event(
@@ -156,13 +130,13 @@ class ApiKeyRoutesTest {
             )
             tenantProjectionService.handleEvents(listOf(tenantEvent))
         }
-        
+
         val resourceResolver: ResourceResolver = ResourceResolverImpl(
             tenantProjectionService = tenantProjectionService,
             namespaceProjectionService = namespaceProjectionService,
             topicRepository = topicRepository
         )
-        
+
         authorizationService = AuthorizationService(
             permissionProjectionService = permissionProjectionService,
             resourceResolver = resourceResolver
@@ -170,7 +144,7 @@ class ApiKeyRoutesTest {
 
         apiKeyAuthenticator = ApiKeyAuthenticator(apiKeyRepository)
     }
-    
+
     private fun grantUserPermissions(userId: String, tenantId: String) {
         runBlocking {
             val grantEvent = Event(
@@ -231,7 +205,7 @@ class ApiKeyRoutesTest {
     fun `POST creates API key successfully`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -263,7 +237,7 @@ class ApiKeyRoutesTest {
     fun `POST rejects empty name`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -290,10 +264,10 @@ class ApiKeyRoutesTest {
     @Test
     fun `GET list returns user's API keys`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val apiKey1Id: String
         val apiKey2Id: String
-        
+
         runBlocking {
             // Create API keys for user1
             val (apiKey1, _) = createApiKeyService.execute(
@@ -310,7 +284,7 @@ class ApiKeyRoutesTest {
             )
             apiKey1Id = apiKey1.id
             apiKey2Id = apiKey2.id
-            
+
             // Create API key for user2 (should not appear)
             createApiKeyService.execute(
                 com.eventstore.domain.services.apikey.CreateApiKeyRequest(
@@ -321,7 +295,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -345,9 +319,9 @@ class ApiKeyRoutesTest {
     @Test
     fun `GET by ID returns API key`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val apiKeyId: String
-        
+
         runBlocking {
             val (apiKey, _) = createApiKeyService.execute(
                 com.eventstore.domain.services.apikey.CreateApiKeyRequest(
@@ -359,7 +333,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -382,9 +356,9 @@ class ApiKeyRoutesTest {
     fun `GET by ID rejects access to other user's API key`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         grantUserPermissions(userId2, tenantId)
-        
+
         val apiKeyId: String
-        
+
         runBlocking {
             // Create API key for user2
             val (apiKey, _) = createApiKeyService.execute(
@@ -397,7 +371,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -420,9 +394,9 @@ class ApiKeyRoutesTest {
     @Test
     fun `DELETE revokes API key`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val apiKeyId: String
-        
+
         runBlocking {
             val (apiKey, _) = createApiKeyService.execute(
                 com.eventstore.domain.services.apikey.CreateApiKeyRequest(
@@ -434,7 +408,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -460,9 +434,9 @@ class ApiKeyRoutesTest {
     fun `DELETE rejects revoking other user's API key`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         grantUserPermissions(userId2, tenantId)
-        
+
         val apiKeyId: String
-        
+
         runBlocking {
             // Create API key for user2
             val (apiKey, _) = createApiKeyService.execute(
@@ -475,7 +449,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -498,7 +472,7 @@ class ApiKeyRoutesTest {
     @Test
     fun `requires authentication`() = testApplication {
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -516,10 +490,10 @@ class ApiKeyRoutesTest {
     @Test
     fun `works with API key authentication`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val apiKeyId: String
         val plainKey: String
-        
+
         runBlocking {
             // Create an API key
             val (apiKey, key) = createApiKeyService.execute(
@@ -533,7 +507,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -557,7 +531,7 @@ class ApiKeyRoutesTest {
     fun `POST rejects whitespace-only name`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -585,7 +559,7 @@ class ApiKeyRoutesTest {
     fun `POST rejects name exceeding max length`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -614,7 +588,7 @@ class ApiKeyRoutesTest {
     fun `POST rejects expiresAt in the past`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -644,7 +618,7 @@ class ApiKeyRoutesTest {
     fun `POST rejects description exceeding max length`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -673,7 +647,7 @@ class ApiKeyRoutesTest {
     fun `POST rejects missing userId parameter`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -682,7 +656,7 @@ class ApiKeyRoutesTest {
 
         val body = CreateApiKeyRequestDto(name = "Test Key")
         val session = sessionManager.createSession(userId1)
-        
+
         // Use empty userId in URL - Ktor routing returns 404 for malformed paths
         val response = client.post("/tenants/$tenantId/users//api-keys") {
             header(HttpHeaders.Authorization, "Bearer ${session.id}")
@@ -698,7 +672,7 @@ class ApiKeyRoutesTest {
     fun `POST creates API key with scopes`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -728,7 +702,7 @@ class ApiKeyRoutesTest {
     fun `POST creates API key with expiration date`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -758,7 +732,7 @@ class ApiKeyRoutesTest {
     fun `POST trims whitespace from name`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -787,7 +761,7 @@ class ApiKeyRoutesTest {
     fun `GET list returns empty list when user has no keys`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -807,10 +781,10 @@ class ApiKeyRoutesTest {
     @Test
     fun `GET list includes revoked and expired keys`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val apiKey1Id: String
         val apiKey2Id: String
-        
+
         runBlocking {
             // Create active key
             val (apiKey1, _) = createApiKeyService.execute(
@@ -820,7 +794,7 @@ class ApiKeyRoutesTest {
                 )
             )
             apiKey1Id = apiKey1.id
-            
+
             // Create and revoke a key
             val (apiKey2, _) = createApiKeyService.execute(
                 com.eventstore.domain.services.apikey.CreateApiKeyRequest(
@@ -830,7 +804,7 @@ class ApiKeyRoutesTest {
             )
             apiKey2Id = apiKey2.id
             revokeApiKeyService.execute(com.eventstore.domain.services.apikey.RevokeApiKeyRequest(keyId = apiKey2Id))
-            
+
             // Create expired key
             val expiredDate = Instant.now().minusSeconds(3600)
             createApiKeyService.execute(
@@ -843,7 +817,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -858,13 +832,13 @@ class ApiKeyRoutesTest {
         assertEquals(HttpStatusCode.OK, response.status)
         val listResponse: ApiKeyListResponseDto = response.body()
         assertEquals(3, listResponse.apiKeys.size)
-        
+
         val activeKey = listResponse.apiKeys.find { it.id == apiKey1Id }
         val revokedKey = listResponse.apiKeys.find { it.id == apiKey2Id }
-        
+
         assertNotNull(activeKey)
         assertTrue(activeKey.isActive)
-        
+
         assertNotNull(revokedKey)
         assertFalse(revokedKey.isActive)
         assertNotNull(revokedKey.revokedAt)
@@ -874,7 +848,7 @@ class ApiKeyRoutesTest {
     fun `GET list rejects missing userId parameter`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -895,9 +869,9 @@ class ApiKeyRoutesTest {
     @Test
     fun `GET by ID returns revoked API key metadata`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val apiKeyId: String
-        
+
         runBlocking {
             val (apiKey, _) = createApiKeyService.execute(
                 com.eventstore.domain.services.apikey.CreateApiKeyRequest(
@@ -910,7 +884,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -933,9 +907,9 @@ class ApiKeyRoutesTest {
     @Test
     fun `GET by ID returns expired API key metadata`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val apiKeyId: String
-        
+
         runBlocking {
             val expiredDate = Instant.now().minusSeconds(3600)
             val (apiKey, _) = createApiKeyService.execute(
@@ -949,7 +923,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -972,7 +946,7 @@ class ApiKeyRoutesTest {
     fun `GET by ID returns 404 for non-existent key`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -994,7 +968,7 @@ class ApiKeyRoutesTest {
     fun `GET by ID rejects missing keyId parameter`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -1014,9 +988,9 @@ class ApiKeyRoutesTest {
     @Test
     fun `DELETE returns 409 for already revoked key`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val apiKeyId: String
-        
+
         runBlocking {
             val (apiKey, _) = createApiKeyService.execute(
                 com.eventstore.domain.services.apikey.CreateApiKeyRequest(
@@ -1029,7 +1003,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -1049,9 +1023,9 @@ class ApiKeyRoutesTest {
     @Test
     fun `DELETE uses consistent response format`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val apiKeyId: String
-        
+
         runBlocking {
             val (apiKey, _) = createApiKeyService.execute(
                 com.eventstore.domain.services.apikey.CreateApiKeyRequest(
@@ -1063,7 +1037,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -1086,7 +1060,7 @@ class ApiKeyRoutesTest {
     fun `DELETE rejects missing keyId parameter`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -1105,9 +1079,9 @@ class ApiKeyRoutesTest {
     @Test
     fun `DELETE can revoke expired key`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val apiKeyId: String
-        
+
         runBlocking {
             val expiredDate = Instant.now().minusSeconds(3600)
             val (apiKey, _) = createApiKeyService.execute(
@@ -1121,7 +1095,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -1134,7 +1108,7 @@ class ApiKeyRoutesTest {
         }
 
         assertEquals(HttpStatusCode.OK, response.status)
-        
+
         // Verify it's revoked
         runBlocking {
             val retrieved = getApiKeyService.getById(apiKeyId)
@@ -1147,9 +1121,9 @@ class ApiKeyRoutesTest {
     @Test
     fun `rejects revoked API key for authentication`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val plainKey: String
-        
+
         runBlocking {
             val (apiKey, key) = createApiKeyService.execute(
                 com.eventstore.domain.services.apikey.CreateApiKeyRequest(
@@ -1162,7 +1136,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -1180,9 +1154,9 @@ class ApiKeyRoutesTest {
     @Test
     fun `rejects expired API key for authentication`() = testApplication {
         grantUserPermissions(userId1, tenantId)
-        
+
         val plainKey: String
-        
+
         runBlocking {
             val expiredDate = Instant.now().minusSeconds(3600)
             val (_, key) = createApiKeyService.execute(
@@ -1196,7 +1170,7 @@ class ApiKeyRoutesTest {
         }
 
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -1215,7 +1189,7 @@ class ApiKeyRoutesTest {
     fun `rejects invalid API key format`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -1234,7 +1208,7 @@ class ApiKeyRoutesTest {
     fun `POST rejects user not found`() = testApplication {
         grantUserPermissions(userId1, tenantId)
         setupApplication {}
-        
+
         val client = createClient {
             install(ClientContentNegotiation) {
                 jackson()
@@ -1244,7 +1218,7 @@ class ApiKeyRoutesTest {
         val nonExistentUserId = UUID.randomUUID().toString()
         val body = CreateApiKeyRequestDto(name = "Test Key")
         val session = sessionManager.createSession(userId1)
-        
+
         val response = client.post("/tenants/$tenantId/users/$nonExistentUserId/api-keys") {
             header(HttpHeaders.Authorization, "Bearer ${session.id}")
             contentType(ContentType.Application.Json)

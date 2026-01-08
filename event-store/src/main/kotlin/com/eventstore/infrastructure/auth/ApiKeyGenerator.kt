@@ -1,7 +1,7 @@
 package com.eventstore.infrastructure.auth
 
 import java.security.SecureRandom
-import java.util.Base64
+import java.util.*
 
 object ApiKeyGenerator {
     private const val PREFIX = "es_"
@@ -15,6 +15,7 @@ object ApiKeyGenerator {
         return "$PREFIX$encoded"
     }
 }
+
 
 
 

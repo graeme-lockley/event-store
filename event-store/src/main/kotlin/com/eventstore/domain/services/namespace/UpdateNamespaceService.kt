@@ -7,12 +7,11 @@ import com.eventstore.domain.Namespace
 import com.eventstore.domain.events.NamespaceEventType
 import com.eventstore.domain.events.NamespaceUpdatedEvent
 import com.eventstore.domain.exceptions.NamespaceNotFoundException
-import com.eventstore.domain.exceptions.TenantNotFoundException
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
 import com.eventstore.infrastructure.projections.TenantProjectionService
-import com.eventstore.domain.tenants.SystemTopics
 import java.time.Instant
 
 data class UpdateNamespaceRequest(

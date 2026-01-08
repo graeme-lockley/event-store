@@ -19,7 +19,7 @@ class ConsumerFactoryImpl : ConsumerFactory {
 
     override fun create(request: ConsumerRegistrationRequest): Consumer {
         val consumerId = UUID.randomUUID().toString()
-        
+
         return when (request) {
             is HttpConsumerRegistrationRequest -> {
                 val callbackUrl = try {
@@ -33,7 +33,7 @@ class ConsumerFactoryImpl : ConsumerFactory {
                     topics = request.topics
                 )
             }
-            
+
             is InMemoryConsumerRegistrationRequest -> {
                 InMemoryConsumer(
                     id = consumerId,
@@ -41,7 +41,7 @@ class ConsumerFactoryImpl : ConsumerFactory {
                     topics = request.topics
                 )
             }
-            
+
             is AzureEventGridConsumerRegistrationRequest -> {
                 // Future implementation
                 throw UnsupportedOperationException("Azure Event Grid consumers not yet implemented")

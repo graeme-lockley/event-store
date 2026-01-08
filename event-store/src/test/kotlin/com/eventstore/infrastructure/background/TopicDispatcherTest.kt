@@ -14,6 +14,7 @@ import kotlin.test.assertNotNull
 
 class TopicDispatcherTest {
     private val stubEventDispatcher = InMemoryEventDispatcher()
+
     @Test
     fun `events are dispatched with the event state being saved after a successful dispatch`() = runTest {
         val topicName = "user-events"
@@ -30,7 +31,7 @@ class TopicDispatcherTest {
             handler = handler,
             topics = mapOf(topicName to null)
         )
-        
+
         val consumerId = RegisterConsumerService(
             helper.consumerRepository,
             helper.topicRepository,
@@ -40,7 +41,7 @@ class TopicDispatcherTest {
 
         // After registration, topics are stored as qualified names (tenant/namespace/topic)
         val qualifiedTopicName = "default/default/$topicName"
-        
+
         val dispatcher = TopicDispatcher(
             qualifiedTopicName,
             helper.consumerRepository,

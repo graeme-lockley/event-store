@@ -9,8 +9,8 @@ import com.eventstore.domain.exceptions.InvalidCredentialsException
 import com.eventstore.domain.exceptions.UserNotFoundException
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
-import com.eventstore.infrastructure.projections.UserProjectionService
 import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.infrastructure.projections.UserProjectionService
 import org.mindrot.jbcrypt.BCrypt
 import java.time.Instant
 
@@ -53,7 +53,12 @@ class ChangePasswordService(
         )
 
         val event = Event(
-            id = EventId.create(SystemTopics.USERS_TOPIC, seq, SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID),
+            id = EventId.create(
+                SystemTopics.USERS_TOPIC,
+                seq,
+                SystemTopics.SYSTEM_TENANT_ID,
+                SystemTopics.MANAGEMENT_NAMESPACE_ID
+            ),
             timestamp = now,
             type = UserEventType.PASSWORD_CHANGED,
             payload = payload.toPayload()

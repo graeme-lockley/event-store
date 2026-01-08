@@ -4,13 +4,7 @@ import com.eventstore.domain.Event
 import com.eventstore.domain.User
 import com.eventstore.domain.UserStatus
 import com.eventstore.domain.UserTenantAssociation
-import com.eventstore.domain.events.UserCreatedEvent
-import com.eventstore.domain.events.UserEventType
-import com.eventstore.domain.events.UserPasswordChangedEvent
-import com.eventstore.domain.events.UserStatusChangedEvent
-import com.eventstore.domain.events.UserTenantAssignedEvent
-import com.eventstore.domain.events.UserTenantRemovedEvent
-import com.eventstore.domain.events.UserUpdatedEvent
+import com.eventstore.domain.events.*
 import com.eventstore.domain.ports.outbound.DeliveryResult
 import com.eventstore.domain.ports.outbound.UserRepository
 import kotlinx.coroutines.sync.Mutex
@@ -35,7 +29,9 @@ class UserProjectionService(
     }
 
     suspend fun getUser(id: String): User? = userRepository.findById(id)?.takeIf { it.status != UserStatus.DELETED }
-    suspend fun getUserByEmail(email: String): User? = userRepository.findByEmail(email)?.takeIf { it.status != UserStatus.DELETED }
+    suspend fun getUserByEmail(email: String): User? =
+        userRepository.findByEmail(email)?.takeIf { it.status != UserStatus.DELETED }
+
     suspend fun getAllUsers(): List<User> = userRepository.findAll().filter { it.status != UserStatus.DELETED }
     suspend fun getAssociations(userId: String): List<UserTenantAssociation> = userRepository.getAssociations(userId)
     suspend fun userExistsByEmail(email: String): Boolean = getUserByEmail(email) != null
@@ -113,6 +109,3 @@ class UserProjectionService(
         }
     }
 }
-
-
-

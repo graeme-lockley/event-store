@@ -1,29 +1,19 @@
 package com.eventstore.domain.services.auth
 
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
-import com.eventstore.domain.Permission
-import com.eventstore.domain.PrincipalType
-import com.eventstore.domain.ResourceType
+import com.eventstore.domain.*
 import com.eventstore.domain.events.PermissionEventType
 import com.eventstore.domain.events.PermissionGrantedEvent
 import com.eventstore.domain.events.TenantCreatedEvent
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
-import com.eventstore.infrastructure.projections.InMemoryNamespaceRepository
-import com.eventstore.infrastructure.projections.InMemoryPermissionRepository
-import com.eventstore.infrastructure.projections.InMemoryTenantRepository
-import com.eventstore.infrastructure.projections.NamespaceProjectionService
-import com.eventstore.infrastructure.projections.PermissionProjectionService
-import com.eventstore.infrastructure.projections.TenantProjectionService
-import com.eventstore.domain.services.auth.ResourceResolverImpl
+import com.eventstore.infrastructure.projections.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -42,62 +32,62 @@ class AuthorizationServiceTest {
     @BeforeEach
     fun setup() {
         runBlocking {
-        permissionRepository = InMemoryPermissionRepository()
-        permissionProjectionService = PermissionProjectionService(permissionRepository)
-        tenantProjectionService = TenantProjectionService(InMemoryTenantRepository())
-        namespaceProjectionService = NamespaceProjectionService(InMemoryNamespaceRepository())
-        topicRepository = InMemoryTopicRepository()
-        resourceResolver = ResourceResolverImpl(
-            tenantProjectionService = tenantProjectionService,
-            namespaceProjectionService = namespaceProjectionService,
-            topicRepository = topicRepository
-        )
-        authorizationService = AuthorizationService(
-            permissionProjectionService = permissionProjectionService,
-            resourceResolver = resourceResolver
-        )
+            permissionRepository = InMemoryPermissionRepository()
+            permissionProjectionService = PermissionProjectionService(permissionRepository)
+            tenantProjectionService = TenantProjectionService(InMemoryTenantRepository())
+            namespaceProjectionService = NamespaceProjectionService(InMemoryNamespaceRepository())
+            topicRepository = InMemoryTopicRepository()
+            resourceResolver = ResourceResolverImpl(
+                tenantProjectionService = tenantProjectionService,
+                namespaceProjectionService = namespaceProjectionService,
+                topicRepository = topicRepository
+            )
+            authorizationService = AuthorizationService(
+                permissionProjectionService = permissionProjectionService,
+                resourceResolver = resourceResolver
+            )
 
-        // Create system topics
-        topicRepository.createTopic(
-            resourceId = UUID.randomUUID(),
-            tenantResourceId = UUID.randomUUID(),
-            namespaceResourceId = UUID.randomUUID(),
-            name = SystemTopics.PERMISSIONS_TOPIC,
-            schemas = emptyList(),
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
-        topicRepository.createTopic(
-            resourceId = UUID.randomUUID(),
-            tenantResourceId = UUID.randomUUID(),
-            namespaceResourceId = UUID.randomUUID(),
-            name = SystemTopics.TENANTS_TOPIC,
-            schemas = emptyList(),
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
+            // Create system topics
+            topicRepository.createTopic(
+                resourceId = UUID.randomUUID(),
+                tenantResourceId = UUID.randomUUID(),
+                namespaceResourceId = UUID.randomUUID(),
+                name = SystemTopics.PERMISSIONS_TOPIC,
+                schemas = emptyList(),
+                tenantName = SystemTopics.SYSTEM_TENANT_ID,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            )
+            topicRepository.createTopic(
+                resourceId = UUID.randomUUID(),
+                tenantResourceId = UUID.randomUUID(),
+                namespaceResourceId = UUID.randomUUID(),
+                name = SystemTopics.TENANTS_TOPIC,
+                schemas = emptyList(),
+                tenantName = SystemTopics.SYSTEM_TENANT_ID,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            )
 
-        // Create a test tenant
-        tenantName = "test-tenant"
-        tenantResourceId = UUID.randomUUID()
-        principalId = UUID.randomUUID().toString()
-        
-        val tenantEvent = Event(
-            id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-            ),
-            timestamp = Instant.now(),
-            type = TenantEventType.CREATED,
-            payload = TenantCreatedEvent(
-                resourceId = tenantResourceId,
-                name = tenantName,
-                createdAt = Instant.now()
-            ).toPayload()
-        )
-        tenantProjectionService.handleEvents(listOf(tenantEvent))
+            // Create a test tenant
+            tenantName = "test-tenant"
+            tenantResourceId = UUID.randomUUID()
+            principalId = UUID.randomUUID().toString()
+
+            val tenantEvent = Event(
+                id = EventId.create(
+                    topic = SystemTopics.TENANTS_TOPIC,
+                    sequence = 1,
+                    tenantId = SystemTopics.SYSTEM_TENANT_ID,
+                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                ),
+                timestamp = Instant.now(),
+                type = TenantEventType.CREATED,
+                payload = TenantCreatedEvent(
+                    resourceId = tenantResourceId,
+                    name = tenantName,
+                    createdAt = Instant.now()
+                ).toPayload()
+            )
+            tenantProjectionService.handleEvents(listOf(tenantEvent))
         }
     }
 

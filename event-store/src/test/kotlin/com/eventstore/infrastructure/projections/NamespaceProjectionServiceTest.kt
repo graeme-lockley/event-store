@@ -11,7 +11,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -32,7 +32,12 @@ class NamespaceProjectionServiceTest {
         val namespaceResourceId = UUID.randomUUID()
         val createdAt = Instant.now()
         val created = Event(
-            id = EventId.create(SystemTopics.NAMESPACES_TOPIC, 1, SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID),
+            id = EventId.create(
+                SystemTopics.NAMESPACES_TOPIC,
+                1,
+                SystemTopics.SYSTEM_TENANT_ID,
+                SystemTopics.MANAGEMENT_NAMESPACE_ID
+            ),
             timestamp = createdAt,
             type = NamespaceEventType.CREATED,
             payload = NamespaceCreatedEvent(
@@ -45,7 +50,12 @@ class NamespaceProjectionServiceTest {
         )
         val updatedAt = createdAt.plusSeconds(10)
         val updated = Event(
-            id = EventId.create(SystemTopics.NAMESPACES_TOPIC, 2, SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID),
+            id = EventId.create(
+                SystemTopics.NAMESPACES_TOPIC,
+                2,
+                SystemTopics.SYSTEM_TENANT_ID,
+                SystemTopics.MANAGEMENT_NAMESPACE_ID
+            ),
             timestamp = updatedAt,
             type = NamespaceEventType.UPDATED,
             payload = NamespaceUpdatedEvent(
@@ -74,7 +84,12 @@ class NamespaceProjectionServiceTest {
         val namespaceResourceId = UUID.randomUUID()
         val createdAt = Instant.now()
         val created = Event(
-            id = EventId.create(SystemTopics.NAMESPACES_TOPIC, 1, SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID),
+            id = EventId.create(
+                SystemTopics.NAMESPACES_TOPIC,
+                1,
+                SystemTopics.SYSTEM_TENANT_ID,
+                SystemTopics.MANAGEMENT_NAMESPACE_ID
+            ),
             timestamp = createdAt,
             type = NamespaceEventType.CREATED,
             payload = NamespaceCreatedEvent(
@@ -87,7 +102,12 @@ class NamespaceProjectionServiceTest {
         )
         val deletedAt = createdAt.plusSeconds(5)
         val deleted = Event(
-            id = EventId.create(SystemTopics.NAMESPACES_TOPIC, 2, SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID),
+            id = EventId.create(
+                SystemTopics.NAMESPACES_TOPIC,
+                2,
+                SystemTopics.SYSTEM_TENANT_ID,
+                SystemTopics.MANAGEMENT_NAMESPACE_ID
+            ),
             timestamp = deletedAt,
             type = NamespaceEventType.DELETED,
             payload = NamespaceDeletedEvent(

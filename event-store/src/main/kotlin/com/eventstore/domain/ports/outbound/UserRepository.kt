@@ -11,6 +11,3 @@ interface UserRepository {
     suspend fun saveAssociation(association: UserTenantAssociation)
     suspend fun getAssociations(userId: String): List<UserTenantAssociation>
 }
-
-
-

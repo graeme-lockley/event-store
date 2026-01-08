@@ -4,7 +4,7 @@ import com.eventstore.domain.Tenant
 import com.eventstore.domain.ports.outbound.TenantRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.UUID
+import java.util.*
 
 class InMemoryTenantRepository : TenantRepository {
     private val mutex = Mutex()

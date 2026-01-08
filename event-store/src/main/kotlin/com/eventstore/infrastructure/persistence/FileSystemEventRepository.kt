@@ -13,7 +13,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import java.util.PriorityQueue
+import java.util.*
 
 data class EventFile(
     val id: String,
@@ -59,7 +59,7 @@ class FileSystemEventRepository(
         namespaceId: String?
     ): Path {
         val sequence = eventId.sequence
-        
+
         // Hierarchical grouping: millions / ten-thousands / hundreds
         // group1: sequence / 1_000_000 (millions)
         // group2: (sequence / 10_000) % 100 (ten-thousands within million)
@@ -152,7 +152,10 @@ class FileSystemEventRepository(
                         logger.warn("Failed to cleanup event file ${path} after bulk storage failure: ${cleanupException.message}")
                     }
                 }
-                throw EventStorageException("Failed to store ${events.size} events (${storedEvents.size} stored before failure)", e)
+                throw EventStorageException(
+                    "Failed to store ${events.size} events (${storedEvents.size} stored before failure)",
+                    e
+                )
             }
         }
     }
@@ -238,66 +241,73 @@ class FileSystemEventRepository(
                                             .forEach group3Loop@{ group3Dir ->
                                                 if (shouldStop) return@group3Loop
 
-                                                val group3 = group3Dir.fileName.toString().toIntOrNull() ?: return@group3Loop
+                                                val group3 =
+                                                    group3Dir.fileName.toString().toIntOrNull() ?: return@group3Loop
                                                 if (group1 == startGroup1 &&
                                                     group2 == startGroup2 &&
-                                                    group3 < startGroup3) return@group3Loop
+                                                    group3 < startGroup3
+                                                ) return@group3Loop
 
                                                 Files.list(group3Dir).use { files ->
                                                     files.filter {
                                                         Files.isRegularFile(it) &&
-                                                        it.fileName.toString().endsWith(".json")
+                                                                it.fileName.toString().endsWith(".json")
                                                     }
-                                                    .sorted()
-                                                    .forEach fileLoop@{ path ->
-                                                        if (limit != null &&
-                                                            limit > 0 &&
-                                                            eventCollection !is PriorityQueue &&
-                                                            eventCollection.size >= limit) {
-                                                            shouldStop = true
-                                                            return@fileLoop
-                                                        }
-
-                                                        try {
-                                                            val json = Files.readString(path)
-                                                            val eventFile: EventFile = objectMapper.readValue(json)
-                                                            val event = Event(
-                                                                id = EventId(eventFile.id),
-                                                                timestamp = Instant.parse(eventFile.timestamp),
-                                                                type = eventFile.type,
-                                                                payload = eventFile.payload
-                                                            )
-
-                                                            if (sinceEventId != null &&
-                                                                compareEventIds(event.id, sinceEventId) <= 0) {
+                                                        .sorted()
+                                                        .forEach fileLoop@{ path ->
+                                                            if (limit != null &&
+                                                                limit > 0 &&
+                                                                eventCollection !is PriorityQueue &&
+                                                                eventCollection.size >= limit
+                                                            ) {
+                                                                shouldStop = true
                                                                 return@fileLoop
                                                             }
 
-                                                            if (date != null) {
-                                                                val eventDate = event.timestamp
-                                                                    .atZone(java.time.ZoneId.systemDefault())
-                                                                    .format(DateTimeFormatter.ISO_LOCAL_DATE)
-                                                                if (eventDate != date) {
-                                                                    return@fileLoop
-                                                                }
-                                                            }
+                                                            try {
+                                                                val json = Files.readString(path)
+                                                                val eventFile: EventFile = objectMapper.readValue(json)
+                                                                val event = Event(
+                                                                    id = EventId(eventFile.id),
+                                                                    timestamp = Instant.parse(eventFile.timestamp),
+                                                                    type = eventFile.type,
+                                                                    payload = eventFile.payload
+                                                                )
 
-                                                            if (eventCollection is PriorityQueue) {
-                                                                eventCollection.add(event)
-                                                                if (eventCollection.size > limit!!) {
-                                                                    eventCollection.remove()
-                                                                }
-                                                            } else {
-                                                                (eventCollection as MutableList).add(event)
-                                                                if (limit != null && limit > 0 && eventCollection.size >= limit) {
-                                                                    shouldStop = true
+                                                                if (sinceEventId != null &&
+                                                                    compareEventIds(event.id, sinceEventId) <= 0
+                                                                ) {
                                                                     return@fileLoop
                                                                 }
+
+                                                                if (date != null) {
+                                                                    val eventDate = event.timestamp
+                                                                        .atZone(java.time.ZoneId.systemDefault())
+                                                                        .format(DateTimeFormatter.ISO_LOCAL_DATE)
+                                                                    if (eventDate != date) {
+                                                                        return@fileLoop
+                                                                    }
+                                                                }
+
+                                                                if (eventCollection is PriorityQueue) {
+                                                                    eventCollection.add(event)
+                                                                    if (eventCollection.size > limit!!) {
+                                                                        eventCollection.remove()
+                                                                    }
+                                                                } else {
+                                                                    (eventCollection as MutableList).add(event)
+                                                                    if (limit != null && limit > 0 && eventCollection.size >= limit) {
+                                                                        shouldStop = true
+                                                                        return@fileLoop
+                                                                    }
+                                                                }
+                                                            } catch (e: Exception) {
+                                                                logger.warn(
+                                                                    "Failed to read event file ${path}: ${e.message}",
+                                                                    e
+                                                                )
                                                             }
-                                                        } catch (e: Exception) {
-                                                            logger.warn("Failed to read event file ${path}: ${e.message}", e)
                                                         }
-                                                    }
                                                 }
                                             }
                                     }

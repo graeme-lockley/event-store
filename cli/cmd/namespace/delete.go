@@ -63,6 +63,3 @@ func init() {
 	deleteCmd.Flags().StringVar(&deleteTenant, "tenant", "", "Tenant ID (or use default)")
 	deleteCmd.Flags().StringVar(&deleteReason, "reason", "", "Reason for deletion")
 }
-
-
-

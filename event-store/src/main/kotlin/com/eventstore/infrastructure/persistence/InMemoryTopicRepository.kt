@@ -5,7 +5,7 @@ import com.eventstore.domain.Topic
 import com.eventstore.domain.ports.outbound.TopicRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.UUID
+import java.util.*
 
 class InMemoryTopicRepository : TopicRepository {
     private val topics = mutableMapOf<String, Topic>()
@@ -75,7 +75,12 @@ class InMemoryTopicRepository : TopicRepository {
         }
     }
 
-    override suspend fun updateSchemas(name: String, schemas: List<Schema>, tenantName: String, namespaceName: String): Topic {
+    override suspend fun updateSchemas(
+        name: String,
+        schemas: List<Schema>,
+        tenantName: String,
+        namespaceName: String
+    ): Topic {
         return mutex.withLock {
             val key = key(name, tenantName, namespaceName)
             val current = topics[key]

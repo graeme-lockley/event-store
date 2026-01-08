@@ -17,16 +17,24 @@ fun Route.eventRoutes(
         route("/events") {
             post {
                 try {
-                    val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                    val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                    val tenantName =
+                        call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                    val namespaceName =
+                        call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                     val requests = call.receive<List<EventRequest>>()
                     if (requests.isEmpty()) {
-                        call.respond(HttpStatusCode.BadRequest, ErrorResponse("Request body must be a non-empty array of events", "INVALID_REQUEST"))
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Request body must be a non-empty array of events", "INVALID_REQUEST")
+                        )
                         return@post
                     }
                     requests.forEach { req ->
                         if (req.topic.isBlank() || req.type.isBlank() || req.payload.isEmpty()) {
-                            call.respond(HttpStatusCode.BadRequest, ErrorResponse("Each event must have topic, type, and payload", "INVALID_EVENT"))
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                ErrorResponse("Each event must have topic, type, and payload", "INVALID_EVENT")
+                            )
                             return@post
                         }
                     }
@@ -42,11 +50,20 @@ fun Route.eventRoutes(
                     val eventIds = publishEventsService.execute(eventRequests)
                     call.respond(HttpStatusCode.Created, EventResponse(eventIds))
                 } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Topic not found", "EVENT_PUBLISH_FAILED"))
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse(e.message ?: "Topic not found", "EVENT_PUBLISH_FAILED")
+                    )
                 } catch (e: com.eventstore.domain.exceptions.SchemaValidationException) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Schema validation failed", "EVENT_PUBLISH_FAILED"))
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse(e.message ?: "Schema validation failed", "EVENT_PUBLISH_FAILED")
+                    )
                 } catch (e: Exception) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Unknown error", "EVENT_PUBLISH_FAILED"))
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse(e.message ?: "Unknown error", "EVENT_PUBLISH_FAILED")
+                    )
                 }
             }
         }
@@ -54,9 +71,12 @@ fun Route.eventRoutes(
         route("/topics/{topic}/events") {
             get {
                 try {
-                    val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                    val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
-                    val topic = call.parameters["topic"] ?: throw IllegalArgumentException("Topic parameter is required")
+                    val tenantName =
+                        call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                    val namespaceName =
+                        call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                    val topic =
+                        call.parameters["topic"] ?: throw IllegalArgumentException("Topic parameter is required")
                     val sinceEventId = call.request.queryParameters["sinceEventId"]
                     val date = call.request.queryParameters["date"]
                     val limit = call.request.queryParameters["limit"]?.toIntOrNull()
@@ -71,9 +91,15 @@ fun Route.eventRoutes(
                     }
                     call.respond(HttpStatusCode.OK, EventsResponse(eventDtos))
                 } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
-                    call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "Topic not found", "TOPIC_NOT_FOUND"))
+                    call.respond(
+                        HttpStatusCode.NotFound,
+                        ErrorResponse(e.message ?: "Topic not found", "TOPIC_NOT_FOUND")
+                    )
                 } catch (e: Exception) {
-                    call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error", "EVENTS_FETCH_FAILED"))
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        ErrorResponse(e.message ?: "Unknown error", "EVENTS_FETCH_FAILED")
+                    )
                 }
             }
         }

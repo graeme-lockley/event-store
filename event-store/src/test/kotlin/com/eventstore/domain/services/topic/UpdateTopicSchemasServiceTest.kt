@@ -1,10 +1,9 @@
 package com.eventstore.domain.services.topic
 
-import com.eventstore.domain.services.PopulateEventStoreState
-import com.eventstore.domain.services.createEventStore
-
 import com.eventstore.domain.Schema
 import com.eventstore.domain.exceptions.TopicNotFoundException
+import com.eventstore.domain.services.PopulateEventStoreState
+import com.eventstore.domain.services.createEventStore
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach

@@ -1,7 +1,7 @@
 package com.eventstore.infrastructure.auth
 
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 data class Session(
@@ -25,6 +25,7 @@ class SessionManager {
         sessions.remove(sessionId)
     }
 }
+
 
 
 

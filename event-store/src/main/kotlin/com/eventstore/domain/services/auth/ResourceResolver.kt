@@ -7,7 +7,7 @@ import com.eventstore.domain.ports.outbound.ResourceResolver
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
 import com.eventstore.infrastructure.projections.TenantProjectionService
-import java.util.UUID
+import java.util.*
 
 /**
  * Implementation of ResourceResolver that resolves human-readable names to resourceId UUIDs.
@@ -17,13 +17,13 @@ class ResourceResolverImpl(
     private val namespaceProjectionService: NamespaceProjectionService,
     private val topicRepository: TopicRepository
 ) : ResourceResolver {
-    
+
     override suspend fun resolveTenantResourceId(tenantName: String): UUID {
         val tenant = tenantProjectionService.getTenantByName(tenantName)
             ?: throw TenantNotFoundException(tenantName)
         return tenant.resourceId
     }
-    
+
     override suspend fun resolveNamespaceResourceId(tenantResourceId: UUID, namespaceName: String): UUID {
         val tenant = tenantProjectionService.getTenantByResourceId(tenantResourceId)
             ?: throw TenantNotFoundException("ResourceId: $tenantResourceId")
@@ -31,7 +31,7 @@ class ResourceResolverImpl(
             ?: throw NamespaceNotFoundException(namespaceName)
         return namespace.resourceId
     }
-    
+
     override suspend fun resolveTopicResourceId(
         tenantResourceId: UUID,
         namespaceResourceId: UUID,
@@ -46,6 +46,7 @@ class ResourceResolverImpl(
         return topic.resourceId
     }
 }
+
 
 
 

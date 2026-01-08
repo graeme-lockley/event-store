@@ -1,9 +1,8 @@
 package com.eventstore.domain.services
 
-import com.eventstore.domain.services.topic.UpdateTopicSchemasService
-
 import com.eventstore.domain.Schema
 import com.eventstore.domain.exceptions.TopicNotFoundException
+import com.eventstore.domain.services.topic.UpdateTopicSchemasService
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach

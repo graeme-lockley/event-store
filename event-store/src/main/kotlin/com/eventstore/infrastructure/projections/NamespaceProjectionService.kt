@@ -11,7 +11,7 @@ import com.eventstore.domain.ports.outbound.NamespaceRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
-import java.util.UUID
+import java.util.*
 
 class NamespaceProjectionService(
     private val namespaceRepository: NamespaceRepository
@@ -47,11 +47,13 @@ class NamespaceProjectionService(
 
     // Backward compatibility - deprecated
     @Deprecated("Use getNamespaceByName instead", ReplaceWith("getNamespaceByName(tenantId, namespaceId)"))
-    suspend fun getNamespace(tenantId: String, namespaceId: String): Namespace? = getNamespaceByName(tenantId, namespaceId)
+    suspend fun getNamespace(tenantId: String, namespaceId: String): Namespace? =
+        getNamespaceByName(tenantId, namespaceId)
 
     // Backward compatibility - deprecated
     @Deprecated("Use namespaceExistsByName instead", ReplaceWith("namespaceExistsByName(tenantId, namespaceId)"))
-    suspend fun namespaceExists(tenantId: String, namespaceId: String): Boolean = namespaceExistsByName(tenantId, namespaceId)
+    suspend fun namespaceExists(tenantId: String, namespaceId: String): Boolean =
+        namespaceExistsByName(tenantId, namespaceId)
 
     private suspend fun applyEvent(event: Event) {
         when (event.type) {

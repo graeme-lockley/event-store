@@ -3,16 +3,8 @@ package com.eventstore.interfaces.http.routes
 import com.eventstore.domain.exceptions.ApiKeyAlreadyRevokedException
 import com.eventstore.domain.exceptions.ApiKeyNotFoundException
 import com.eventstore.domain.exceptions.UserNotFoundException
-import com.eventstore.domain.services.apikey.CreateApiKeyRequest
-import com.eventstore.domain.services.apikey.CreateApiKeyService
-import com.eventstore.domain.services.apikey.GetApiKeyService
-import com.eventstore.domain.services.apikey.RevokeApiKeyRequest
-import com.eventstore.domain.services.apikey.RevokeApiKeyService
-import com.eventstore.interfaces.http.dto.ApiKeyListResponseDto
-import com.eventstore.interfaces.http.dto.ApiKeyResponseDto
-import com.eventstore.interfaces.http.dto.ApiKeyRevokeResponseDto
-import com.eventstore.interfaces.http.dto.CreateApiKeyRequestDto
-import com.eventstore.interfaces.http.dto.ErrorResponse
+import com.eventstore.domain.services.apikey.*
+import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -54,6 +46,7 @@ fun Route.apiKeyRoutes(
                         )
                         return@post
                     }
+
                     trimmedName.length > MAX_NAME_LENGTH -> {
                         call.respond(
                             HttpStatusCode.BadRequest,
@@ -68,7 +61,10 @@ fun Route.apiKeyRoutes(
                     if (desc.length > MAX_DESCRIPTION_LENGTH) {
                         call.respond(
                             HttpStatusCode.BadRequest,
-                            ErrorResponse("description exceeds maximum length of $MAX_DESCRIPTION_LENGTH characters", "INVALID_INPUT")
+                            ErrorResponse(
+                                "description exceeds maximum length of $MAX_DESCRIPTION_LENGTH characters",
+                                "INVALID_INPUT"
+                            )
                         )
                         return@post
                     }
@@ -144,7 +140,7 @@ fun Route.apiKeyRoutes(
                 val userId = call.requireParameter("userId")
                 val keyId = call.requireParameter("keyId")
                 val apiKey = getApiKeyService.getById(keyId) ?: throw ApiKeyNotFoundException(keyId)
-                
+
                 // Validate ownership - ensure API key belongs to the user in the URL
                 if (apiKey.userId != userId) {
                     call.respond(
@@ -153,10 +149,13 @@ fun Route.apiKeyRoutes(
                     )
                     return@get
                 }
-                
+
                 call.respond(HttpStatusCode.OK, apiKey.toResponse())
             } catch (e: ApiKeyNotFoundException) {
-                call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "API key not found", "API_KEY_NOT_FOUND"))
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    ErrorResponse(e.message ?: "API key not found", "API_KEY_NOT_FOUND")
+                )
             } catch (e: IllegalArgumentException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
@@ -174,11 +173,11 @@ fun Route.apiKeyRoutes(
             try {
                 val userId = call.requireParameter("userId")
                 val keyId = call.requireParameter("keyId")
-                
+
                 // Validate ownership before revoking
                 val apiKey = getApiKeyService.getById(keyId)
                     ?: throw ApiKeyNotFoundException(keyId)
-                
+
                 if (apiKey.userId != userId) {
                     call.respond(
                         HttpStatusCode.Forbidden,
@@ -186,9 +185,9 @@ fun Route.apiKeyRoutes(
                     )
                     return@delete
                 }
-                
+
                 revokeApiKeyService.execute(RevokeApiKeyRequest(keyId = keyId))
-                
+
                 // Get updated API key to get revokedAt timestamp
                 val revokedApiKey = getApiKeyService.getById(keyId)
                 call.respond(
@@ -200,7 +199,10 @@ fun Route.apiKeyRoutes(
                     )
                 )
             } catch (e: ApiKeyNotFoundException) {
-                call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "API key not found", "API_KEY_NOT_FOUND"))
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    ErrorResponse(e.message ?: "API key not found", "API_KEY_NOT_FOUND")
+                )
             } catch (e: ApiKeyAlreadyRevokedException) {
                 call.respond(
                     HttpStatusCode.Conflict,

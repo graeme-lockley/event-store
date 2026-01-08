@@ -36,6 +36,3 @@ data class UserResponse(
 data class UserListResponse(
     val users: List<UserResponse>
 )
-
-
-

@@ -29,7 +29,8 @@ class GetHealthStatusServiceTest {
         )
         val consumerFactory = ConsumerFactoryImpl()
         val eventDispatcher = InMemoryEventDispatcher()
-        val registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, eventDispatcher)
+        val registerConsumerService =
+            RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, eventDispatcher)
 
         registerConsumerService.execute(request, "default", "default")
         registerConsumerService.execute(request, "default", "default")

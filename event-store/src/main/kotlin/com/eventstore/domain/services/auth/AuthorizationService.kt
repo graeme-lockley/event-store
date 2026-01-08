@@ -4,7 +4,7 @@ import com.eventstore.domain.Permission
 import com.eventstore.domain.ResourceType
 import com.eventstore.domain.ports.outbound.ResourceResolver
 import com.eventstore.infrastructure.projections.PermissionProjectionService
-import java.util.UUID
+import java.util.*
 
 /**
  * Service that checks if a principal has permission to perform an action on a resource.
@@ -37,18 +37,18 @@ class AuthorizationService(
     ): Boolean {
         // Resolve human-readable names to resource UUIDs
         val tenantResourceId = resourceResolver.resolveTenantResourceId(tenantName)
-        val namespaceResourceId = namespaceName?.let { 
-            resourceResolver.resolveNamespaceResourceId(tenantResourceId, it) 
+        val namespaceResourceId = namespaceName?.let {
+            resourceResolver.resolveNamespaceResourceId(tenantResourceId, it)
         }
         val topicResourceId = topicName?.let {
             requireNotNull(namespaceResourceId) { "Namespace required for topic" }
             resourceResolver.resolveTopicResourceId(
-                tenantResourceId, 
-                namespaceResourceId, 
+                tenantResourceId,
+                namespaceResourceId,
                 it
             )
         }
-        
+
         // Determine target resourceId based on resourceType
         val targetResourceId = when (resourceType) {
             ResourceType.TENANT -> tenantResourceId
@@ -56,7 +56,7 @@ class AuthorizationService(
             ResourceType.TOPIC -> topicResourceId
             else -> resourceName?.let { UUID.fromString(it) }  // For USER, CONSUMER, etc., resourceId comes from parameter
         }
-        
+
         return permissionProjectionService.hasPermission(
             principalId = principalId,
             resourceType = resourceType,
@@ -68,6 +68,3 @@ class AuthorizationService(
         )
     }
 }
-
-
-

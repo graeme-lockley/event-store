@@ -11,12 +11,12 @@ import com.eventstore.domain.exceptions.TenantNotFoundException
 import com.eventstore.domain.exceptions.UserAlreadyExistsException
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import com.eventstore.infrastructure.projections.UserProjectionService
-import com.eventstore.domain.tenants.SystemTopics
 import org.mindrot.jbcrypt.BCrypt
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 data class CreateUserRequest(
     val email: String,

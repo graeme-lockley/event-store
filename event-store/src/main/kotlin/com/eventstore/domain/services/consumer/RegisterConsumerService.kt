@@ -36,12 +36,14 @@ class RegisterConsumerService(
                     topics = qualifiedTopics
                 )
             }
+
             is InMemoryConsumerRegistrationRequest -> {
                 InMemoryConsumerRegistrationRequest(
                     handler = request.handler,
                     topics = qualifiedTopics
                 )
             }
+
             is AzureEventGridConsumerRegistrationRequest -> {
                 AzureEventGridConsumerRegistrationRequest(
                     endpointUrl = request.endpointUrl,

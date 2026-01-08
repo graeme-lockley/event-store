@@ -60,8 +60,8 @@ data class PermissionGrantedEvent(
             val tenantResourceId = payload["tenantResourceId"] as? String ?: error("tenantResourceId missing")
             val namespaceResourceId = payload["namespaceResourceId"] as? String
             val topicResourceId = payload["topicResourceId"] as? String
-            val permissions = (payload["permissions"] as? List<*>)?.map { 
-                Permission.valueOf(it as String) 
+            val permissions = (payload["permissions"] as? List<*>)?.map {
+                Permission.valueOf(it as String)
             }?.toSet() ?: error("permissions missing")
             val grantedBy = payload["grantedBy"] as? String ?: error("grantedBy missing")
             val grantedAt = parseInstant(payload["grantedAt"])
@@ -129,8 +129,8 @@ data class PermissionRevokedEvent(
             val tenantResourceId = payload["tenantResourceId"] as? String ?: error("tenantResourceId missing")
             val namespaceResourceId = payload["namespaceResourceId"] as? String
             val topicResourceId = payload["topicResourceId"] as? String
-            val permissions = (payload["permissions"] as? List<*>)?.map { 
-                Permission.valueOf(it as String) 
+            val permissions = (payload["permissions"] as? List<*>)?.map {
+                Permission.valueOf(it as String)
             }?.toSet() ?: error("permissions missing")
             val revokedBy = payload["revokedBy"] as? String ?: error("revokedBy missing")
             val revokedAt = parseInstant(payload["revokedAt"])

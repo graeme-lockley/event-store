@@ -9,8 +9,8 @@ import com.eventstore.domain.events.UserUpdatedEvent
 import com.eventstore.domain.exceptions.UserNotFoundException
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
-import com.eventstore.infrastructure.projections.UserProjectionService
 import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.infrastructure.projections.UserProjectionService
 import java.time.Instant
 
 data class UpdateUserRequest(

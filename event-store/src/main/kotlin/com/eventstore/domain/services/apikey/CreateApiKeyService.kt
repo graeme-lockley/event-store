@@ -7,7 +7,7 @@ import com.eventstore.infrastructure.auth.ApiKeyGenerator
 import com.eventstore.infrastructure.auth.ApiKeyHasher
 import com.eventstore.infrastructure.projections.UserProjectionService
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 data class CreateApiKeyRequest(
     val userId: String,
@@ -23,7 +23,7 @@ class CreateApiKeyService(
 ) {
     suspend fun execute(request: CreateApiKeyRequest): Pair<ApiKey, String> {
         // Validate user exists
-        val user = userProjectionService.getUser(request.userId)
+        userProjectionService.getUser(request.userId)
             ?: throw UserNotFoundException(request.userId)
 
         // Generate API key

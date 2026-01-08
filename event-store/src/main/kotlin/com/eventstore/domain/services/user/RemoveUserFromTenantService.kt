@@ -8,8 +8,8 @@ import com.eventstore.domain.events.UserTenantRemovedEvent
 import com.eventstore.domain.exceptions.UserNotFoundException
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
-import com.eventstore.infrastructure.projections.UserProjectionService
 import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.infrastructure.projections.UserProjectionService
 import java.time.Instant
 
 data class RemoveUserTenantRequest(
@@ -48,7 +48,12 @@ class RemoveUserFromTenantService(
         )
 
         val event = Event(
-            id = EventId.create(SystemTopics.USERS_TOPIC, seq, SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID),
+            id = EventId.create(
+                SystemTopics.USERS_TOPIC,
+                seq,
+                SystemTopics.SYSTEM_TENANT_ID,
+                SystemTopics.MANAGEMENT_NAMESPACE_ID
+            ),
             timestamp = now,
             type = UserEventType.TENANT_REMOVED,
             payload = payload.toPayload()

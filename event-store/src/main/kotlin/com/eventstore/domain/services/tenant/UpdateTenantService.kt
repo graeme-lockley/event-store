@@ -10,8 +10,8 @@ import com.eventstore.domain.events.TenantUpdatedEvent
 import com.eventstore.domain.exceptions.TenantNotFoundException
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
-import com.eventstore.infrastructure.projections.TenantProjectionService
 import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.infrastructure.projections.TenantProjectionService
 import java.time.Instant
 
 data class UpdateTenantRequest(

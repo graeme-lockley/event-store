@@ -1,10 +1,6 @@
 package com.eventstore.infrastructure.projections
 
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
-import com.eventstore.domain.Permission
-import com.eventstore.domain.PrincipalType
-import com.eventstore.domain.ResourceType
+import com.eventstore.domain.*
 import com.eventstore.domain.events.PermissionEventType
 import com.eventstore.domain.events.PermissionGrantedEvent
 import com.eventstore.domain.events.PermissionRevokedEvent
@@ -13,7 +9,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -61,7 +57,7 @@ class PermissionProjectionServiceTest {
         // First verify the grant was stored by checking the repository directly
         val allGrants = repository.findByPrincipal(principalId)
         assertEquals(1, allGrants.size, "Grant should be stored in repository")
-        
+
         val grants = service.getPermissionGrants(principalId, tenantResourceId, null, null)
         assertEquals(1, grants.size, "Grant should be returned by getPermissionGrants")
         assertEquals(principalId, grants.first().principalId)

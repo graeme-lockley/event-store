@@ -14,9 +14,9 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
-import kotlin.test.assertFailsWith
 import org.mindrot.jbcrypt.BCrypt
 import java.time.Instant
+import kotlin.test.assertFailsWith
 
 class AuthenticationServiceTest {
 

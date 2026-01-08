@@ -2,7 +2,6 @@ package com.eventstore.domain.services.namespace
 
 import com.eventstore.Config
 import com.eventstore.domain.EventId
-import com.eventstore.domain.Namespace
 import com.eventstore.domain.events.NamespaceEventType
 import com.eventstore.domain.exceptions.NamespaceAlreadyExistsException
 import com.eventstore.domain.exceptions.TenantNotFoundException
@@ -36,7 +35,8 @@ class CreateNamespaceServiceTest {
         tenantProjection = TenantProjectionService(InMemoryTenantRepository())
         namespaceProjection = NamespaceProjectionService(InMemoryNamespaceRepository())
         config = Config(0, "./data", "./config", 1024, 10, multiTenantEnabled = true, authEnabled = false)
-        service = CreateNamespaceService(eventRepository, topicRepository, tenantProjection, namespaceProjection, config)
+        service =
+            CreateNamespaceService(eventRepository, topicRepository, tenantProjection, namespaceProjection, config)
 
         runBlocking {
             // Seed system topics
@@ -53,7 +53,12 @@ class CreateNamespaceServiceTest {
             tenantProjection.handleEvents(
                 listOf(
                     com.eventstore.domain.Event(
-                        id = EventId.create(SystemTopics.TENANTS_TOPIC, 1, SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID),
+                        id = EventId.create(
+                            SystemTopics.TENANTS_TOPIC,
+                            1,
+                            SystemTopics.SYSTEM_TENANT_ID,
+                            SystemTopics.MANAGEMENT_NAMESPACE_ID
+                        ),
                         timestamp = java.time.Instant.now(),
                         type = com.eventstore.domain.events.TenantEventType.CREATED,
                         payload = com.eventstore.domain.events.TenantCreatedEvent(
@@ -71,7 +76,11 @@ class CreateNamespaceServiceTest {
     fun `creates namespace and emits event`() = runTest {
         val ns = service.execute(CreateNamespaceRequest("acme", "billing", "Billing"))
         assertEquals("billing", ns.name)
-        val events = eventRepository.getEvents(SystemTopics.NAMESPACES_TOPIC, tenantId = SystemTopics.SYSTEM_TENANT_ID, namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID)
+        val events = eventRepository.getEvents(
+            SystemTopics.NAMESPACES_TOPIC,
+            tenantId = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+        )
         assertEquals(1, events.size)
         assertEquals(NamespaceEventType.CREATED, events.first().type)
         assertTrue(events.first().id.isTenantScoped)
@@ -79,7 +88,8 @@ class CreateNamespaceServiceTest {
 
     @Test
     fun `fails when tenant missing`() = runTest {
-        val missingTenantService = CreateNamespaceService(eventRepository, topicRepository, tenantProjection, namespaceProjection, config)
+        val missingTenantService =
+            CreateNamespaceService(eventRepository, topicRepository, tenantProjection, namespaceProjection, config)
         assertFailsWith<TenantNotFoundException> {
             missingTenantService.execute(CreateNamespaceRequest("unknown", "billing", "Billing"))
         }

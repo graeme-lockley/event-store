@@ -3,23 +3,8 @@ package com.eventstore.interfaces.http.routes
 import com.eventstore.domain.User
 import com.eventstore.domain.exceptions.UserAlreadyExistsException
 import com.eventstore.domain.exceptions.UserNotFoundException
-import com.eventstore.domain.services.user.AssignUserRequest
-import com.eventstore.domain.services.user.AssignUserToTenantService
-import com.eventstore.domain.services.user.CreateUserRequest
-import com.eventstore.domain.services.user.CreateUserService
-import com.eventstore.domain.services.user.DeleteUserRequest
-import com.eventstore.domain.services.user.DeleteUserService
-import com.eventstore.domain.services.user.GetUserService
-import com.eventstore.domain.services.user.RemoveUserFromTenantService
-import com.eventstore.domain.services.user.RemoveUserTenantRequest
-import com.eventstore.domain.services.user.UpdateUserRequest
-import com.eventstore.domain.services.user.UpdateUserService
-import com.eventstore.interfaces.http.dto.AssignUserTenantRequest
-import com.eventstore.interfaces.http.dto.ErrorResponse
-import com.eventstore.interfaces.http.dto.UserCreateRequest
-import com.eventstore.interfaces.http.dto.UserListResponse
-import com.eventstore.interfaces.http.dto.UserResponse
-import com.eventstore.interfaces.http.dto.UserUpdateRequest
+import com.eventstore.domain.services.user.*
+import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -59,7 +44,10 @@ fun Route.userRoutes(
             } catch (e: UserAlreadyExistsException) {
                 call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "User exists", "USER_EXISTS"))
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Failed to create user", "USER_CREATE_FAILED"))
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(e.message ?: "Failed to create user", "USER_CREATE_FAILED")
+                )
             }
         }
 
@@ -76,7 +64,10 @@ fun Route.userRoutes(
             } catch (e: UserNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "User not found", "USER_NOT_FOUND"))
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Failed to fetch user", "USER_GET_FAILED"))
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(e.message ?: "Failed to fetch user", "USER_GET_FAILED")
+                )
             }
         }
 
@@ -96,7 +87,10 @@ fun Route.userRoutes(
             } catch (e: UserNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "User not found", "USER_NOT_FOUND"))
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Failed to update user", "USER_UPDATE_FAILED"))
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(e.message ?: "Failed to update user", "USER_UPDATE_FAILED")
+                )
             }
         }
 
@@ -108,7 +102,10 @@ fun Route.userRoutes(
             } catch (e: UserNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "User not found", "USER_NOT_FOUND"))
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Failed to delete user", "USER_DELETE_FAILED"))
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(e.message ?: "Failed to delete user", "USER_DELETE_FAILED")
+                )
             }
         }
 
@@ -124,9 +121,15 @@ fun Route.userRoutes(
                         isPrimary = body.isPrimary
                     )
                 )
-                call.respond(HttpStatusCode.OK, mapOf("message" to "User '$userId' assigned to tenant '${body.tenantId}'"))
+                call.respond(
+                    HttpStatusCode.OK,
+                    mapOf("message" to "User '$userId' assigned to tenant '${body.tenantId}'")
+                )
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Failed to assign tenant", "USER_ASSIGN_TENANT_FAILED"))
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(e.message ?: "Failed to assign tenant", "USER_ASSIGN_TENANT_FAILED")
+                )
             }
         }
 
@@ -142,7 +145,10 @@ fun Route.userRoutes(
                 )
                 call.respond(HttpStatusCode.OK, mapOf("message" to "User '$userId' removed from tenant '$tenantId'"))
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Failed to remove tenant", "USER_REMOVE_TENANT_FAILED"))
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(e.message ?: "Failed to remove tenant", "USER_REMOVE_TENANT_FAILED")
+                )
             }
         }
     }
@@ -160,4 +166,3 @@ private fun User.toResponse(): UserResponse = UserResponse(
     primaryTenantId = primaryTenantId,
     metadata = metadata
 )
- 

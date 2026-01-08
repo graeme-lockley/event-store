@@ -1,6 +1,6 @@
 package com.eventstore.domain
 
-import java.util.UUID
+import java.util.*
 
 /**
  * Domain entity representing a topic with its configuration.

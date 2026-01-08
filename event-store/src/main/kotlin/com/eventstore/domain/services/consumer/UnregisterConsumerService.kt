@@ -12,7 +12,7 @@ class UnregisterConsumerService(
         if (consumer == null) {
             throw ConsumerNotFoundException(consumerId)
         }
-        
+
         // Note: Consumer domain model doesn't currently store tenant/namespace,
         // but we validate it exists before deletion
         val removed = consumerRepository.delete(consumerId)

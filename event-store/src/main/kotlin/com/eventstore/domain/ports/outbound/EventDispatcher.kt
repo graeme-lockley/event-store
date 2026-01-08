@@ -13,7 +13,7 @@ interface EventDispatcher {
      * @param topics The set of topic names that received new events
      */
     suspend fun notifyEventsPublished(topics: Set<String>)
-    
+
     /**
      * Ensures dispatchers are running for the given topics.
      * This should be called when consumers are registered to ensure

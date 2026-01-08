@@ -1,33 +1,34 @@
 package com.eventstore
 
-import com.eventstore.domain.ports.outbound.ConsumerFactory
 import com.eventstore.domain.ports.outbound.*
+import com.eventstore.domain.services.apikey.CreateApiKeyService
+import com.eventstore.domain.services.apikey.GetApiKeyService
+import com.eventstore.domain.services.apikey.RevokeApiKeyService
+import com.eventstore.domain.services.auth.AuthenticationService
+import com.eventstore.domain.services.auth.AuthorizationService
+import com.eventstore.domain.services.auth.ResourceResolverImpl
+import com.eventstore.domain.services.bootstrap.BootstrapService
+import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.RegisterConsumerService
 import com.eventstore.domain.services.consumer.UnregisterConsumerService
-import com.eventstore.domain.services.bootstrap.BootstrapService
 import com.eventstore.domain.services.event.GetEventsService
 import com.eventstore.domain.services.event.PublishEventsService
 import com.eventstore.domain.services.health.GetHealthStatusService
+import com.eventstore.domain.services.namespace.*
+import com.eventstore.domain.services.permission.GetPermissionsService
+import com.eventstore.domain.services.permission.GrantPermissionService
+import com.eventstore.domain.services.permission.RevokePermissionService
 import com.eventstore.domain.services.tenant.CreateTenantService
 import com.eventstore.domain.services.tenant.DeleteTenantService
 import com.eventstore.domain.services.tenant.GetTenantService
 import com.eventstore.domain.services.tenant.UpdateTenantService
-import com.eventstore.domain.services.namespace.CreateNamespaceService
-import com.eventstore.domain.services.namespace.DeleteNamespaceService
-import com.eventstore.domain.services.namespace.GetNamespaceService
-import com.eventstore.domain.services.namespace.UpdateNamespaceService
-import com.eventstore.domain.services.namespace.CreateNamespaceRequest
-import com.eventstore.domain.services.auth.AuthenticationService
 import com.eventstore.domain.services.topic.CreateTopicService
 import com.eventstore.domain.services.topic.GetTopicsService
 import com.eventstore.domain.services.topic.UpdateTopicSchemasService
-import com.eventstore.domain.services.user.AssignUserToTenantService
-import com.eventstore.domain.services.user.ChangePasswordService
-import com.eventstore.domain.services.user.CreateUserService
-import com.eventstore.domain.services.user.DeleteUserService
-import com.eventstore.domain.services.user.GetUserService
-import com.eventstore.domain.services.user.RemoveUserFromTenantService
-import com.eventstore.domain.services.user.UpdateUserService
+import com.eventstore.domain.services.user.*
+import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.infrastructure.auth.ApiKeyAuthenticator
+import com.eventstore.infrastructure.auth.SessionManager
 import com.eventstore.infrastructure.background.DispatcherManager
 import com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl
 import com.eventstore.infrastructure.external.JsonSchemaValidator
@@ -36,39 +37,10 @@ import com.eventstore.infrastructure.persistence.FileSystemApiKeyRepository
 import com.eventstore.infrastructure.persistence.FileSystemEventRepository
 import com.eventstore.infrastructure.persistence.FileSystemTopicRepository
 import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
-import com.eventstore.infrastructure.auth.ApiKeyAuthenticator
-import com.eventstore.infrastructure.auth.SessionManager
-import com.eventstore.infrastructure.projections.InMemoryNamespaceRepository
-import com.eventstore.infrastructure.projections.InMemoryUserRepository
-import com.eventstore.infrastructure.projections.InMemoryTenantRepository
-import com.eventstore.infrastructure.projections.InMemoryPermissionRepository
-import com.eventstore.infrastructure.projections.TenantProjectionService
-import com.eventstore.infrastructure.projections.NamespaceProjectionService
-import com.eventstore.infrastructure.projections.UserProjectionService
-import com.eventstore.infrastructure.projections.PermissionProjectionService
-import com.eventstore.domain.ports.outbound.ResourceResolver
-import com.eventstore.domain.services.auth.ResourceResolverImpl
-import com.eventstore.domain.services.auth.AuthorizationService
-import com.eventstore.domain.services.apikey.CreateApiKeyService
-import com.eventstore.domain.services.apikey.GetApiKeyService
-import com.eventstore.domain.services.apikey.RevokeApiKeyService
-import com.eventstore.domain.services.permission.GrantPermissionService
-import com.eventstore.domain.services.permission.RevokePermissionService
-import com.eventstore.domain.services.permission.GetPermissionsService
+import com.eventstore.infrastructure.projections.*
 import com.eventstore.interfaces.http.middleware.AuthenticationMiddleware
 import com.eventstore.interfaces.http.middleware.AuthorizationMiddleware
-import com.eventstore.domain.tenants.SystemTopics
-import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
-import com.eventstore.interfaces.http.routes.apiKeyRoutes
-import com.eventstore.interfaces.http.routes.consumerRoutes
-import com.eventstore.interfaces.http.routes.eventRoutes
-import com.eventstore.interfaces.http.routes.healthRoutes
-import com.eventstore.interfaces.http.routes.namespaceRoutes
-import com.eventstore.interfaces.http.routes.tenantRoutes
-import com.eventstore.interfaces.http.routes.topicRoutes
-import com.eventstore.interfaces.http.routes.userRoutes
-import com.eventstore.interfaces.http.routes.authRoutes
-import com.eventstore.interfaces.http.routes.permissionRoutes
+import com.eventstore.interfaces.http.routes.*
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
@@ -118,15 +90,15 @@ fun Application.configureApplication(config: Config) {
     val consumerRepository: ConsumerRepository = InMemoryConsumerRepository()
     val schemaValidator: SchemaValidator = JsonSchemaValidator(objectMapper)
     val consumerFactory: ConsumerFactory = ConsumerFactoryImpl()
-    
+
     // Initialize API key repository early for bootstrap if needed
-    val apiKeyRepository: com.eventstore.domain.ports.outbound.ApiKeyRepository? = 
+    val apiKeyRepository: ApiKeyRepository? =
         if (config.createTestApiKey) {
             FileSystemApiKeyRepository(configDir, objectMapper)
         } else {
             null
         }
-    
+
     val bootstrapService: BootstrapService = BootstrapServiceImpl(
         eventRepository = eventRepository,
         topicRepository = topicRepository,
@@ -248,22 +220,48 @@ fun Application.configureApplication(config: Config) {
     val getTenantService = GetTenantService(tenantProjectionService)
     val updateTenantService = UpdateTenantService(eventRepository, topicRepository, tenantProjectionService, config)
     val deleteTenantService = DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config)
-    val createNamespaceService = CreateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config)
+    val createNamespaceService = CreateNamespaceService(
+        eventRepository,
+        topicRepository,
+        tenantProjectionService,
+        namespaceProjectionService,
+        config
+    )
     val getNamespaceService = GetNamespaceService(namespaceProjectionService)
-    val updateNamespaceService = UpdateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config)
-    val deleteNamespaceService = DeleteNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config)
-    val createUserService = CreateUserService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)
+    val updateNamespaceService = UpdateNamespaceService(
+        eventRepository,
+        topicRepository,
+        tenantProjectionService,
+        namespaceProjectionService,
+        config
+    )
+    val deleteNamespaceService = DeleteNamespaceService(
+        eventRepository,
+        topicRepository,
+        tenantProjectionService,
+        namespaceProjectionService,
+        config
+    )
+    val createUserService =
+        CreateUserService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)
     val getUserService = GetUserService(userProjectionService)
     val updateUserService = UpdateUserService(eventRepository, topicRepository, userProjectionService, config)
     val deleteUserService = DeleteUserService(eventRepository, topicRepository, userProjectionService, config)
     val changePasswordService = ChangePasswordService(eventRepository, topicRepository, userProjectionService, config)
-    val assignUserToTenantService = AssignUserToTenantService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)
-    val removeUserFromTenantService = RemoveUserFromTenantService(eventRepository, topicRepository, userProjectionService, config)
+    val assignUserToTenantService = AssignUserToTenantService(
+        eventRepository,
+        topicRepository,
+        tenantProjectionService,
+        userProjectionService,
+        config
+    )
+    val removeUserFromTenantService =
+        RemoveUserFromTenantService(eventRepository, topicRepository, userProjectionService, config)
     val sessionManager = SessionManager()
     val authenticationService = AuthenticationService(userProjectionService, sessionManager)
 
     // Initialize API key components (reuse if created for bootstrap, otherwise create new)
-    val apiKeyRepositoryForApp: com.eventstore.domain.ports.outbound.ApiKeyRepository = 
+    val apiKeyRepositoryForApp: ApiKeyRepository =
         apiKeyRepository ?: FileSystemApiKeyRepository(configDir, objectMapper)
     val createApiKeyService = CreateApiKeyService(apiKeyRepositoryForApp, userProjectionService)
     val getApiKeyService = GetApiKeyService(apiKeyRepositoryForApp)
@@ -292,7 +290,8 @@ fun Application.configureApplication(config: Config) {
     if (config.multiTenantEnabled) {
         runBlocking {
             if (tenantProjectionService.tenantExistsByName("default") &&
-                !namespaceProjectionService.namespaceExistsByName("default", "default")) {
+                !namespaceProjectionService.namespaceExistsByName("default", "default")
+            ) {
                 runCatching {
                     createNamespaceService.execute(
                         CreateNamespaceRequest(
@@ -370,7 +369,7 @@ fun Application.configureApplication(config: Config) {
 
     // Middleware: Rate limiting (in-memory per IP per route)
     val rateBuckets = ConcurrentHashMap<String, RateBucket>()
-    
+
     // Periodic cleanup of expired rate limit buckets
     applicationScope.launch {
         while (isActive) {
@@ -379,7 +378,7 @@ fun Application.configureApplication(config: Config) {
             rateBuckets.entries.removeAll { it.value.resetAt < now }
         }
     }
-    
+
     intercept(ApplicationCallPipeline.Plugins) {
         val ip = call.request.headers["X-Forwarded-For"]?.split(",")?.firstOrNull()?.trim()
             ?: call.request.local.remoteHost
@@ -419,7 +418,7 @@ fun Application.configureApplication(config: Config) {
     routing {
         // Install authentication middleware
         authenticationMiddleware.install(this)
-        
+
         // Install authorization middleware
         authorizationMiddleware.install(this)
 
@@ -428,7 +427,14 @@ fun Application.configureApplication(config: Config) {
         consumerRoutes(registerConsumerService, unregisterConsumerService, consumerRepository)
         tenantRoutes(createTenantService, getTenantService, updateTenantService, deleteTenantService)
         namespaceRoutes(createNamespaceService, getNamespaceService, updateNamespaceService, deleteNamespaceService)
-        userRoutes(createUserService, getUserService, updateUserService, deleteUserService, assignUserToTenantService, removeUserFromTenantService)
+        userRoutes(
+            createUserService,
+            getUserService,
+            updateUserService,
+            deleteUserService,
+            assignUserToTenantService,
+            removeUserFromTenantService
+        )
         apiKeyRoutes(createApiKeyService, getApiKeyService, revokeApiKeyService)
         authRoutes(authenticationService, changePasswordService)
         permissionRoutes(grantPermissionService, revokePermissionService, getPermissionsService)

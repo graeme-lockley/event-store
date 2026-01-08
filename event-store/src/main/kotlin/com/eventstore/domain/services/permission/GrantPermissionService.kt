@@ -1,10 +1,6 @@
 package com.eventstore.domain.services.permission
 
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
-import com.eventstore.domain.Permission
-import com.eventstore.domain.PrincipalType
-import com.eventstore.domain.ResourceType
+import com.eventstore.domain.*
 import com.eventstore.domain.events.PermissionEventType
 import com.eventstore.domain.events.PermissionGrantedEvent
 import com.eventstore.domain.ports.outbound.EventRepository
@@ -14,7 +10,7 @@ import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 data class GrantPermissionRequest(
     val principalId: String,
@@ -39,18 +35,18 @@ class GrantPermissionService(
     suspend fun execute(request: GrantPermissionRequest): PermissionGrantedEvent {
         // Resolve tenant resourceId
         val tenantResourceId = resourceResolver.resolveTenantResourceId(request.tenantName)
-        
+
         // Resolve namespace resourceId if provided
         val namespaceResourceId = request.namespaceName?.let {
             resourceResolver.resolveNamespaceResourceId(tenantResourceId, it)
         }
-        
+
         // Resolve topic resourceId if provided
         val topicResourceId = request.topicName?.let {
             requireNotNull(namespaceResourceId) { "Namespace required when granting topic permissions" }
             resourceResolver.resolveTopicResourceId(tenantResourceId, namespaceResourceId, it)
         }
-        
+
         // Resolve target resourceId based on resourceType
         // If resourceName is provided, use it (for specific resource targeting)
         // Otherwise, use the resolved resourceId for the resource type
@@ -63,7 +59,7 @@ class GrantPermissionService(
             ResourceType.TOPIC -> topicResourceId
             else -> null
         }
-        
+
         val now = Instant.now()
         val event = PermissionGrantedEvent(
             principalId = request.principalId,
@@ -78,13 +74,13 @@ class GrantPermissionService(
             grantedAt = now,
             expiresAt = request.expiresAt
         )
-        
+
         val sequence = topicRepository.getAndIncrementSequence(
             topicName = SystemTopics.PERMISSIONS_TOPIC,
             tenantName = SystemTopics.SYSTEM_TENANT_ID,
             namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
-        
+
         val storedEvent = Event(
             id = EventId.create(
                 topic = SystemTopics.PERMISSIONS_TOPIC,
@@ -96,13 +92,13 @@ class GrantPermissionService(
             type = PermissionEventType.GRANTED,
             payload = event.toPayload()
         )
-        
+
         eventRepository.storeEvents(
             listOf(storedEvent),
             tenantId = SystemTopics.SYSTEM_TENANT_ID,
             namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
-        
+
         return event
     }
 }

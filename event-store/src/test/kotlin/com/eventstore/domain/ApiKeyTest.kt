@@ -1,6 +1,7 @@
 package com.eventstore.domain
 
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Instant
 
@@ -76,6 +77,7 @@ class ApiKeyTest {
         assertFalse(apiKey.isActive)
     }
 }
+
 
 
 

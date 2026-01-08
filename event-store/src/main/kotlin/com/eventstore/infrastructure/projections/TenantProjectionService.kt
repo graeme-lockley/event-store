@@ -11,7 +11,7 @@ import com.eventstore.domain.ports.outbound.TenantRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
-import java.util.UUID
+import java.util.*
 
 class TenantProjectionService(
     private val tenantRepository: TenantRepository

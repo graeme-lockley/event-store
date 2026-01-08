@@ -10,10 +10,10 @@ enum class Permission {
     LIST,
     UPDATE,
     DELETE,
-    
+
     // Admin permission (full control over resource type)
     ADMIN,
-    
+
     // Resource-specific permissions
     PERMISSION_GRANT,      // For tenants, namespaces, topics
     PERMISSION_REVOKE,     // For tenants, namespaces, topics

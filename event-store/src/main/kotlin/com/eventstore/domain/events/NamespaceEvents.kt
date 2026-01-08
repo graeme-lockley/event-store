@@ -1,7 +1,7 @@
 package com.eventstore.domain.events
 
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 object NamespaceEventType {
     const val CREATED = "namespace.created"
@@ -51,14 +51,23 @@ data class NamespaceCreatedEvent(
                 ?: error("tenantResourceId missing - cannot create namespace without tenant reference")
             // Support old format with tenantId/namespaceId fields for backward compatibility
             val tenantName = (payload["tenantName"] as? String) ?: (payload["tenantId"] as? String)
-                ?: error("tenantName is required")
+            ?: error("tenantName is required")
             val name = (payload["name"] as? String) ?: (payload["namespaceId"] as? String)
-                ?: error("name is required")
+            ?: error("name is required")
             val description = payload["description"] as? String
             val createdBy = payload["createdBy"] as? String ?: "system"
             val createdAt = parseInstant(payload["createdAt"])
             val metadata = payload["metadata"] as? Map<String, Any> ?: emptyMap()
-            return NamespaceCreatedEvent(resourceId, tenantResourceId, tenantName, name, description, createdBy, createdAt, metadata)
+            return NamespaceCreatedEvent(
+                resourceId,
+                tenantResourceId,
+                tenantName,
+                name,
+                description,
+                createdBy,
+                createdAt,
+                metadata
+            )
         }
     }
 }
@@ -95,7 +104,15 @@ data class NamespaceUpdatedEvent(
             val updatedBy = payload["updatedBy"] as? String ?: "system"
             val updatedAt = parseInstant(payload["updatedAt"])
             val metadata = payload["metadata"] as? Map<String, Any>
-            return NamespaceUpdatedEvent(resourceId, tenantResourceId, name, description, updatedBy, updatedAt, metadata)
+            return NamespaceUpdatedEvent(
+                resourceId,
+                tenantResourceId,
+                name,
+                description,
+                updatedBy,
+                updatedAt,
+                metadata
+            )
         }
     }
 }

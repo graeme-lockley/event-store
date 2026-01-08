@@ -3,11 +3,7 @@ package com.eventstore.interfaces.http.routes
 import com.eventstore.domain.Permission
 import com.eventstore.domain.PrincipalType
 import com.eventstore.domain.ResourceType
-import com.eventstore.domain.services.permission.GetPermissionsService
-import com.eventstore.domain.services.permission.GrantPermissionRequest
-import com.eventstore.domain.services.permission.GrantPermissionService
-import com.eventstore.domain.services.permission.RevokePermissionRequest
-import com.eventstore.domain.services.permission.RevokePermissionService
+import com.eventstore.domain.services.permission.*
 import com.eventstore.interfaces.http.dto.ErrorResponse
 import com.eventstore.interfaces.http.middleware.AuthenticationMiddleware
 import io.ktor.http.*
@@ -57,13 +53,13 @@ fun Route.permissionRoutes(
     route("/tenants/{tenantName}/users/{userId}/permissions") {
         get {
             try {
-                val tenantName = call.parameters["tenantName"] 
+                val tenantName = call.parameters["tenantName"]
                     ?: throw IllegalArgumentException("tenantName is required")
                 val userId = call.parameters["userId"]
                     ?: throw IllegalArgumentException("userId is required")
 
                 val grants = getPermissionsService.execute(
-                    com.eventstore.domain.services.permission.GetPermissionsRequest(
+                    GetPermissionsRequest(
                         principalId = userId,
                         tenantName = tenantName
                     )
@@ -94,7 +90,7 @@ fun Route.permissionRoutes(
             try {
                 val tenantName = call.parameters["tenantName"]
                     ?: throw IllegalArgumentException("tenantName is required")
-                val userId = call.parameters["userId"]
+                call.parameters["userId"]
                     ?: throw IllegalArgumentException("userId is required")
                 val currentUserId = call.attributes.getOrNull(AuthenticationMiddleware.UserIdKey)
                     ?: throw IllegalStateException("Authentication required")
@@ -139,7 +135,7 @@ fun Route.permissionRoutes(
 
                 val expiresAt = body.expiresAt?.let { Instant.parse(it) }
 
-                val event = grantPermissionService.execute(
+                grantPermissionService.execute(
                     GrantPermissionRequest(
                         principalId = body.principalId,
                         principalType = principalType,
@@ -167,7 +163,7 @@ fun Route.permissionRoutes(
             try {
                 val tenantName = call.parameters["tenantName"]
                     ?: throw IllegalArgumentException("tenantName is required")
-                val userId = call.parameters["userId"]
+                call.parameters["userId"]
                     ?: throw IllegalArgumentException("userId is required")
                 val currentUserId = call.attributes.getOrNull(AuthenticationMiddleware.UserIdKey)
                     ?: throw IllegalStateException("Authentication required")

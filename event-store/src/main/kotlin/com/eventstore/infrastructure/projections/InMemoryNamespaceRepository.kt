@@ -4,7 +4,7 @@ import com.eventstore.domain.Namespace
 import com.eventstore.domain.ports.outbound.NamespaceRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.UUID
+import java.util.*
 
 class InMemoryNamespaceRepository : NamespaceRepository {
     private val mutex = Mutex()
@@ -12,7 +12,8 @@ class InMemoryNamespaceRepository : NamespaceRepository {
     private val namespacesByResourceId = mutableMapOf<Pair<UUID, UUID>, Namespace>()
 
     private fun nameKey(tenantName: String, name: String): String = "$tenantName/$name"
-    private fun resourceIdKey(tenantResourceId: UUID, resourceId: UUID): Pair<UUID, UUID> = Pair(tenantResourceId, resourceId)
+    private fun resourceIdKey(tenantResourceId: UUID, resourceId: UUID): Pair<UUID, UUID> =
+        Pair(tenantResourceId, resourceId)
 
     override suspend fun save(namespace: Namespace) {
         mutex.withLock {

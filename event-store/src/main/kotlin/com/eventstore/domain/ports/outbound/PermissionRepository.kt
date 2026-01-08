@@ -1,7 +1,7 @@
 package com.eventstore.domain.ports.outbound
 
 import com.eventstore.domain.PermissionGrant
-import java.util.UUID
+import java.util.*
 
 /**
  * Repository interface for permission grants.
@@ -14,6 +14,7 @@ interface PermissionRepository {
     suspend fun findAll(): List<PermissionGrant>
     suspend fun delete(grant: PermissionGrant)
 }
+
 
 
 

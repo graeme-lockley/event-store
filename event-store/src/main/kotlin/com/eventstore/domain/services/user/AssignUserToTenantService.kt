@@ -9,9 +9,9 @@ import com.eventstore.domain.exceptions.TenantNotFoundException
 import com.eventstore.domain.exceptions.UserNotFoundException
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import com.eventstore.infrastructure.projections.UserProjectionService
-import com.eventstore.domain.tenants.SystemTopics
 import java.time.Instant
 
 data class AssignUserRequest(
@@ -38,7 +38,7 @@ class AssignUserToTenantService(
             throw TenantNotFoundException(request.tenantId)
         }
 
-        val user = userProjectionService.getUser(request.userId) ?: throw UserNotFoundException(request.userId)
+        userProjectionService.getUser(request.userId) ?: throw UserNotFoundException(request.userId)
 
         val now = Instant.now()
         val payload = UserTenantAssignedEvent(
@@ -57,7 +57,12 @@ class AssignUserToTenantService(
         )
 
         val event = Event(
-            id = EventId.create(SystemTopics.USERS_TOPIC, seq, SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID),
+            id = EventId.create(
+                SystemTopics.USERS_TOPIC,
+                seq,
+                SystemTopics.SYSTEM_TENANT_ID,
+                SystemTopics.MANAGEMENT_NAMESPACE_ID
+            ),
             timestamp = now,
             type = UserEventType.TENANT_ASSIGNED,
             payload = payload.toPayload()

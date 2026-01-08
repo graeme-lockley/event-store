@@ -10,10 +10,10 @@ import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.exceptions.TenantAlreadyExistsException
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
-import com.eventstore.infrastructure.projections.TenantProjectionService
 import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.infrastructure.projections.TenantProjectionService
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 data class CreateTenantRequest(
     val name: String,

@@ -31,6 +31,3 @@ data class UserTenantAssociation(
     val assignedBy: String,
     val isPrimary: Boolean = false
 )
-
-
-

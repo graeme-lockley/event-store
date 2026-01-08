@@ -1,21 +1,7 @@
 package com.eventstore.infrastructure.bootstrap
 
-import com.eventstore.domain.ApiKey
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
-import com.eventstore.domain.Permission
-import com.eventstore.domain.PrincipalType
-import com.eventstore.domain.ResourceType
-import com.eventstore.domain.events.NamespaceCreatedEvent
-import com.eventstore.domain.events.NamespaceEventType
-import com.eventstore.domain.events.PermissionEventType
-import com.eventstore.domain.events.PermissionGrantedEvent
-import com.eventstore.domain.events.TenantCreatedEvent
-import com.eventstore.domain.events.TenantEventType
-import com.eventstore.domain.events.UserCreatedEvent
-import com.eventstore.domain.events.UserEventType
-import com.eventstore.domain.events.UserTenantAssignedEvent
-import com.eventstore.domain.UserStatus
+import com.eventstore.domain.*
+import com.eventstore.domain.events.*
 import com.eventstore.domain.ports.outbound.ApiKeyRepository
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
@@ -26,9 +12,8 @@ import com.eventstore.infrastructure.auth.ApiKeyHasher
 import org.mindrot.jbcrypt.BCrypt
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 class BootstrapServiceImpl(
     private val eventRepository: EventRepository,
@@ -83,7 +68,8 @@ class BootstrapServiceImpl(
                 // Note: These are temporary UUIDs - the actual resourceIds will be set when tenant/namespace are created
                 val topicResourceId = UUID.randomUUID()
                 val systemTenantResourceId = UUID.randomUUID() // Temporary - will be replaced when tenant is created
-                val managementNamespaceResourceId = UUID.randomUUID() // Temporary - will be replaced when namespace is created
+                val managementNamespaceResourceId =
+                    UUID.randomUUID() // Temporary - will be replaced when namespace is created
                 topicRepository.createTopic(
                     resourceId = topicResourceId,
                     tenantResourceId = systemTenantResourceId,
@@ -217,7 +203,7 @@ class BootstrapServiceImpl(
             Permission.WRITE_ADMIN, Permission.REPLAY, Permission.PURGE,
             Permission.ACTIVATE, Permission.SUSPEND, Permission.PASSWORD_RESET, Permission.MANAGE
         )
-        
+
         val permissionGranted = PermissionGrantedEvent(
             principalId = adminId,
             principalType = PrincipalType.USER,
@@ -231,7 +217,7 @@ class BootstrapServiceImpl(
             grantedAt = timestamp,
             expiresAt = null
         )
-        
+
         events.add(
             Event(
                 id = EventId.create(
@@ -285,7 +271,7 @@ class BootstrapServiceImpl(
 
             // Save API key (this is a suspend function and will complete synchronously)
             apiKeyRepository.save(apiKey)
-            
+
             // Verify the key was saved by looking it up
             val savedKey = apiKeyRepository.findByKeyHash(keyHash)
             if (savedKey == null) {

@@ -1,16 +1,14 @@
 package com.eventstore.domain.services
 
-import com.eventstore.domain.services.topic.CreateTopicService
-
 import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
 import com.eventstore.domain.Schema
-import com.eventstore.domain.Topic
 import com.eventstore.domain.events.NamespaceCreatedEvent
 import com.eventstore.domain.events.NamespaceEventType
 import com.eventstore.domain.events.TenantCreatedEvent
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.exceptions.TopicAlreadyExistsException
+import com.eventstore.domain.services.topic.CreateTopicService
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.InMemoryNamespaceRepository
 import com.eventstore.infrastructure.projections.InMemoryTenantRepository
@@ -22,7 +20,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -38,7 +36,7 @@ class CreateTopicServiceTest {
         helper = createEventStore(topicName)
         val tenantProjectionService = TenantProjectionService(InMemoryTenantRepository())
         val namespaceProjectionService = NamespaceProjectionService(InMemoryNamespaceRepository())
-        
+
         // Set up default tenant
         val tenantResourceId = UUID.randomUUID()
         val tenantEvent = Event(
@@ -57,7 +55,7 @@ class CreateTopicServiceTest {
             ).toPayload()
         )
         tenantProjectionService.handleEvents(listOf(tenantEvent))
-        
+
         // Set up default namespace
         val namespaceResourceId = UUID.randomUUID()
         val namespaceEvent = Event(
@@ -78,8 +76,13 @@ class CreateTopicServiceTest {
             ).toPayload()
         )
         namespaceProjectionService.handleEvents(listOf(namespaceEvent))
-        
-        service = CreateTopicService(helper.topicRepository, helper.schemaValidator, tenantProjectionService, namespaceProjectionService)
+
+        service = CreateTopicService(
+            helper.topicRepository,
+            helper.schemaValidator,
+            tenantProjectionService,
+            namespaceProjectionService
+        )
     }
 
     @Test

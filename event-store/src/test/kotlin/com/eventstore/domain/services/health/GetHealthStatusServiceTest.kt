@@ -1,11 +1,10 @@
 package com.eventstore.domain.services.health
 
 import com.eventstore.domain.services.PopulateEventStoreState
-import com.eventstore.domain.services.createEventStore
 import com.eventstore.domain.services.consumer.HttpConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.RegisterConsumerService
+import com.eventstore.domain.services.createEventStore
 import com.eventstore.domain.services.event.InMemoryEventDispatcher
-
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -31,7 +30,8 @@ class GetHealthStatusServiceTest {
         )
         val consumerFactory = ConsumerFactoryImpl()
         val eventDispatcher = InMemoryEventDispatcher()
-        val registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, eventDispatcher)
+        val registerConsumerService =
+            RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, eventDispatcher)
 
         registerConsumerService.execute(request, "default", "default")
         registerConsumerService.execute(request, "default", "default")

@@ -7,6 +7,3 @@ package com.eventstore.domain.services.bootstrap
 interface BootstrapService {
     suspend fun run()
 }
-
-
-

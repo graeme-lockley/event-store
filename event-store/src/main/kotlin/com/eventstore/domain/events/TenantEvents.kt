@@ -2,7 +2,7 @@ package com.eventstore.domain.events
 
 import com.eventstore.domain.Quota
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 /**
  * Event payload helpers for tenant lifecycle events.
@@ -50,8 +50,8 @@ data class TenantCreatedEvent(
             val resourceId = (payload["resourceId"] as? String)?.let { UUID.fromString(it) }
                 ?: UUID.randomUUID() // Generate UUID for backward compatibility
             // Support old format with tenantId field for backward compatibility
-            val name = (payload["name"] as? String) ?: (payload["tenantId"] as? String) 
-                ?: error("name is required")
+            val name = (payload["name"] as? String) ?: (payload["tenantId"] as? String)
+            ?: error("name is required")
             val createdBy = payload["createdBy"] as? String ?: "system"
             val createdAt = parseInstant(payload["createdAt"])
             val metadata = payload["metadata"] as? Map<String, Any> ?: emptyMap()

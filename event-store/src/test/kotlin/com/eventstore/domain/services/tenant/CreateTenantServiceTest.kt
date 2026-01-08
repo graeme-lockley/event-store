@@ -3,14 +3,13 @@ package com.eventstore.domain.services.tenant
 import com.eventstore.Config
 import com.eventstore.domain.EventId
 import com.eventstore.domain.Quota
-import com.eventstore.domain.Tenant
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.exceptions.TenantAlreadyExistsException
+import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.persistence.InMemoryEventRepository
 import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
 import com.eventstore.infrastructure.projections.InMemoryTenantRepository
 import com.eventstore.infrastructure.projections.TenantProjectionService
-import com.eventstore.domain.tenants.SystemTopics
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
@@ -18,8 +17,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class CreateTenantServiceTest {
 
@@ -62,7 +61,14 @@ class CreateTenantServiceTest {
 
     @Test
     fun `creates tenant and emits event`() = runTest {
-        val quota = Quota(maxTopics = 10, maxNamespaces = 5, maxEventsPerDay = 1000, maxConsumers = 2, maxUsers = 3, maxEventSizeBytes = 512)
+        val quota = Quota(
+            maxTopics = 10,
+            maxNamespaces = 5,
+            maxEventsPerDay = 1000,
+            maxConsumers = 2,
+            maxUsers = 3,
+            maxEventSizeBytes = 512
+        )
         val tenant = service.execute(
             CreateTenantRequest(
                 name = "acme",

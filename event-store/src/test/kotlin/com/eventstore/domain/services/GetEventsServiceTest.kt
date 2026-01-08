@@ -1,8 +1,7 @@
 package com.eventstore.domain.services
 
-import com.eventstore.domain.services.event.GetEventsService
-
 import com.eventstore.domain.exceptions.TopicNotFoundException
+import com.eventstore.domain.services.event.GetEventsService
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach

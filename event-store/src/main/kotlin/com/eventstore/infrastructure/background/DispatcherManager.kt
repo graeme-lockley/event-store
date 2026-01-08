@@ -72,11 +72,11 @@ class DispatcherManager(
             triggerDelivery(topic)
         }
     }
-    
+
     override suspend fun ensureDispatchersRunning(topics: Set<String>) {
         for (topic in topics) {
             val wasNew = startDispatcher(topic)
-            
+
             // If we just started a new dispatcher, trigger immediate delivery check
             // This ensures catchup happens immediately when a consumer is registered
             if (wasNew) {

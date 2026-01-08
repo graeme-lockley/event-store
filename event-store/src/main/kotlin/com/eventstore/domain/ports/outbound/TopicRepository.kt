@@ -2,7 +2,7 @@ package com.eventstore.domain.ports.outbound
 
 import com.eventstore.domain.Schema
 import com.eventstore.domain.Topic
-import java.util.UUID
+import java.util.*
 
 /**
  * Outbound port for topic persistence operations.

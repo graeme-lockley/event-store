@@ -29,6 +29,7 @@ interface EventRepository {
         tenantId: String? = null,
         namespaceId: String? = null
     ): Event?
+
     suspend fun getEvents(
         topic: String,
         sinceEventId: EventId? = null,

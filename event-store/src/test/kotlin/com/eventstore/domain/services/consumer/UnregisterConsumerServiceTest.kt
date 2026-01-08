@@ -1,10 +1,9 @@
 package com.eventstore.domain.services.consumer
 
+import com.eventstore.domain.exceptions.ConsumerNotFoundException
 import com.eventstore.domain.services.PopulateEventStoreState
 import com.eventstore.domain.services.createEventStore
 import com.eventstore.domain.services.event.InMemoryEventDispatcher
-
-import com.eventstore.domain.exceptions.ConsumerNotFoundException
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -26,7 +25,8 @@ class UnregisterConsumerServiceTest {
         helper = createEventStore(topicName)
         val consumerFactory = ConsumerFactoryImpl()
         val eventDispatcher = InMemoryEventDispatcher()
-        registerConsumerService = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, eventDispatcher)
+        registerConsumerService =
+            RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, eventDispatcher)
         unregisterConsumerService = UnregisterConsumerService(helper.consumerRepository)
     }
 

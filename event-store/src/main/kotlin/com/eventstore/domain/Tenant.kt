@@ -1,7 +1,7 @@
 package com.eventstore.domain
 
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 /**
  * Domain entity representing a tenant.

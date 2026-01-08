@@ -52,11 +52,17 @@ class AuthenticationMiddleware(
                     proceed()
                     return@intercept
                 } catch (e: InvalidApiKeyException) {
-                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse(e.message ?: "Invalid API key", "INVALID_API_KEY"))
+                    call.respond(
+                        HttpStatusCode.Unauthorized,
+                        ErrorResponse(e.message ?: "Invalid API key", "INVALID_API_KEY")
+                    )
                     finish()
                     return@intercept
                 } catch (e: Exception) {
-                    call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Authentication failed: ${e.message}", "AUTH_FAILED"))
+                    call.respond(
+                        HttpStatusCode.Unauthorized,
+                        ErrorResponse("Authentication failed: ${e.message}", "AUTH_FAILED")
+                    )
                     finish()
                     return@intercept
                 }
@@ -76,10 +82,10 @@ class AuthenticationMiddleware(
 
     private fun isPublicEndpoint(path: String): Boolean {
         return path.startsWith("/auth/login") ||
-               path.startsWith("/auth/logout") ||
-               path.startsWith("/health") ||
-               path == "/" ||
-               path == "/favicon.ico"
+                path.startsWith("/auth/logout") ||
+                path.startsWith("/health") ||
+                path == "/" ||
+                path == "/favicon.ico"
     }
 }
 

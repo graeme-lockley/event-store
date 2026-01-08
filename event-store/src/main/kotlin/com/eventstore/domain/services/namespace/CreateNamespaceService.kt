@@ -10,11 +10,11 @@ import com.eventstore.domain.exceptions.NamespaceAlreadyExistsException
 import com.eventstore.domain.exceptions.TenantNotFoundException
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
 import com.eventstore.infrastructure.projections.TenantProjectionService
-import com.eventstore.domain.tenants.SystemTopics
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 data class CreateNamespaceRequest(
     val tenantName: String,

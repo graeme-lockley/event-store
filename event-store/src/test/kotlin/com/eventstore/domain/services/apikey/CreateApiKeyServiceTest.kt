@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 class CreateApiKeyServiceTest {
 
@@ -37,11 +37,11 @@ class CreateApiKeyServiceTest {
             status = com.eventstore.domain.UserStatus.ACTIVE,
             createdAt = Instant.now()
         )
-        val userRepo = com.eventstore.infrastructure.projections.InMemoryUserRepository()
+        val userRepo = InMemoryUserRepository()
         userRepo.save(user)
-        val testUserProjection = com.eventstore.infrastructure.projections.UserProjectionService(userRepo)
+        val testUserProjection = UserProjectionService(userRepo)
         val testService = CreateApiKeyService(apiKeyRepository, testUserProjection)
-        
+
         val request = CreateApiKeyRequest(
             userId = userId,
             name = "Test API Key",
@@ -88,9 +88,9 @@ class CreateApiKeyServiceTest {
             status = com.eventstore.domain.UserStatus.ACTIVE,
             createdAt = Instant.now()
         )
-        val userRepo = com.eventstore.infrastructure.projections.InMemoryUserRepository()
+        val userRepo = InMemoryUserRepository()
         userRepo.save(user)
-        val testUserProjection = com.eventstore.infrastructure.projections.UserProjectionService(userRepo)
+        val testUserProjection = UserProjectionService(userRepo)
         val testService = CreateApiKeyService(apiKeyRepository, testUserProjection)
 
         val expiresAt = Instant.now().plusSeconds(3600)
@@ -117,9 +117,9 @@ class CreateApiKeyServiceTest {
             status = com.eventstore.domain.UserStatus.ACTIVE,
             createdAt = Instant.now()
         )
-        val userRepo = com.eventstore.infrastructure.projections.InMemoryUserRepository()
+        val userRepo = InMemoryUserRepository()
         userRepo.save(user)
-        val testUserProjection = com.eventstore.infrastructure.projections.UserProjectionService(userRepo)
+        val testUserProjection = UserProjectionService(userRepo)
         val testService = CreateApiKeyService(apiKeyRepository, testUserProjection)
 
         val scopes = setOf("read", "write")

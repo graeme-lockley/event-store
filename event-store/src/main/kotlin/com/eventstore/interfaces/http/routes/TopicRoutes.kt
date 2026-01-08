@@ -20,11 +20,16 @@ fun Route.topicRoutes(
     route("/tenants/{tenantName}/namespaces/{namespaceName}/topics") {
         post {
             try {
-                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val tenantName =
+                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName =
+                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val request = call.receive<TopicCreationRequest>()
                 if (request.name.isBlank() || request.schemas.isEmpty()) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid request body. Required: name, schemas array", "INVALID_REQUEST"))
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid request body. Required: name, schemas array", "INVALID_REQUEST")
+                    )
                     return@post
                 }
                 val schemas = request.schemas.map { dto ->
@@ -38,18 +43,29 @@ fun Route.topicRoutes(
                 }
                 val topic = createTopicService.execute(request.name, schemas, tenantName, namespaceName)
                 dispatcherManager.startDispatcher(topic.name)
-                call.respond(HttpStatusCode.Created, mapOf("message" to "Topic '${request.name}' created in $tenantName/$namespaceName"))
+                call.respond(
+                    HttpStatusCode.Created,
+                    mapOf("message" to "Topic '${request.name}' created in $tenantName/$namespaceName")
+                )
             } catch (e: com.eventstore.domain.exceptions.TopicAlreadyExistsException) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Topic already exists", "TOPIC_CREATION_FAILED"))
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(e.message ?: "Topic already exists", "TOPIC_CREATION_FAILED")
+                )
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Unknown error", "TOPIC_CREATION_FAILED"))
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(e.message ?: "Unknown error", "TOPIC_CREATION_FAILED")
+                )
             }
         }
 
         get {
             try {
-                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val tenantName =
+                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName =
+                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val topics = getTopicsService.list(tenantName, namespaceName)
                 val response = TopicsResponse(
                     topics = topics.map { topic: com.eventstore.domain.Topic ->
@@ -70,15 +86,21 @@ fun Route.topicRoutes(
                 )
                 call.respond(HttpStatusCode.OK, response)
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error", "TOPICS_LIST_FAILED"))
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    ErrorResponse(e.message ?: "Unknown error", "TOPICS_LIST_FAILED")
+                )
             }
         }
 
         get("{topic}") {
             try {
-                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
-                val topicName = call.parameters["topic"] ?: throw IllegalArgumentException("Topic parameter is required")
+                val tenantName =
+                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName =
+                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val topicName =
+                    call.parameters["topic"] ?: throw IllegalArgumentException("Topic parameter is required")
                 val topic = getTopicsService.get(topicName, tenantName, namespaceName)
                 val response = TopicResponse(
                     name = topic.name,
@@ -97,18 +119,27 @@ fun Route.topicRoutes(
             } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "Topic not found", "TOPIC_NOT_FOUND"))
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.InternalServerError, ErrorResponse(e.message ?: "Unknown error", "TOPIC_FETCH_FAILED"))
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    ErrorResponse(e.message ?: "Unknown error", "TOPIC_FETCH_FAILED")
+                )
             }
         }
 
         put("{topic}") {
             try {
-                val tenantName = call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName = call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
-                val topicName = call.parameters["topic"] ?: throw IllegalArgumentException("Topic parameter is required")
+                val tenantName =
+                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val namespaceName =
+                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val topicName =
+                    call.parameters["topic"] ?: throw IllegalArgumentException("Topic parameter is required")
                 val request = call.receive<TopicUpdateRequest>()
                 if (request.schemas.isEmpty()) {
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid request body. Required: schemas array", "INVALID_REQUEST"))
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid request body. Required: schemas array", "INVALID_REQUEST")
+                    )
                     return@put
                 }
                 val schemas = request.schemas.map { dto ->
@@ -125,10 +156,14 @@ fun Route.topicRoutes(
             } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "Topic not found", "TOPIC_NOT_FOUND"))
             } catch (e: IllegalArgumentException) {
-                val errorCode = if (e.message?.contains("Cannot remove schemas") == true) "SCHEMA_REMOVAL_NOT_ALLOWED" else "TOPIC_UPDATE_FAILED"
+                val errorCode =
+                    if (e.message?.contains("Cannot remove schemas") == true) "SCHEMA_REMOVAL_NOT_ALLOWED" else "TOPIC_UPDATE_FAILED"
                 call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Unknown error", errorCode))
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Unknown error", "TOPIC_UPDATE_FAILED"))
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(e.message ?: "Unknown error", "TOPIC_UPDATE_FAILED")
+                )
             }
         }
     }

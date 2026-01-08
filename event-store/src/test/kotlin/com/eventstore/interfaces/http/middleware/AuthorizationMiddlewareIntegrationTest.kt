@@ -1,49 +1,34 @@
 package com.eventstore.interfaces.http.middleware
 
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
-import com.eventstore.domain.Permission
-import com.eventstore.domain.PrincipalType
-import com.eventstore.domain.ResourceType
+import com.eventstore.domain.*
 import com.eventstore.domain.events.PermissionEventType
 import com.eventstore.domain.events.PermissionGrantedEvent
 import com.eventstore.domain.events.TenantCreatedEvent
 import com.eventstore.domain.events.TenantEventType
-import com.eventstore.domain.tenants.SystemTopics
-import com.eventstore.domain.services.auth.AuthorizationService
-import com.eventstore.domain.services.auth.AuthenticationService
 import com.eventstore.domain.ports.outbound.ResourceResolver
-import com.eventstore.infrastructure.auth.Session
-import com.eventstore.infrastructure.auth.SessionManager
-import com.eventstore.infrastructure.projections.InMemoryNamespaceRepository
-import com.eventstore.infrastructure.projections.InMemoryPermissionRepository
-import com.eventstore.infrastructure.projections.InMemoryTenantRepository
-import com.eventstore.infrastructure.projections.InMemoryUserRepository
-import com.eventstore.infrastructure.projections.NamespaceProjectionService
-import com.eventstore.infrastructure.projections.PermissionProjectionService
-import com.eventstore.infrastructure.projections.TenantProjectionService
-import com.eventstore.infrastructure.projections.UserProjectionService
-import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
+import com.eventstore.domain.services.auth.AuthenticationService
+import com.eventstore.domain.services.auth.AuthorizationService
 import com.eventstore.domain.services.auth.ResourceResolverImpl
+import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.infrastructure.auth.SessionManager
+import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
+import com.eventstore.infrastructure.projections.*
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
-import io.ktor.serialization.jackson.*
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 /**
  * Integration tests for AuthorizationMiddleware.
@@ -57,7 +42,7 @@ class AuthorizationMiddlewareIntegrationTest {
     private lateinit var tenantProjectionService: TenantProjectionService
     private lateinit var namespaceProjectionService: NamespaceProjectionService
     private lateinit var topicRepository: InMemoryTopicRepository
-    
+
     private val testUserId = "test-user-id"
     private val testTenantName = "test-tenant"
     private val testNamespaceName = "test-namespace"
@@ -73,18 +58,18 @@ class AuthorizationMiddlewareIntegrationTest {
             userProjectionService = userProjectionService,
             sessionManager = sessionManager
         )
-        
+
         tenantProjectionService = TenantProjectionService(InMemoryTenantRepository())
         namespaceProjectionService = NamespaceProjectionService(InMemoryNamespaceRepository())
         permissionProjectionService = PermissionProjectionService(InMemoryPermissionRepository())
         topicRepository = InMemoryTopicRepository()
-        
+
         val resourceResolver: ResourceResolver = ResourceResolverImpl(
             tenantProjectionService = tenantProjectionService,
             namespaceProjectionService = namespaceProjectionService,
             topicRepository = topicRepository
         )
-        
+
         authorizationService = AuthorizationService(
             permissionProjectionService = permissionProjectionService,
             resourceResolver = resourceResolver
@@ -328,10 +313,12 @@ class AuthorizationMiddlewareIntegrationTest {
                 val namespaceName = call.attributes.getOrNull(AuthorizationMiddleware.NamespaceNameKey)
                 assertEquals(testTenantName, tenantName)
                 assertEquals(testNamespaceName, namespaceName)
-                call.respond(HttpStatusCode.OK, mapOf(
-                    "tenantName" to tenantName,
-                    "namespaceName" to namespaceName
-                ))
+                call.respond(
+                    HttpStatusCode.OK, mapOf(
+                        "tenantName" to tenantName,
+                        "namespaceName" to namespaceName
+                    )
+                )
             }
         }
 
@@ -701,7 +688,7 @@ class AuthorizationMiddlewareIntegrationTest {
     fun `handles Authorization header taking precedence over cookie`() = testApplication {
         val otherUserId = "other-user-id"
         val otherSession = sessionManager.createSession(otherUserId)
-        
+
         runBlocking {
             // Grant permission only to testUserId
             val grantEvent = Event(
@@ -878,9 +865,10 @@ class AuthorizationMiddlewareIntegrationTest {
             }
         }
 
-        val response = client.put("/tenants/$testTenantName/namespaces/$testNamespaceName/topics/$testTopicName/schemas") {
-            header(HttpHeaders.Authorization, "Bearer $testSessionId")
-        }
+        val response =
+            client.put("/tenants/$testTenantName/namespaces/$testNamespaceName/topics/$testTopicName/schemas") {
+                header(HttpHeaders.Authorization, "Bearer $testSessionId")
+            }
         assertEquals(HttpStatusCode.OK, response.status)
     }
 
@@ -1130,11 +1118,13 @@ class AuthorizationMiddlewareIntegrationTest {
                 assertEquals(testTenantName, tenantName)
                 assertEquals(testNamespaceName, namespaceName)
                 assertEquals(testTopicName, topicName)
-                call.respond(HttpStatusCode.OK, mapOf(
-                    "tenantName" to tenantName,
-                    "namespaceName" to namespaceName,
-                    "topicName" to topicName
-                ))
+                call.respond(
+                    HttpStatusCode.OK, mapOf(
+                        "tenantName" to tenantName,
+                        "namespaceName" to namespaceName,
+                        "topicName" to topicName
+                    )
+                )
             }
         }
 

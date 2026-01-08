@@ -7,7 +7,7 @@ import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
 import com.eventstore.infrastructure.projections.TenantProjectionService
-import java.util.UUID
+import java.util.*
 
 class CreateTopicService(
     private val topicRepository: TopicRepository,

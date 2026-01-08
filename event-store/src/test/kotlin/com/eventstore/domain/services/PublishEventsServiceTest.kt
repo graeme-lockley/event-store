@@ -1,14 +1,13 @@
 package com.eventstore.domain.services
 
-import com.eventstore.domain.services.event.EventRequest
-import com.eventstore.domain.services.event.PublishEventsService
-
 import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
 import com.eventstore.domain.exceptions.SchemaNotFoundException
 import com.eventstore.domain.exceptions.SchemaValidationException
 import com.eventstore.domain.exceptions.TopicNotFoundException
 import com.eventstore.domain.ports.outbound.EventDispatcher
+import com.eventstore.domain.services.event.EventRequest
+import com.eventstore.domain.services.event.PublishEventsService
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
@@ -25,7 +24,7 @@ class InMemoryEventDispatcher : EventDispatcher {
     override suspend fun notifyEventsPublished(topics: Set<String>) {
         events.add(topics)
     }
-    
+
     override suspend fun ensureDispatchersRunning(topics: Set<String>) {
         ensuredTopics.add(topics)
     }
@@ -41,7 +40,12 @@ class PublishEventsServiceTest {
     @BeforeEach
     fun setup() = runBlocking {
         helper = createEventStore(topicName)
-        service = PublishEventsService(helper.topicRepository, helper.eventRepository, helper.schemaValidator, eventDispatcher)
+        service = PublishEventsService(
+            helper.topicRepository,
+            helper.eventRepository,
+            helper.schemaValidator,
+            eventDispatcher
+        )
     }
 
     @Test

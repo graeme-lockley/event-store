@@ -13,7 +13,7 @@ object ConsumerResponseMapper {
             is HttpConsumer -> consumer.callbackUrl.toString()
             else -> consumer.toString() // Fallback for non-HTTP consumers
         }
-        
+
         return ConsumerResponse(
             id = consumer.id,
             callback = callback,

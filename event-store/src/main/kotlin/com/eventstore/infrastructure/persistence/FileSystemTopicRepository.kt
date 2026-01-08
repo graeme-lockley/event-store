@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
+import java.util.*
 
 data class TopicConfig(
     val resourceId: String? = null,  // UUID as string, nullable for backward compatibility
@@ -267,8 +267,10 @@ class FileSystemTopicRepository(
                             val config: TopicConfig = objectMapper.readValue(json)
                             // Generate resourceIds if not present (backward compatibility)
                             val resourceId = config.resourceId?.let { UUID.fromString(it) } ?: UUID.randomUUID()
-                            val tenantResourceId = config.tenantResourceId?.let { UUID.fromString(it) } ?: UUID.randomUUID()
-                            val namespaceResourceId = config.namespaceResourceId?.let { UUID.fromString(it) } ?: UUID.randomUUID()
+                            val tenantResourceId =
+                                config.tenantResourceId?.let { UUID.fromString(it) } ?: UUID.randomUUID()
+                            val namespaceResourceId =
+                                config.namespaceResourceId?.let { UUID.fromString(it) } ?: UUID.randomUUID()
                             Topic(
                                 resourceId = resourceId,
                                 tenantResourceId = tenantResourceId,

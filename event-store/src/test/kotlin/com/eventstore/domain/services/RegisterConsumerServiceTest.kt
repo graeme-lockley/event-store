@@ -1,11 +1,10 @@
 package com.eventstore.domain.services
 
-import com.eventstore.domain.services.consumer.HttpConsumerRegistrationRequest
-import com.eventstore.domain.services.consumer.RegisterConsumerService
-
 import com.eventstore.domain.consumers.HttpConsumer
 import com.eventstore.domain.exceptions.InvalidConsumerRegistrationException
 import com.eventstore.domain.exceptions.TopicNotFoundException
+import com.eventstore.domain.services.consumer.HttpConsumerRegistrationRequest
+import com.eventstore.domain.services.consumer.RegisterConsumerService
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -27,7 +26,12 @@ class RegisterConsumerServiceTest {
     fun setup() = runBlocking {
         helper = createEventStore(topicName)
         val consumerFactory = ConsumerFactoryImpl()
-        service = RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, testEventDispatcher)
+        service = RegisterConsumerService(
+            helper.consumerRepository,
+            helper.topicRepository,
+            consumerFactory,
+            testEventDispatcher
+        )
     }
 
     @Test

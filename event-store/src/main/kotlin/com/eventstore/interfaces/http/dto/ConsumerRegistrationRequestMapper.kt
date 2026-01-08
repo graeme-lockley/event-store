@@ -17,7 +17,7 @@ object ConsumerRegistrationRequestMapper {
                 if (value.isNullOrBlank()) null else value
             }
         }
-        
+
         return when (dto) {
             is HttpConsumerRegistrationRequestDto -> {
                 HttpConsumerRegistrationRequest(
@@ -25,7 +25,7 @@ object ConsumerRegistrationRequestMapper {
                     topics = normalizeTopics(dto.topics)
                 )
             }
-            
+
             is AzureEventGridConsumerRegistrationRequestDto -> {
                 AzureEventGridConsumerRegistrationRequest(
                     endpointUrl = dto.endpointUrl,
