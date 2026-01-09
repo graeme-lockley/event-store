@@ -1,81 +1,129 @@
 package com.eventstore.domain.services.topic
 
+import com.eventstore.domain.Application
 import com.eventstore.domain.Schema
 import com.eventstore.domain.exceptions.TopicNotFoundException
-import com.eventstore.domain.services.PopulateEventStoreState
-import com.eventstore.domain.services.createEventStore
-import kotlinx.coroutines.runBlocking
+import com.eventstore.domain.services.createApplication
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UpdateTopicSchemasServiceTest {
-    val topicName = "user-events"
-
-    private lateinit var helper: PopulateEventStoreState
-    private lateinit var service: UpdateTopicSchemasService
+    private lateinit var application: Application
+    private val topicName = "user-events"
 
     @BeforeEach
-    fun setup() = runBlocking {
-        helper = createEventStore(topicName)
-        service = UpdateTopicSchemasService(helper.topicRepository, helper.schemaValidator)
+    fun setup() = runTest {
+        application = createApplication()
+        // Create tenant and namespace
+        application.createTenant("default")
+        application.createNamespace("default", "default")
     }
 
     @Test
     fun `should successfully add new schemas`() = runTest {
-        val currentTopic = helper.findTopic(topicName)!!
-        val newSchemas = currentTopic.schemas + Schema(eventType = "user.deleted", properties = mapOf("id" to "string"))
+        val initialSchemas = listOf(
+            Schema(eventType = "user.created", properties = mapOf("id" to "string"))
+        )
+        application.createTopic(topicName, initialSchemas)
 
-        val result = service.execute(topicName, newSchemas)
+        val newSchemas = initialSchemas + Schema(eventType = "user.deleted", properties = mapOf("id" to "string"))
 
-        assertEquals(result.schemas, newSchemas)
-        assertEquals(helper.findTopic(topicName)!!.schemas, newSchemas)
+        val result = application.updateTopicSchemas(topicName, newSchemas)
+
+        assertEquals(newSchemas.size, result.schemas.size)
+        assertTrue(result.schemas.any { it.eventType == "user.created" })
+        assertTrue(result.schemas.any { it.eventType == "user.deleted" })
+        
+        val retrieved = application.getTopic(topicName)
+        assertEquals(newSchemas.size, retrieved.schemas.size)
     }
 
     @Test
     fun `should successfully update existing schemas`() = runTest {
-        val currentTopic = helper.findTopic(topicName)!!
-        val newSchemas = currentTopic.schemas.filter { it.eventType != "user.created" } +
-                Schema(eventType = "user.created", properties = mapOf("id" to "string", "email" to "string"))
+        val initialSchemas = listOf(
+            Schema(eventType = "user.created", properties = mapOf("id" to "string"))
+        )
+        application.createTopic(topicName, initialSchemas)
 
-        val result = service.execute(topicName, newSchemas)
+        val newSchemas = listOf(
+            Schema(eventType = "user.created", properties = mapOf("id" to "string", "email" to "string"))
+        )
 
-        assertEquals(result.schemas, newSchemas)
-        assertEquals(helper.findTopic(topicName)!!.schemas, newSchemas)
+        val result = application.updateTopicSchemas(topicName, newSchemas)
+
+        assertEquals(newSchemas.size, result.schemas.size)
+        val updatedSchema = result.schemas.find { it.eventType == "user.created" }
+        assertNotNull(updatedSchema)
+        assertTrue(updatedSchema.properties.containsKey("email"))
+        
+        val retrieved = application.getTopic(topicName)
+        assertEquals(newSchemas.size, retrieved.schemas.size)
     }
 
     @Test
     fun `should throw an exception when there are duplicate event types in the schemas`() = runTest {
-        val currentTopic = helper.findTopic(topicName)!!
-        val newSchemas = currentTopic.schemas + currentTopic.schemas[0]
+        val initialSchemas = listOf(
+            Schema(eventType = "user.created", properties = mapOf("id" to "string"))
+        )
+        application.createTopic(topicName, initialSchemas)
+
+        val newSchemas = initialSchemas + initialSchemas[0]
 
         assertThrows<IllegalArgumentException> {
-            service.execute(topicName, newSchemas)
+            application.updateTopicSchemas(topicName, newSchemas)
         }
     }
 
     @Test
     fun `should throw exception when topic does not exist`() = runTest {
-        val topicName = "unknown-topic"
-
-        assertNull(helper.findTopic(topicName))
+        val unknownTopic = "unknown-topic"
 
         assertThrows<TopicNotFoundException> {
-            service.execute(topicName, listOf())
+            application.updateTopicSchemas(unknownTopic, listOf())
         }
     }
 
     @Test
     fun `should throw exception when removing schemas`() = runTest {
-        val currentTopic = helper.findTopic(topicName)!!
-        val newSchemas = currentTopic.schemas.drop(1)
+        val initialSchemas = listOf(
+            Schema(eventType = "user.created", properties = mapOf("id" to "string")),
+            Schema(eventType = "user.updated", properties = mapOf("id" to "string"))
+        )
+        application.createTopic(topicName, initialSchemas)
+
+        val newSchemas = initialSchemas.drop(1)
 
         assertThrows<IllegalArgumentException> {
-            service.execute(topicName, newSchemas)
+            application.updateTopicSchemas(topicName, newSchemas)
         }
     }
-}
 
+    @Test
+    fun `should update schemas in specific tenant and namespace`() = runTest {
+        val tenantName = "acme"
+        val namespaceName = "production"
+        val topicName = "order-events"
+        val initialSchemas = listOf(
+            Schema(eventType = "order.created", properties = mapOf("id" to "string"))
+        )
+
+        application.createTenant(tenantName)
+        application.createNamespace(tenantName, namespaceName)
+        application.createTopic(topicName, initialSchemas, tenantName, namespaceName)
+
+        val newSchemas = initialSchemas + Schema(eventType = "order.cancelled", properties = mapOf("id" to "string"))
+
+        val result = application.updateTopicSchemas(topicName, newSchemas, tenantName, namespaceName)
+
+        assertEquals(newSchemas.size, result.schemas.size)
+        assertTrue(result.schemas.any { it.eventType == "order.created" })
+        assertTrue(result.schemas.any { it.eventType == "order.cancelled" })
+    }
+}

@@ -25,6 +25,8 @@ import com.eventstore.domain.services.permission.RevokePermissionRequest
 import com.eventstore.domain.services.permission.RevokePermissionService
 import com.eventstore.domain.services.tenant.*
 import com.eventstore.domain.services.topic.CreateTopicService
+import com.eventstore.domain.services.topic.GetTopicsService
+import com.eventstore.domain.services.topic.UpdateTopicSchemasService
 import com.eventstore.domain.services.user.CreateUserRequest
 import com.eventstore.domain.services.user.CreateUserService
 import com.eventstore.domain.tenants.SystemTopics
@@ -102,6 +104,12 @@ class Application(
 
     private val createTopicService: CreateTopicService =
         CreateTopicService(topicRepository, schemaValidator, tenantProjectionService, namespaceProjectionService)
+
+    private val getTopicsService: GetTopicsService =
+        GetTopicsService(topicRepository)
+
+    private val updateTopicSchemasService: UpdateTopicSchemasService =
+        UpdateTopicSchemasService(topicRepository, schemaValidator)
 
     private val publishEventsService: PublishEventsService =
         PublishEventsService(topicRepository, eventRepository, schemaValidator, dispatcherManager)
@@ -308,6 +316,27 @@ class Application(
         namespaceName: String = "default"
     ): Topic =
         createTopicService.execute(name, schemas, tenantName, namespaceName)
+
+    suspend fun getTopic(
+        topicName: String,
+        tenantName: String = "default",
+        namespaceName: String = "default"
+    ): Topic =
+        getTopicsService.get(topicName, tenantName, namespaceName)
+
+    suspend fun listTopics(
+        tenantName: String = "default",
+        namespaceName: String = "default"
+    ): List<Topic> =
+        getTopicsService.list(tenantName, namespaceName)
+
+    suspend fun updateTopicSchemas(
+        topicName: String,
+        schemas: List<Schema>,
+        tenantName: String = "default",
+        namespaceName: String = "default"
+    ): Topic =
+        updateTopicSchemasService.execute(topicName, schemas, tenantName, namespaceName)
 
     suspend fun createUser(
         email: String,

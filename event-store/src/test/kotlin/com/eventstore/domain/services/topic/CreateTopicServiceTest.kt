@@ -1,152 +1,127 @@
 package com.eventstore.domain.services.topic
 
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
+import com.eventstore.domain.Application
 import com.eventstore.domain.Schema
-import com.eventstore.domain.events.NamespaceCreatedEvent
-import com.eventstore.domain.events.NamespaceEventType
-import com.eventstore.domain.events.TenantCreatedEvent
-import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.exceptions.TopicAlreadyExistsException
-import com.eventstore.domain.services.PopulateEventStoreState
-import com.eventstore.domain.services.createEventStore
-import com.eventstore.domain.tenants.SystemTopics
-import com.eventstore.infrastructure.projections.InMemoryNamespaceRepository
-import com.eventstore.infrastructure.projections.InMemoryTenantRepository
-import com.eventstore.infrastructure.projections.NamespaceProjectionService
-import com.eventstore.infrastructure.projections.TenantProjectionService
-import kotlinx.coroutines.runBlocking
+import com.eventstore.domain.services.createApplication
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
-import java.time.Instant
-import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CreateTopicServiceTest {
-    val topicName = "user-events"
-
-    private lateinit var helper: PopulateEventStoreState
-    private lateinit var service: CreateTopicService
+    private lateinit var application: Application
+    private val topicName = "user-events"
 
     @BeforeEach
-    fun setup() = runBlocking {
-        helper = createEventStore(topicName)
-        val tenantProjectionService = TenantProjectionService(InMemoryTenantRepository())
-        val namespaceProjectionService = NamespaceProjectionService(InMemoryNamespaceRepository())
-
-        // Set up default tenant
-        val tenantResourceId = UUID.randomUUID()
-        val tenantEvent = Event(
-            id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-            ),
-            timestamp = Instant.now(),
-            type = TenantEventType.CREATED,
-            payload = TenantCreatedEvent(
-                resourceId = tenantResourceId,
-                name = "default",
-                createdAt = Instant.now()
-            ).toPayload()
-        )
-        tenantProjectionService.handleEvents(listOf(tenantEvent))
-
-        // Set up default namespace
-        val namespaceResourceId = UUID.randomUUID()
-        val namespaceEvent = Event(
-            id = EventId.create(
-                topic = SystemTopics.NAMESPACES_TOPIC,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-            ),
-            timestamp = Instant.now(),
-            type = NamespaceEventType.CREATED,
-            payload = NamespaceCreatedEvent(
-                resourceId = namespaceResourceId,
-                tenantResourceId = tenantResourceId,
-                tenantName = "default",
-                name = "default",
-                createdAt = Instant.now()
-            ).toPayload()
-        )
-        namespaceProjectionService.handleEvents(listOf(namespaceEvent))
-
-        service = CreateTopicService(
-            helper.topicRepository,
-            helper.schemaValidator,
-            tenantProjectionService,
-            namespaceProjectionService
-        )
+    fun setup() = runTest {
+        application = createApplication()
+        // Create tenant and namespace
+        application.createTenant("default")
+        application.createNamespace("default", "default")
     }
 
     @Test
     fun `should create topic successfully`() = runTest {
-        val name = "new-${topicName}"
+        val name = "new-$topicName"
         val schemas = listOf(
             Schema(eventType = "user.created", properties = mapOf("id" to "string"))
         )
 
-        val result = service.execute(name, schemas)
+        val result = application.createTopic(name, schemas)
 
-        val retrieved = helper.findTopic(name)
-        assertNotNull(retrieved)
+        val retrieved = application.getTopic(name)
         assertEquals(name, result.name)
         assertEquals(0L, result.sequence)
         assertEquals(schemas, result.schemas)
-        assertEquals(name, retrieved!!.name)
+        assertEquals(name, retrieved.name)
         assertEquals(0L, retrieved.sequence)
         assertEquals(schemas, retrieved.schemas)
     }
 
     @Test
     fun `should throw exception when topic already exists`() = runTest {
-        assertNotNull(helper.findTopic(topicName))
+        application.createTopic(topicName, listOf(Schema(eventType = "user.created")))
+        
         assertThrows<TopicAlreadyExistsException> {
-            service.execute(topicName, listOf(Schema(eventType = "user.created")))
+            application.createTopic(topicName, listOf(Schema(eventType = "user.created")))
         }
     }
 
     @Test
     fun `should handle multiple schemas`() = runTest {
-        val name = "new-${topicName}"
+        val name = "new-$topicName"
         val schemas = listOf(
             Schema(eventType = "user.created"),
             Schema(eventType = "user.updated")
         )
 
-        val topic = service.execute(name, schemas)
+        val topic = application.createTopic(name, schemas)
 
         assertEquals(name, topic.name)
         assertEquals(0L, topic.sequence)
         assertEquals(schemas, topic.schemas)
-        val retrieved = helper.findTopic(name)
-        assertNotNull(retrieved)
-        assertEquals(name, retrieved!!.name)
+        val retrieved = application.getTopic(name)
+        assertEquals(name, retrieved.name)
         assertEquals(0L, retrieved.sequence)
         assertEquals(schemas, retrieved.schemas)
-
-        assertTrue(helper.hasSchema(name, "user.created"))
-        assertTrue(helper.hasSchema(name, "user.updated"))
     }
 
     @Test
     fun `should throw exception when duplicate event types in schemas`() = runTest {
-        val name = "new-${topicName}"
+        val name = "new-$topicName"
         val schemas = listOf(
             Schema(eventType = "user.created", properties = mapOf("id" to "string")),
             Schema(eventType = "user.created", properties = mapOf("id" to "string"))
         )
 
         assertThrows<IllegalArgumentException> {
-            service.execute(name, schemas)
+            application.createTopic(name, schemas)
+        }
+    }
+
+    @Test
+    fun `should create topic in specific tenant and namespace`() = runTest {
+        val tenantName = "acme"
+        val namespaceName = "production"
+        val name = "order-events"
+        val schemas = listOf(
+            Schema(eventType = "order.created", properties = mapOf("id" to "string"))
+        )
+
+        application.createTenant(tenantName)
+        application.createNamespace(tenantName, namespaceName)
+
+        val topic = application.createTopic(name, schemas, tenantName, namespaceName)
+
+        assertEquals(name, topic.name)
+        assertEquals(tenantName, topic.tenantName)
+        assertEquals(namespaceName, topic.namespaceName)
+        
+        val retrieved = application.getTopic(name, tenantName, namespaceName)
+        assertEquals(name, retrieved.name)
+        assertEquals(tenantName, retrieved.tenantName)
+        assertEquals(namespaceName, retrieved.namespaceName)
+    }
+
+    @Test
+    fun `should throw exception when tenant does not exist`() = runTest {
+        assertThrows<com.eventstore.domain.exceptions.TenantNotFoundException> {
+            application.createTopic("test-topic", emptyList(), "nonexistent-tenant", "default")
+        }
+    }
+
+    @Test
+    fun `should throw exception when namespace does not exist`() = runTest {
+        application.createTenant("acme")
+        
+        assertThrows<com.eventstore.domain.exceptions.NamespaceNotFoundException> {
+            application.createTopic("test-topic", emptyList(), "acme", "nonexistent-namespace")
         }
     }
 }
-
