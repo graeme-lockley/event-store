@@ -15,8 +15,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Route.authRoutes(
-    authenticationService: AuthenticationService,
-    changePasswordService: ChangePasswordService
+    authenticationService: com.eventstore.domain.services.auth.AuthenticationService,
+    application: com.eventstore.domain.Application
 ) {
     route("/auth") {
         post("/login") {
@@ -52,13 +52,11 @@ fun Route.authRoutes(
                     ?: throw InvalidCredentialsException()
                 val session = authenticationService.getSession(sessionId) ?: throw InvalidCredentialsException()
                 val body = call.receive<ChangePasswordRequestDto>()
-                changePasswordService.execute(
-                    ChangePasswordRequest(
-                        userId = session.userId,
-                        oldPassword = body.oldPassword,
-                        newPassword = body.newPassword,
-                        changedBy = session.userId
-                    )
+                application.changePassword(
+                    userId = session.userId,
+                    oldPassword = body.oldPassword,
+                    newPassword = body.newPassword,
+                    changedBy = session.userId
                 )
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Password changed"))
             } catch (e: InvalidCredentialsException) {

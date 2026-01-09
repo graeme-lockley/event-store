@@ -1,10 +1,10 @@
 package com.eventstore.interfaces.http.routes
 
+import com.eventstore.domain.Application
 import com.eventstore.domain.Quota
 import com.eventstore.domain.Tenant
 import com.eventstore.domain.exceptions.TenantAlreadyExistsException
 import com.eventstore.domain.exceptions.TenantNotFoundException
-import com.eventstore.domain.services.tenant.*
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -15,10 +15,7 @@ import io.ktor.server.routing.*
 private data class TenantDeleteRequestDto(val reason: String? = null)
 
 fun Route.tenantRoutes(
-    createTenantService: CreateTenantService,
-    getTenantService: GetTenantService,
-    updateTenantService: UpdateTenantService,
-    deleteTenantService: DeleteTenantService
+    application: Application
 ) {
     route("/tenants") {
         post {
@@ -32,12 +29,10 @@ fun Route.tenantRoutes(
                     return@post
                 }
 
-                val created = createTenantService.execute(
-                    CreateTenantRequest(
-                        name = body.name,
-                        quota = body.quota?.toDomain(),
-                        metadata = body.metadata
-                    )
+                val created = application.createTenant(
+                    name = body.name,
+                    quota = body.quota?.toDomain(),
+                    metadata = body.metadata
                 )
 
                 call.respond(HttpStatusCode.Created, created.toResponse())
@@ -61,7 +56,7 @@ fun Route.tenantRoutes(
 
         get {
             try {
-                val tenants = getTenantService.listTenants()
+                val tenants = application.listTenants()
                 call.respond(HttpStatusCode.OK, TenantListResponse(tenants.map { it.toResponse() }))
             } catch (e: Exception) {
                 call.respond(
@@ -75,7 +70,7 @@ fun Route.tenantRoutes(
             try {
                 val tenantName =
                     call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val tenant = getTenantService.getTenant(tenantName) ?: throw TenantNotFoundException(tenantName)
+                val tenant = application.getTenant(tenantName) ?: throw TenantNotFoundException(tenantName)
                 call.respond(HttpStatusCode.OK, tenant.toResponse())
             } catch (e: TenantNotFoundException) {
                 call.respond(
@@ -96,13 +91,11 @@ fun Route.tenantRoutes(
                     call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
                 val body = call.receive<TenantUpdateRequest>()
 
-                val updated = updateTenantService.execute(
-                    UpdateTenantRequest(
-                        tenantName = tenantName,
-                        name = body.name,
-                        quota = body.quota?.toDomain(),
-                        metadata = body.metadata
-                    )
+                val updated = application.updateTenant(
+                    tenantName = tenantName,
+                    name = body.name,
+                    quota = body.quota?.toDomain(),
+                    metadata = body.metadata
                 )
 
                 call.respond(HttpStatusCode.OK, updated.toResponse())
@@ -130,11 +123,9 @@ fun Route.tenantRoutes(
                     call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
                 val body = runCatching { call.receive<TenantDeleteRequestDto>() }.getOrNull()
 
-                deleteTenantService.execute(
-                    DeleteTenantRequest(
-                        tenantName = tenantName,
-                        reason = body?.reason
-                    )
+                application.deleteTenant(
+                    tenantName = tenantName,
+                    reason = body?.reason
                 )
 
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Tenant '$tenantName' deleted"))

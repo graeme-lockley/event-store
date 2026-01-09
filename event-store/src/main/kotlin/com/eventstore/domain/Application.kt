@@ -11,6 +11,7 @@ import com.eventstore.domain.services.consumer.ConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.RegisterConsumerService
 import com.eventstore.domain.services.consumer.UnregisterConsumerService
+import com.eventstore.domain.Consumer
 import com.eventstore.domain.services.event.EventRequest
 import com.eventstore.domain.services.event.GetEventsService
 import com.eventstore.domain.services.event.PublishEventsService
@@ -24,6 +25,8 @@ import com.eventstore.domain.services.topic.GetTopicsService
 import com.eventstore.domain.services.topic.UpdateTopicSchemasService
 import com.eventstore.domain.services.user.*
 import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.domain.ports.outbound.EventDispatcher
+import com.eventstore.infrastructure.background.AsyncDispatcherManager
 import com.eventstore.infrastructure.background.SyncDispatcherManager
 import com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl
 import com.eventstore.infrastructure.external.JsonSchemaValidator
@@ -48,14 +51,10 @@ class Application(
     val apiKeyRepository: ApiKeyRepository = InMemoryApiKeyRepository(),
     val consumerFactory: ConsumerFactory = ConsumerFactoryImpl(),
     val schemaValidator: SchemaValidator = JsonSchemaValidator(),
-    val config: Config = Config.fromEnvironment()
+    val config: Config = Config.fromEnvironment(),
+    providedDispatcherManager: EventDispatcher? = null
 ) {
-//    val dispatcherManager = AsyncDispatcherManager(
-//        consumerRepository = consumerRepository,
-//        eventRepository = eventRepository
-//    )
-
-    val dispatcherManager = SyncDispatcherManager(
+    val dispatcherManager: EventDispatcher = providedDispatcherManager ?: SyncDispatcherManager(
         consumerRepository = consumerRepository,
         eventRepository = eventRepository
     )
@@ -114,7 +113,11 @@ class Application(
 
     private val getHealthStatusService: GetHealthStatusService =
         GetHealthStatusService(consumerRepository) {
-            dispatcherManager.getRunningDispatchers()
+            when (dispatcherManager) {
+                is SyncDispatcherManager -> dispatcherManager.getRunningDispatchers()
+                is AsyncDispatcherManager -> dispatcherManager.getRunningDispatchers()
+                else -> emptyList()
+            }
         }
 
     private val registerConsumerService: RegisterConsumerService =
@@ -338,8 +341,14 @@ class Application(
         schemas: List<Schema>,
         tenantName: String = "default",
         namespaceName: String = "default"
-    ): Topic =
-        createTopicService.execute(name, schemas, tenantName, namespaceName)
+    ): Topic {
+        val topic = createTopicService.execute(name, schemas, tenantName, namespaceName)
+        // Start dispatcher for the topic if using AsyncDispatcherManager
+        if (dispatcherManager is AsyncDispatcherManager) {
+            dispatcherManager.startDispatcher(topic.name)
+        }
+        return topic
+    }
 
     suspend fun getTopic(
         topicName: String,
@@ -508,6 +517,12 @@ class Application(
         namespaceName: String
     ): Boolean =
         unregisterConsumerService.execute(consumerId, tenantName, namespaceName)
+
+    suspend fun listConsumers(
+        tenantName: String,
+        namespaceName: String
+    ): List<Consumer> =
+        consumerRepository.findByTenantAndNamespace(tenantName, namespaceName)
 
     suspend fun publishEvents(
         requests: List<EventRequest>

@@ -1,7 +1,6 @@
 package com.eventstore.interfaces.http.routes
 
-import com.eventstore.domain.services.event.GetEventsService
-import com.eventstore.domain.services.event.PublishEventsService
+import com.eventstore.domain.Application
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -10,8 +9,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Route.eventRoutes(
-    publishEventsService: PublishEventsService,
-    getEventsService: GetEventsService
+    application: Application
 ) {
     route("/tenants/{tenantName}/namespaces/{namespaceName}") {
         route("/events") {
@@ -47,7 +45,7 @@ fun Route.eventRoutes(
                             namespaceId = namespaceName
                         )
                     }
-                    val eventIds = publishEventsService.execute(eventRequests)
+                    val eventIds = application.publishEvents(eventRequests)
                     call.respond(HttpStatusCode.Created, EventResponse(eventIds))
                 } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
                     call.respond(
@@ -80,7 +78,7 @@ fun Route.eventRoutes(
                     val sinceEventId = call.request.queryParameters["sinceEventId"]
                     val date = call.request.queryParameters["date"]
                     val limit = call.request.queryParameters["limit"]?.toIntOrNull()
-                    val events = getEventsService.execute(topic, sinceEventId, date, limit, tenantName, namespaceName)
+                    val events = application.getEvents(topic, sinceEventId, date, limit, tenantName, namespaceName)
                     val eventDtos = events.map { event ->
                         EventDto(
                             id = event.id.value,

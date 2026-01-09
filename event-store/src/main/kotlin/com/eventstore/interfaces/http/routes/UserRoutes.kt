@@ -1,9 +1,9 @@
 package com.eventstore.interfaces.http.routes
 
+import com.eventstore.domain.Application
 import com.eventstore.domain.User
 import com.eventstore.domain.exceptions.UserAlreadyExistsException
 import com.eventstore.domain.exceptions.UserNotFoundException
-import com.eventstore.domain.services.user.*
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -12,33 +12,24 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Route.userRoutes(
-    createUserService: CreateUserService,
-    getUserService: GetUserService,
-    updateUserService: UpdateUserService,
-    deleteUserService: DeleteUserService,
-    assignUserToTenantService: AssignUserToTenantService,
-    removeUserFromTenantService: RemoveUserFromTenantService
+    application: Application
 ) {
     route("/tenants/{tenantId}/users") {
         post {
             try {
                 val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
                 val body = call.receive<UserCreateRequest>()
-                val created = createUserService.execute(
-                    CreateUserRequest(
-                        email = body.email,
-                        name = body.name,
-                        password = body.password,
-                        metadata = body.metadata,
-                        primaryTenantId = body.primaryTenantId ?: tenantId
-                    )
+                val created = application.createUser(
+                    email = body.email,
+                    name = body.name,
+                    password = body.password,
+                    metadata = body.metadata,
+                    primaryTenantId = body.primaryTenantId ?: tenantId
                 )
-                assignUserToTenantService.execute(
-                    AssignUserRequest(
-                        userId = created.id,
-                        tenantId = tenantId,
-                        isPrimary = body.primaryTenantId == tenantId || body.primaryTenantId == null
-                    )
+                application.assignUserToTenant(
+                    userId = created.id,
+                    tenantId = tenantId,
+                    isPrimary = body.primaryTenantId == tenantId || body.primaryTenantId == null
                 )
                 call.respond(HttpStatusCode.Created, created.toResponse())
             } catch (e: UserAlreadyExistsException) {
@@ -52,14 +43,14 @@ fun Route.userRoutes(
         }
 
         get {
-            val users = getUserService.list()
+            val users = application.listUsers()
             call.respond(HttpStatusCode.OK, UserListResponse(users.map { it.toResponse() }))
         }
 
         get("{userId}") {
             try {
                 val userId = call.parameters["userId"] ?: throw IllegalArgumentException("userId is required")
-                val user = getUserService.getById(userId) ?: throw UserNotFoundException(userId)
+                val user = application.getUserById(userId) ?: throw UserNotFoundException(userId)
                 call.respond(HttpStatusCode.OK, user.toResponse())
             } catch (e: UserNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "User not found", "USER_NOT_FOUND"))
@@ -75,13 +66,11 @@ fun Route.userRoutes(
             try {
                 val userId = call.parameters["userId"] ?: throw IllegalArgumentException("userId is required")
                 val body = call.receive<UserUpdateRequest>()
-                val updated = updateUserService.execute(
-                    UpdateUserRequest(
-                        userId = userId,
-                        email = body.email,
-                        name = body.name,
-                        metadata = body.metadata
-                    )
+                val updated = application.updateUser(
+                    userId = userId,
+                    email = body.email,
+                    name = body.name,
+                    metadata = body.metadata
                 )
                 call.respond(HttpStatusCode.OK, updated.toResponse())
             } catch (e: UserNotFoundException) {
@@ -97,7 +86,7 @@ fun Route.userRoutes(
         delete("{userId}") {
             try {
                 val userId = call.parameters["userId"] ?: throw IllegalArgumentException("userId is required")
-                deleteUserService.execute(DeleteUserRequest(userId = userId))
+                application.deleteUser(userId = userId)
                 call.respond(HttpStatusCode.OK, mapOf("message" to "User '$userId' deleted"))
             } catch (e: UserNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "User not found", "USER_NOT_FOUND"))
@@ -113,13 +102,11 @@ fun Route.userRoutes(
             try {
                 val userId = call.parameters["userId"] ?: throw IllegalArgumentException("userId is required")
                 val body = call.receive<AssignUserTenantRequest>()
-                assignUserToTenantService.execute(
-                    AssignUserRequest(
-                        userId = userId,
-                        tenantId = body.tenantId,
-                        role = body.role,
-                        isPrimary = body.isPrimary
-                    )
+                application.assignUserToTenant(
+                    userId = userId,
+                    tenantId = body.tenantId,
+                    role = body.role,
+                    isPrimary = body.isPrimary
                 )
                 call.respond(
                     HttpStatusCode.OK,
@@ -137,11 +124,9 @@ fun Route.userRoutes(
             try {
                 val userId = call.parameters["userId"] ?: throw IllegalArgumentException("userId is required")
                 val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
-                removeUserFromTenantService.execute(
-                    RemoveUserTenantRequest(
-                        userId = userId,
-                        tenantId = tenantId
-                    )
+                application.removeUserFromTenant(
+                    userId = userId,
+                    tenantId = tenantId
                 )
                 call.respond(HttpStatusCode.OK, mapOf("message" to "User '$userId' removed from tenant '$tenantId'"))
             } catch (e: Exception) {

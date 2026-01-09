@@ -46,9 +46,7 @@ data class PermissionResponseDto(
 )
 
 fun Route.permissionRoutes(
-    grantPermissionService: GrantPermissionService,
-    revokePermissionService: RevokePermissionService,
-    getPermissionsService: GetPermissionsService
+    application: com.eventstore.domain.Application
 ) {
     route("/tenants/{tenantName}/users/{userId}/permissions") {
         get {
@@ -58,20 +56,20 @@ fun Route.permissionRoutes(
                 val userId = call.parameters["userId"]
                     ?: throw IllegalArgumentException("userId is required")
 
-                val grants = getPermissionsService.execute(
-                    GetPermissionsRequest(
+                val grants = application.getPermissions(
+                    com.eventstore.domain.services.permission.GetPermissionsRequest(
                         principalId = userId,
                         tenantName = tenantName
                     )
                 )
 
-                val response = grants.map { grant ->
+                val response = grants.map { grant: com.eventstore.domain.PermissionGrant ->
                     PermissionResponseDto(
                         principalId = grant.principalId,
                         principalType = grant.principalType.name,
                         resourceType = grant.resourceType.name,
                         resourceId = grant.resourceId,
-                        permissions = grant.permissions.map { it.name },
+                        permissions = grant.permissions.map { permission -> permission.name },
                         grantedAt = grant.grantedAt.toString(),
                         grantedBy = grant.grantedBy
                     )
@@ -135,8 +133,8 @@ fun Route.permissionRoutes(
 
                 val expiresAt = body.expiresAt?.let { Instant.parse(it) }
 
-                grantPermissionService.execute(
-                    GrantPermissionRequest(
+                application.grantPermission(
+                    com.eventstore.domain.services.permission.GrantPermissionRequest(
                         principalId = body.principalId,
                         principalType = principalType,
                         resourceType = resourceType,
@@ -206,8 +204,8 @@ fun Route.permissionRoutes(
                     return@delete
                 }
 
-                revokePermissionService.execute(
-                    RevokePermissionRequest(
+                application.revokePermission(
+                    com.eventstore.domain.services.permission.RevokePermissionRequest(
                         principalId = body.principalId,
                         principalType = principalType,
                         resourceType = resourceType,

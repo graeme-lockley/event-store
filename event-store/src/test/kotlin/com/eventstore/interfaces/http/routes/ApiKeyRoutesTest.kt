@@ -121,20 +121,8 @@ class ApiKeyRoutesTest {
                 )
                 AuthenticationMiddleware(authenticationService, apiKeyAuthenticator).install(this)
                 AuthorizationMiddleware(authorizationService).install(this)
-                // Use Application helper methods to access services
-                // We need to create services directly since they're private in Application
-                val createApiKeyService = com.eventstore.domain.services.apikey.CreateApiKeyService(
-                    domainApp.userProjectionService,
-                    domainApp.config,
-                    domainApp.systemEventPublisher
-                )
-                val getApiKeyService = domainApp.getApiKeyService
-                val revokeApiKeyService = com.eventstore.domain.services.apikey.RevokeApiKeyService(
-                    domainApp.apiKeyProjectionService,
-                    domainApp.config,
-                    domainApp.systemEventPublisher
-                )
-                apiKeyRoutes(createApiKeyService, getApiKeyService, revokeApiKeyService)
+                // Use domain Application instance directly
+                apiKeyRoutes(domainApp)
                 block()
             }
         }
@@ -142,9 +130,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `POST creates API key successfully`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -176,9 +162,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `POST rejects empty name`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -206,16 +190,14 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `GET list returns user's API keys`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
+        grantUserPermissions(userId1, tenantId)
 
-            // Create API keys for user1
-            application.createApiKey(userId1, "Key 1")
-            application.createApiKey(userId1, "Key 2")
+        // Create API keys for user1
+        application.createApiKey(userId1, "Key 1")
+        application.createApiKey(userId1, "Key 2")
 
-            // Create API key for user2 (should not appear)
-            application.createApiKey(userId2, "Key 3")
-        }
+        // Create API key for user2 (should not appear)
+        application.createApiKey(userId2, "Key 3")
 
         setupApplication {}
 
@@ -239,123 +221,115 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `GET by ID returns API key`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-            val (apiKey, _) = application.createApiKey(userId1, "Test Key")
-            val apiKeyId = apiKey.id
+        grantUserPermissions(userId1, tenantId)
+        val (apiKey, _) = application.createApiKey(userId1, "Test Key")
+        val apiKeyId = apiKey.id
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            val session = sessionManager.createSession(userId1)
-            val response = client.get("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
-                header(HttpHeaders.Authorization, "Bearer ${session.id}")
-            }
-
-            assertEquals(HttpStatusCode.OK, response.status)
-            val apiKeyResponse: ApiKeyResponseDto = response.body()
-            assertEquals(apiKeyId, apiKeyResponse.id)
-            assertEquals("Test Key", apiKeyResponse.name)
-            assertEquals(null, apiKeyResponse.key) // Plain key should NOT be returned
         }
+
+        val session = sessionManager.createSession(userId1)
+        val response = client.get("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
+            header(HttpHeaders.Authorization, "Bearer ${session.id}")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val apiKeyResponse: ApiKeyResponseDto = response.body()
+        assertEquals(apiKeyId, apiKeyResponse.id)
+        assertEquals("Test Key", apiKeyResponse.name)
+        assertEquals(null, apiKeyResponse.key) // Plain key should NOT be returned
     }
 
     @Test
     fun `GET by ID rejects access to other user's API key`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-            grantUserPermissions(userId2, tenantId)
+        grantUserPermissions(userId1, tenantId)
+        grantUserPermissions(userId2, tenantId)
 
-            // Create API key for user2
-            val (apiKey, _) = application.createApiKey(userId2, "User2 Key")
-            val apiKeyId = apiKey.id
+        // Create API key for user2
+        val (apiKey, _) = application.createApiKey(userId2, "User2 Key")
+        val apiKeyId = apiKey.id
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            // User1 tries to access user2's API key
-            val session = sessionManager.createSession(userId1)
-            val response = client.get("/tenants/$tenantId/users/$userId2/api-keys/$apiKeyId") {
-                header(HttpHeaders.Authorization, "Bearer ${session.id}")
-            }
-
-            assertEquals(HttpStatusCode.Forbidden, response.status)
-            val errorResponse: ErrorResponse = response.body()
-            // Authorization middleware blocks access to other user's resources with PERMISSION_DENIED
-            // before route code can check ownership, which is also correct security behavior
-            assertTrue(errorResponse.code == "FORBIDDEN" || errorResponse.code == "PERMISSION_DENIED")
         }
+
+        // User1 tries to access user2's API key
+        val session = sessionManager.createSession(userId1)
+        val response = client.get("/tenants/$tenantId/users/$userId2/api-keys/$apiKeyId") {
+            header(HttpHeaders.Authorization, "Bearer ${session.id}")
+        }
+
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+        val errorResponse: ErrorResponse = response.body()
+        // Authorization middleware blocks access to other user's resources with PERMISSION_DENIED
+        // before route code can check ownership, which is also correct security behavior
+        assertTrue(errorResponse.code == "FORBIDDEN" || errorResponse.code == "PERMISSION_DENIED")
     }
 
     @Test
     fun `DELETE revokes API key`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-            val (apiKey, _) = application.createApiKey(userId1, "Test Key")
-            val apiKeyId = apiKey.id
+        grantUserPermissions(userId1, tenantId)
+        val (apiKey, _) = application.createApiKey(userId1, "Test Key")
+        val apiKeyId = apiKey.id
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            val session = sessionManager.createSession(userId1)
-            val response = client.delete("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
-                header(HttpHeaders.Authorization, "Bearer ${session.id}")
-            }
-
-            assertEquals(HttpStatusCode.OK, response.status)
-
-            // Verify it's revoked
-            val retrieved = application.getApiKey(apiKeyId)
-            assertNotNull(retrieved)
-            assertNotNull(retrieved.revokedAt)
         }
+
+        val session = sessionManager.createSession(userId1)
+        val response = client.delete("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
+            header(HttpHeaders.Authorization, "Bearer ${session.id}")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        // Verify it's revoked
+        val retrieved = application.getApiKey(apiKeyId)
+        assertNotNull(retrieved)
+        assertNotNull(retrieved.revokedAt)
     }
 
     @Test
     fun `DELETE rejects revoking other user's API key`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-            grantUserPermissions(userId2, tenantId)
+        grantUserPermissions(userId1, tenantId)
+        grantUserPermissions(userId2, tenantId)
 
-            // Create API key for user2
-            val (apiKey, _) = application.createApiKey(userId2, "User2 Key")
-            val apiKeyId = apiKey.id
+        // Create API key for user2
+        val (apiKey, _) = application.createApiKey(userId2, "User2 Key")
+        val apiKeyId = apiKey.id
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            // User1 tries to revoke user2's API key
-            val session = sessionManager.createSession(userId1)
-            val response = client.delete("/tenants/$tenantId/users/$userId2/api-keys/$apiKeyId") {
-                header(HttpHeaders.Authorization, "Bearer ${session.id}")
-            }
-
-            assertEquals(HttpStatusCode.Forbidden, response.status)
-            val errorResponse: ErrorResponse = response.body()
-            // Authorization middleware blocks access to other user's resources with PERMISSION_DENIED
-            // before route code can check ownership, which is also correct security behavior
-            assertTrue(errorResponse.code == "FORBIDDEN" || errorResponse.code == "PERMISSION_DENIED")
         }
+
+        // User1 tries to revoke user2's API key
+        val session = sessionManager.createSession(userId1)
+        val response = client.delete("/tenants/$tenantId/users/$userId2/api-keys/$apiKeyId") {
+            header(HttpHeaders.Authorization, "Bearer ${session.id}")
+        }
+
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+        val errorResponse: ErrorResponse = response.body()
+        // Authorization middleware blocks access to other user's resources with PERMISSION_DENIED
+        // before route code can check ownership, which is also correct security behavior
+        assertTrue(errorResponse.code == "FORBIDDEN" || errorResponse.code == "PERMISSION_DENIED")
     }
 
     @Test
@@ -378,30 +352,28 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `works with API key authentication`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
+        grantUserPermissions(userId1, tenantId)
 
-            // Create an API key
-            val (apiKey, plainKey) = application.createApiKey(userId1, "Auth Key")
-            val apiKeyId = apiKey.id
+        // Create an API key
+        val (apiKey, plainKey) = application.createApiKey(userId1, "Auth Key")
+        val apiKeyId = apiKey.id
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            // Use the API key to authenticate
-            val response = client.get("/tenants/$tenantId/users/$userId1/api-keys") {
-                header(HttpHeaders.Authorization, "Bearer $plainKey")
-            }
-
-            assertEquals(HttpStatusCode.OK, response.status)
-            val listResponse: ApiKeyListResponseDto = response.body()
-            assertTrue(listResponse.apiKeys.any { it.id == apiKeyId })
         }
+
+        // Use the API key to authenticate
+        val response = client.get("/tenants/$tenantId/users/$userId1/api-keys") {
+            header(HttpHeaders.Authorization, "Bearer $plainKey")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val listResponse: ApiKeyListResponseDto = response.body()
+        assertTrue(listResponse.apiKeys.any { it.id == apiKeyId })
     }
 
     // ========== Priority 2: Boundary Condition Tests ==========
@@ -409,9 +381,7 @@ class ApiKeyRoutesTest {
     // POST Endpoint Boundary Tests
     @Test
     fun `POST rejects whitespace-only name`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -439,9 +409,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `POST rejects name exceeding max length`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -470,9 +438,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `POST rejects expiresAt in the past`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -502,9 +468,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `POST rejects description exceeding max length`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -533,9 +497,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `POST rejects missing userId parameter`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -560,9 +522,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `POST creates API key with scopes`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -592,9 +552,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `POST creates API key with expiration date`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -624,9 +582,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `POST trims whitespace from name`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -655,9 +611,7 @@ class ApiKeyRoutesTest {
     // GET List Endpoint Boundary Tests
     @Test
     fun `GET list returns empty list when user has no keys`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -681,22 +635,20 @@ class ApiKeyRoutesTest {
         val apiKey1Id: String
         val apiKey2Id: String
 
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
+        grantUserPermissions(userId1, tenantId)
 
-            // Create active key
-            val (apiKey1, _) = application.createApiKey(userId1, "Active Key")
-            apiKey1Id = apiKey1.id
+        // Create active key
+        val (apiKey1, _) = application.createApiKey(userId1, "Active Key")
+        apiKey1Id = apiKey1.id
 
-            // Create and revoke a key
-            val (apiKey2, _) = application.createApiKey(userId1, "Revoked Key")
-            apiKey2Id = apiKey2.id
-            application.revokeApiKey(apiKey2Id)
+        // Create and revoke a key
+        val (apiKey2, _) = application.createApiKey(userId1, "Revoked Key")
+        apiKey2Id = apiKey2.id
+        application.revokeApiKey(apiKey2Id)
 
-            // Create expired key
-            val expiredDate = Instant.now().minusSeconds(3600)
-            application.createApiKey(userId1, "Expired Key", expiresAt = expiredDate)
-        }
+        // Create expired key
+        val expiredDate = Instant.now().minusSeconds(3600)
+        application.createApiKey(userId1, "Expired Key", expiresAt = expiredDate)
 
         setupApplication {}
 
@@ -728,9 +680,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `GET list rejects missing userId parameter`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -752,68 +702,62 @@ class ApiKeyRoutesTest {
     // GET by ID Endpoint Boundary Tests
     @Test
     fun `GET by ID returns revoked API key metadata`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-            val (apiKey, _) = application.createApiKey(userId1, "Test Key")
-            val apiKeyId = apiKey.id
-            application.revokeApiKey(apiKeyId)
+        grantUserPermissions(userId1, tenantId)
+        val (apiKey, _) = application.createApiKey(userId1, "Test Key")
+        val apiKeyId = apiKey.id
+        application.revokeApiKey(apiKeyId)
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            val session = sessionManager.createSession(userId1)
-            val response = client.get("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
-                header(HttpHeaders.Authorization, "Bearer ${session.id}")
-            }
-
-            assertEquals(HttpStatusCode.OK, response.status)
-            val apiKeyResponse: ApiKeyResponseDto = response.body()
-            assertEquals(apiKeyId, apiKeyResponse.id)
-            assertFalse(apiKeyResponse.isActive)
-            assertNotNull(apiKeyResponse.revokedAt)
-            assertEquals(null, apiKeyResponse.key) // Plain key should NOT be returned
         }
+
+        val session = sessionManager.createSession(userId1)
+        val response = client.get("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
+            header(HttpHeaders.Authorization, "Bearer ${session.id}")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val apiKeyResponse: ApiKeyResponseDto = response.body()
+        assertEquals(apiKeyId, apiKeyResponse.id)
+        assertFalse(apiKeyResponse.isActive)
+        assertNotNull(apiKeyResponse.revokedAt)
+        assertEquals(null, apiKeyResponse.key) // Plain key should NOT be returned
     }
 
     @Test
     fun `GET by ID returns expired API key metadata`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-            val expiredDate = Instant.now().minusSeconds(3600)
-            val (apiKey, _) = application.createApiKey(userId1, "Expired Key", expiresAt = expiredDate)
-            val apiKeyId = apiKey.id
+        grantUserPermissions(userId1, tenantId)
+        val expiredDate = Instant.now().minusSeconds(3600)
+        val (apiKey, _) = application.createApiKey(userId1, "Expired Key", expiresAt = expiredDate)
+        val apiKeyId = apiKey.id
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            val session = sessionManager.createSession(userId1)
-            val response = client.get("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
-                header(HttpHeaders.Authorization, "Bearer ${session.id}")
-            }
-
-            assertEquals(HttpStatusCode.OK, response.status)
-            val apiKeyResponse: ApiKeyResponseDto = response.body()
-            assertEquals(apiKeyId, apiKeyResponse.id)
-            assertFalse(apiKeyResponse.isActive)
-            assertNotNull(apiKeyResponse.expiresAt)
         }
+
+        val session = sessionManager.createSession(userId1)
+        val response = client.get("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
+            header(HttpHeaders.Authorization, "Bearer ${session.id}")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val apiKeyResponse: ApiKeyResponseDto = response.body()
+        assertEquals(apiKeyId, apiKeyResponse.id)
+        assertFalse(apiKeyResponse.isActive)
+        assertNotNull(apiKeyResponse.expiresAt)
     }
 
     @Test
     fun `GET by ID returns 404 for non-existent key`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -835,9 +779,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `GET by ID rejects missing keyId parameter`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -858,64 +800,58 @@ class ApiKeyRoutesTest {
     // DELETE Endpoint Boundary Tests
     @Test
     fun `DELETE returns 409 for already revoked key`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-            val (apiKey, _) = application.createApiKey(userId1, "Test Key")
-            val apiKeyId = apiKey.id
-            application.revokeApiKey(apiKeyId)
+        grantUserPermissions(userId1, tenantId)
+        val (apiKey, _) = application.createApiKey(userId1, "Test Key")
+        val apiKeyId = apiKey.id
+        application.revokeApiKey(apiKeyId)
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            val session = sessionManager.createSession(userId1)
-            val response = client.delete("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
-                header(HttpHeaders.Authorization, "Bearer ${session.id}")
-            }
-
-            assertEquals(HttpStatusCode.Conflict, response.status)
-            val errorResponse: ErrorResponse = response.body()
-            assertEquals("API_KEY_ALREADY_REVOKED", errorResponse.code)
         }
+
+        val session = sessionManager.createSession(userId1)
+        val response = client.delete("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
+            header(HttpHeaders.Authorization, "Bearer ${session.id}")
+        }
+
+        assertEquals(HttpStatusCode.Conflict, response.status)
+        val errorResponse: ErrorResponse = response.body()
+        assertEquals("API_KEY_ALREADY_REVOKED", errorResponse.code)
     }
 
     @Test
     fun `DELETE uses consistent response format`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-            val (apiKey, _) = application.createApiKey(userId1, "Test Key")
-            val apiKeyId = apiKey.id
+        grantUserPermissions(userId1, tenantId)
+        val (apiKey, _) = application.createApiKey(userId1, "Test Key")
+        val apiKeyId = apiKey.id
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            val session = sessionManager.createSession(userId1)
-            val response = client.delete("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
-                header(HttpHeaders.Authorization, "Bearer ${session.id}")
-            }
-
-            assertEquals(HttpStatusCode.OK, response.status)
-            val revokeResponse: ApiKeyRevokeResponseDto = response.body()
-            assertEquals("API key revoked", revokeResponse.message)
-            assertEquals(apiKeyId, revokeResponse.keyId)
-            assertNotNull(revokeResponse.revokedAt)
         }
+
+        val session = sessionManager.createSession(userId1)
+        val response = client.delete("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
+            header(HttpHeaders.Authorization, "Bearer ${session.id}")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val revokeResponse: ApiKeyRevokeResponseDto = response.body()
+        assertEquals("API key revoked", revokeResponse.message)
+        assertEquals(apiKeyId, revokeResponse.keyId)
+        assertNotNull(revokeResponse.revokedAt)
     }
 
     @Test
     fun `DELETE rejects missing keyId parameter`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -935,88 +871,80 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `DELETE can revoke expired key`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-            val expiredDate = Instant.now().minusSeconds(3600)
-            val (apiKey, _) = application.createApiKey(userId1, "Expired Key", expiresAt = expiredDate)
-            val apiKeyId = apiKey.id
+        grantUserPermissions(userId1, tenantId)
+        val expiredDate = Instant.now().minusSeconds(3600)
+        val (apiKey, _) = application.createApiKey(userId1, "Expired Key", expiresAt = expiredDate)
+        val apiKeyId = apiKey.id
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            val session = sessionManager.createSession(userId1)
-            val response = client.delete("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
-                header(HttpHeaders.Authorization, "Bearer ${session.id}")
-            }
-
-            assertEquals(HttpStatusCode.OK, response.status)
-
-            // Verify it's revoked
-            val retrieved = application.getApiKey(apiKeyId)
-            assertNotNull(retrieved)
-            assertNotNull(retrieved.revokedAt)
         }
+
+        val session = sessionManager.createSession(userId1)
+        val response = client.delete("/tenants/$tenantId/users/$userId1/api-keys/$apiKeyId") {
+            header(HttpHeaders.Authorization, "Bearer ${session.id}")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        // Verify it's revoked
+        val retrieved = application.getApiKey(apiKeyId)
+        assertNotNull(retrieved)
+        assertNotNull(retrieved.revokedAt)
     }
 
     // Authentication Boundary Tests
     @Test
     fun `rejects revoked API key for authentication`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-            val (apiKey, plainKey) = application.createApiKey(userId1, "Auth Key")
-            application.revokeApiKey(apiKey.id)
+        grantUserPermissions(userId1, tenantId)
+        val (apiKey, plainKey) = application.createApiKey(userId1, "Auth Key")
+        application.revokeApiKey(apiKey.id)
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            // Try to use revoked API key
-            val response = client.get("/tenants/$tenantId/users/$userId1/api-keys") {
-                header(HttpHeaders.Authorization, "Bearer $plainKey")
-            }
-
-            assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
+
+        // Try to use revoked API key
+        val response = client.get("/tenants/$tenantId/users/$userId1/api-keys") {
+            header(HttpHeaders.Authorization, "Bearer $plainKey")
+        }
+
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
     @Test
     fun `rejects expired API key for authentication`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-            val expiredDate = Instant.now().minusSeconds(3600)
-            val (_, plainKey) = application.createApiKey(userId1, "Expired Auth Key", expiresAt = expiredDate)
+        grantUserPermissions(userId1, tenantId)
+        val expiredDate = Instant.now().minusSeconds(3600)
+        val (_, plainKey) = application.createApiKey(userId1, "Expired Auth Key", expiresAt = expiredDate)
 
-            setupApplication {}
+        setupApplication {}
 
-            val client = createClient {
-                install(ClientContentNegotiation) {
-                    jackson()
-                }
+        val client = createClient {
+            install(ClientContentNegotiation) {
+                jackson()
             }
-
-            // Try to use expired API key
-            val response = client.get("/tenants/$tenantId/users/$userId1/api-keys") {
-                header(HttpHeaders.Authorization, "Bearer $plainKey")
-            }
-
-            assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
+
+        // Try to use expired API key
+        val response = client.get("/tenants/$tenantId/users/$userId1/api-keys") {
+            header(HttpHeaders.Authorization, "Bearer $plainKey")
+        }
+
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
     @Test
     fun `rejects invalid API key format`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {
@@ -1035,9 +963,7 @@ class ApiKeyRoutesTest {
 
     @Test
     fun `POST rejects user not found`() = testApplication {
-        runBlocking {
-            grantUserPermissions(userId1, tenantId)
-        }
+        grantUserPermissions(userId1, tenantId)
         setupApplication {}
 
         val client = createClient {

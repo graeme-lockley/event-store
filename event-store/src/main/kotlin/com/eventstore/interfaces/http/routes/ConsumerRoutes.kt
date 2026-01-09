@@ -1,8 +1,6 @@
 package com.eventstore.interfaces.http.routes
 
-import com.eventstore.domain.ports.outbound.ConsumerRepository
-import com.eventstore.domain.services.consumer.RegisterConsumerService
-import com.eventstore.domain.services.consumer.UnregisterConsumerService
+import com.eventstore.domain.Application
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -11,9 +9,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Route.consumerRoutes(
-    registerConsumerService: RegisterConsumerService,
-    unregisterConsumerService: UnregisterConsumerService,
-    consumerRepository: ConsumerRepository
+    application: Application
 ) {
     route("/tenants/{tenantName}/namespaces/{namespaceName}/consumers") {
         // POST /tenants/{tenantName}/namespaces/{namespaceName}/consumers/register - Register a consumer
@@ -36,7 +32,7 @@ fun Route.consumerRoutes(
                     return@post
                 }
 
-                val consumerId = registerConsumerService.execute(registrationRequest, tenantName, namespaceName)
+                val consumerId = application.registerConsumer(registrationRequest, tenantName, namespaceName)
 
                 call.respond(HttpStatusCode.Created, ConsumerRegistrationResponse(consumerId))
             } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
@@ -64,7 +60,7 @@ fun Route.consumerRoutes(
                     call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
                 val namespaceName =
                     call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
-                val consumers = consumerRepository.findByTenantAndNamespace(tenantName, namespaceName)
+                val consumers = application.listConsumers(tenantName, namespaceName)
                 val consumerInfo = consumers.map { consumer ->
                     ConsumerResponseMapper.toDto(consumer)
                 }
@@ -88,7 +84,7 @@ fun Route.consumerRoutes(
                     ?: throw IllegalArgumentException("Consumer ID is required")
 
                 try {
-                    unregisterConsumerService.execute(consumerId, tenantName, namespaceName)
+                    application.unregisterConsumer(consumerId, tenantName, namespaceName)
                     call.respond(
                         HttpStatusCode.OK,
                         mapOf("message" to "Consumer $consumerId unregistered")

@@ -5,4 +5,4 @@ My ad-hoc to-do list for this project.
 - [ ] Add eventStore.storeEvent - there are a number of cases where a single event is wrapped into a list.
 - [x] Make APIs lifecycled using an event stream
 - [ ] When configuring a consumer, allow it to set a page size.  If the page size is one, then it'll only deliver a single event at a time.  One at a time delivery does not have an envelope.
-- [ ] Refactor cmdline Application to use the domain Application
+- [x] Refactor cmdline Application to use the domain Application

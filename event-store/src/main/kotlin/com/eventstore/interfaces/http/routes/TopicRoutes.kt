@@ -1,9 +1,7 @@
 package com.eventstore.interfaces.http.routes
 
+import com.eventstore.domain.Application
 import com.eventstore.domain.Schema
-import com.eventstore.domain.services.topic.CreateTopicService
-import com.eventstore.domain.services.topic.GetTopicsService
-import com.eventstore.domain.services.topic.UpdateTopicSchemasService
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -12,9 +10,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Route.topicRoutes(
-    createTopicService: CreateTopicService,
-    getTopicsService: GetTopicsService,
-    updateTopicSchemasService: UpdateTopicSchemasService,
+    application: Application,
     dispatcherManager: com.eventstore.infrastructure.background.AsyncDispatcherManager
 ) {
     route("/tenants/{tenantName}/namespaces/{namespaceName}/topics") {
@@ -41,8 +37,7 @@ fun Route.topicRoutes(
                         required = dto.required
                     )
                 }
-                val topic = createTopicService.execute(request.name, schemas, tenantName, namespaceName)
-                dispatcherManager.startDispatcher(topic.name)
+                val topic = application.createTopic(request.name, schemas, tenantName, namespaceName)
                 call.respond(
                     HttpStatusCode.Created,
                     mapOf("message" to "Topic '${request.name}' created in $tenantName/$namespaceName")
@@ -66,7 +61,7 @@ fun Route.topicRoutes(
                     call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
                 val namespaceName =
                     call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
-                val topics = getTopicsService.list(tenantName, namespaceName)
+                val topics = application.listTopics(tenantName, namespaceName)
                 val response = TopicsResponse(
                     topics = topics.map { topic: com.eventstore.domain.Topic ->
                         TopicResponse(
@@ -101,7 +96,7 @@ fun Route.topicRoutes(
                     call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val topicName =
                     call.parameters["topic"] ?: throw IllegalArgumentException("Topic parameter is required")
-                val topic = getTopicsService.get(topicName, tenantName, namespaceName)
+                val topic = application.getTopic(topicName, tenantName, namespaceName)
                 val response = TopicResponse(
                     name = topic.name,
                     sequence = topic.sequence,
@@ -151,7 +146,7 @@ fun Route.topicRoutes(
                         required = dto.required
                     )
                 }
-                updateTopicSchemasService.execute(topicName, schemas, tenantName, namespaceName)
+                application.updateTopicSchemas(topicName, schemas, tenantName, namespaceName)
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Topic '$topicName' schemas updated successfully"))
             } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "Topic not found", "TOPIC_NOT_FOUND"))

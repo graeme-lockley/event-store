@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -258,6 +259,56 @@ class RegisterConsumerServiceTest {
         assertNotNull(defaultConsumer)
         assertNotNull(acmeConsumer)
         assertTrue(defaultConsumer.id != acmeConsumer.id)
+    }
+
+    @Test
+    fun `should list consumers by tenant and namespace`() = runTest {
+        // Create another tenant and namespace
+        application.createTenant("acme")
+        application.createNamespace("acme", "production")
+        application.createTopic(
+            name = topicName,
+            schemas = listOf(
+                Schema(
+                    eventType = "user.created",
+                    properties = mapOf("id" to "string", "name" to "string"),
+                    required = listOf("id", "name")
+                )
+            ),
+            tenantName = "acme",
+            namespaceName = "production"
+        )
+
+        val defaultRequest1 = HttpConsumerRegistrationRequest(
+            callbackUrl = "https://default1.example.com/webhook",
+            topics = mapOf(topicName to null)
+        )
+        val defaultRequest2 = HttpConsumerRegistrationRequest(
+            callbackUrl = "https://default2.example.com/webhook",
+            topics = mapOf(topicName to null)
+        )
+        val acmeRequest = HttpConsumerRegistrationRequest(
+            callbackUrl = "https://acme.example.com/webhook",
+            topics = mapOf(topicName to null)
+        )
+
+        val defaultConsumerId1 = application.registerConsumer(defaultRequest1, "default", "default")
+        val defaultConsumerId2 = application.registerConsumer(defaultRequest2, "default", "default")
+        val acmeConsumerId = application.registerConsumer(acmeRequest, "acme", "production")
+
+        // List consumers in default/default
+        val defaultConsumers = application.listConsumers("default", "default")
+        assertEquals(2, defaultConsumers.size)
+        assertTrue(defaultConsumers.any { it.id == defaultConsumerId1 })
+        assertTrue(defaultConsumers.any { it.id == defaultConsumerId2 })
+        assertFalse(defaultConsumers.any { it.id == acmeConsumerId })
+
+        // List consumers in acme/production
+        val acmeConsumers = application.listConsumers("acme", "production")
+        assertEquals(1, acmeConsumers.size)
+        assertEquals(acmeConsumerId, acmeConsumers.first().id)
+        assertFalse(acmeConsumers.any { it.id == defaultConsumerId1 })
+        assertFalse(acmeConsumers.any { it.id == defaultConsumerId2 })
     }
 
     @Test

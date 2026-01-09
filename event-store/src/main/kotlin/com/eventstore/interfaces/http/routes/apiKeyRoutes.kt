@@ -26,9 +26,7 @@ private fun ApplicationCall.requireParameter(name: String): String {
 }
 
 fun Route.apiKeyRoutes(
-    createApiKeyService: CreateApiKeyService,
-    getApiKeyService: GetApiKeyService,
-    revokeApiKeyService: RevokeApiKeyService
+    application: com.eventstore.domain.Application
 ) {
     route("/tenants/{tenantId}/users/{userId}/api-keys") {
         post {
@@ -91,14 +89,12 @@ fun Route.apiKeyRoutes(
                     }
                 }
 
-                val (apiKey, plainKey) = createApiKeyService.execute(
-                    CreateApiKeyRequest(
-                        userId = userId,
-                        name = trimmedName,
-                        description = body.description?.takeIf { it.isNotBlank() },
-                        expiresAt = expiresAt,
-                        scopes = body.scopes
-                    )
+                val (apiKey, plainKey) = application.createApiKey(
+                    userId = userId,
+                    name = trimmedName,
+                    description = body.description?.takeIf { it.isNotBlank() },
+                    expiresAt = expiresAt,
+                    scopes = body.scopes
                 )
 
                 call.respond(HttpStatusCode.Created, apiKey.toResponse(plainKey))
@@ -120,7 +116,7 @@ fun Route.apiKeyRoutes(
         get {
             try {
                 val userId = call.requireParameter("userId")
-                val apiKeys = getApiKeyService.getByUserId(userId)
+                val apiKeys = application.getApiKeysByUserId(userId)
                 call.respond(HttpStatusCode.OK, ApiKeyListResponseDto(apiKeys.map { it.toResponse() }))
             } catch (e: IllegalArgumentException) {
                 call.respond(
@@ -139,7 +135,7 @@ fun Route.apiKeyRoutes(
             try {
                 val userId = call.requireParameter("userId")
                 val keyId = call.requireParameter("keyId")
-                val apiKey = getApiKeyService.getById(keyId) ?: throw ApiKeyNotFoundException(keyId)
+                val apiKey = application.getApiKey(keyId) ?: throw ApiKeyNotFoundException(keyId)
 
                 // Validate ownership - ensure API key belongs to the user in the URL
                 if (apiKey.userId != userId) {
@@ -175,7 +171,7 @@ fun Route.apiKeyRoutes(
                 val keyId = call.requireParameter("keyId")
 
                 // Validate ownership before revoking
-                val apiKey = getApiKeyService.getById(keyId)
+                val apiKey = application.getApiKey(keyId)
                     ?: throw ApiKeyNotFoundException(keyId)
 
                 if (apiKey.userId != userId) {
@@ -186,10 +182,10 @@ fun Route.apiKeyRoutes(
                     return@delete
                 }
 
-                revokeApiKeyService.execute(RevokeApiKeyRequest(keyId = keyId))
+                application.revokeApiKey(keyId = keyId)
 
                 // Get updated API key to get revokedAt timestamp
-                val revokedApiKey = getApiKeyService.getById(keyId)
+                val revokedApiKey = application.getApiKey(keyId)
                 call.respond(
                     HttpStatusCode.OK,
                     ApiKeyRevokeResponseDto(

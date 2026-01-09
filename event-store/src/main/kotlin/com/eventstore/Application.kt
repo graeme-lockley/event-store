@@ -1,39 +1,14 @@
 package com.eventstore
 
-import com.eventstore.domain.ports.outbound.*
-import com.eventstore.domain.services.SystemEventPublisher
-import com.eventstore.domain.services.apikey.CreateApiKeyService
-import com.eventstore.domain.services.apikey.GetApiKeyService
-import com.eventstore.domain.services.apikey.RevokeApiKeyService
+import com.eventstore.domain.Application as DomainApplication
 import com.eventstore.domain.services.auth.AuthenticationService
 import com.eventstore.domain.services.auth.AuthorizationService
-import com.eventstore.domain.services.auth.ResourceResolverImpl
-import com.eventstore.domain.services.bootstrap.BootstrapService
-import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
-import com.eventstore.domain.services.consumer.RegisterConsumerService
-import com.eventstore.domain.services.consumer.UnregisterConsumerService
-import com.eventstore.domain.services.event.GetEventsService
-import com.eventstore.domain.services.event.PublishEventsService
-import com.eventstore.domain.services.health.GetHealthStatusService
-import com.eventstore.domain.services.namespace.*
-import com.eventstore.domain.services.permission.GetPermissionsService
-import com.eventstore.domain.services.permission.GrantPermissionService
-import com.eventstore.domain.services.permission.RevokePermissionService
-import com.eventstore.domain.services.tenant.CreateTenantService
-import com.eventstore.domain.services.tenant.DeleteTenantService
-import com.eventstore.domain.services.tenant.GetTenantService
-import com.eventstore.domain.services.tenant.UpdateTenantService
-import com.eventstore.domain.services.topic.CreateTopicService
-import com.eventstore.domain.services.topic.GetTopicsService
-import com.eventstore.domain.services.topic.UpdateTopicSchemasService
-import com.eventstore.domain.services.user.*
+import com.eventstore.domain.services.namespace.CreateNamespaceRequest
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.auth.ApiKeyAuthenticator
 import com.eventstore.infrastructure.auth.SessionManager
 import com.eventstore.infrastructure.background.AsyncDispatcherManager
-import com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl
 import com.eventstore.infrastructure.external.JsonSchemaValidator
-import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import com.eventstore.infrastructure.persistence.FileSystemEventRepository
 import com.eventstore.infrastructure.persistence.FileSystemTopicRepository
 import com.eventstore.infrastructure.persistence.InMemoryApiKeyRepository
@@ -86,37 +61,32 @@ fun Application.configureApplication(config: Config) {
     val dataDir = Paths.get(config.dataDir)
     val configDir = Paths.get(config.configDir)
 
-    val topicRepository: TopicRepository = FileSystemTopicRepository(configDir, objectMapper)
-    val eventRepository: EventRepository = FileSystemEventRepository(dataDir, objectMapper)
-    val consumerRepository: ConsumerRepository = InMemoryConsumerRepository()
-    val schemaValidator: SchemaValidator = JsonSchemaValidator(objectMapper)
-    val consumerFactory: ConsumerFactory = ConsumerFactoryImpl()
+    val topicRepository = FileSystemTopicRepository(configDir, objectMapper)
+    val eventRepository = FileSystemEventRepository(dataDir, objectMapper)
+    val consumerRepository = InMemoryConsumerRepository()
+    val schemaValidator = JsonSchemaValidator(objectMapper)
+    val consumerFactory = com.eventstore.infrastructure.factories.ConsumerFactoryImpl()
 
-    val bootstrapService: BootstrapService = BootstrapServiceImpl(
-        eventRepository = eventRepository,
-        topicRepository = topicRepository,
-        schemaValidator = schemaValidator,
-        objectMapper = objectMapper
-    )
-
-    // Initialize dispatcher manager
+    // Initialize dispatcher manager for production
     val dispatcherManager = AsyncDispatcherManager(
         consumerRepository = consumerRepository,
         eventRepository = eventRepository
     )
 
-    // Consumer services (used for projection registration and HTTP routes)
-    val registerConsumerService =
-        RegisterConsumerService(consumerRepository, topicRepository, consumerFactory, dispatcherManager)
-    val unregisterConsumerService = UnregisterConsumerService(consumerRepository)
+    // Create domain Application with FileSystem repositories and AsyncDispatcherManager
+    val domainApplication = DomainApplication(
+        bootstrap = true,
+        topicRepository = topicRepository,
+        eventRepository = eventRepository,
+        consumerRepository = consumerRepository,
+        schemaValidator = schemaValidator,
+        consumerFactory = consumerFactory,
+        config = config,
+        providedDispatcherManager = dispatcherManager
+    )
 
     // Create application scope for lifecycle management
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    // Run bootstrap before loading schemas and dispatchers
-    runBlocking {
-        bootstrapService.run()
-    }
 
     // Load existing schemas on startup (non-blocking)
     environment.monitor.subscribe(ApplicationStarted) {
@@ -128,177 +98,26 @@ fun Application.configureApplication(config: Config) {
         }
     }
 
-    // Tenant projection consumer registration
-    val tenantProjectionRepository = InMemoryTenantRepository()
-    val tenantProjectionService = TenantProjectionService(tenantProjectionRepository)
-    val tenantTopic = SystemTopics.qualified(SystemTopics.TENANTS_TOPIC)
-
-    val namespaceProjectionRepository = InMemoryNamespaceRepository()
-    val namespaceProjectionService = NamespaceProjectionService(namespaceProjectionRepository)
-    val namespaceTopic = SystemTopics.qualified(SystemTopics.NAMESPACES_TOPIC)
-
-    val userProjectionRepository = InMemoryUserRepository()
-    val userProjectionService = UserProjectionService(userProjectionRepository)
-    val usersTopic = SystemTopics.qualified(SystemTopics.USERS_TOPIC)
-
-    val permissionProjectionRepository = InMemoryPermissionRepository()
-    val permissionProjectionService = PermissionProjectionService(permissionProjectionRepository)
-    val permissionsTopic = SystemTopics.qualified(SystemTopics.PERMISSIONS_TOPIC)
-
-    val apiKeyProjectionRepository = InMemoryApiKeyRepository()
-    val apiKeyProjectionService = ApiKeyProjectionService(apiKeyProjectionRepository)
-    val apiKeysTopic = SystemTopics.qualified(SystemTopics.API_KEYS_TOPIC)
-
-    runBlocking {
-        // Register system consumers for projection services
-        // These consume from system topics in $system/$management namespace
-        registerConsumerService.execute(
-            InMemoryConsumerRegistrationRequest(
-                handler = { events -> tenantProjectionService.handleEvents(events) },
-                topics = mapOf(tenantTopic to null)
-            ),
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
-        registerConsumerService.execute(
-            InMemoryConsumerRegistrationRequest(
-                handler = { events -> namespaceProjectionService.handleEvents(events) },
-                topics = mapOf(namespaceTopic to null)
-            ),
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
-        registerConsumerService.execute(
-            InMemoryConsumerRegistrationRequest(
-                handler = { events -> userProjectionService.handleEvents(events) },
-                topics = mapOf(usersTopic to null)
-            ),
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
-        registerConsumerService.execute(
-            InMemoryConsumerRegistrationRequest(
-                handler = { events -> permissionProjectionService.handleEvents(events) },
-                topics = mapOf(permissionsTopic to null)
-            ),
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
-        registerConsumerService.execute(
-            InMemoryConsumerRegistrationRequest(
-                handler = { events -> apiKeyProjectionService.handleEvents(events) },
-                topics = mapOf(apiKeysTopic to null)
-            ),
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
-    }
-
-    // Initialize permission and authorization services (needed by other services)
-    val resourceResolver: ResourceResolver = ResourceResolverImpl(
-        tenantProjectionService = tenantProjectionService,
-        namespaceProjectionService = namespaceProjectionService,
-        topicRepository = topicRepository
-    )
-    val authorizationService = AuthorizationService(
-        permissionProjectionService = permissionProjectionService,
-        resourceResolver = resourceResolver
-    )
-
-    // Initialize domain services
-    val createTopicService = CreateTopicService(
-        topicRepository = topicRepository,
-        schemaValidator = schemaValidator,
-        tenantProjectionService = tenantProjectionService,
-        namespaceProjectionService = namespaceProjectionService
-    )
-    val getTopicsService = GetTopicsService(topicRepository)
-    val updateTopicSchemasService = UpdateTopicSchemasService(topicRepository, schemaValidator)
-    val publishEventsService =
-        PublishEventsService(topicRepository, eventRepository, schemaValidator, dispatcherManager)
-    val getEventsService = GetEventsService(eventRepository, topicRepository)
-    val getHealthStatusService = GetHealthStatusService(consumerRepository) {
-        dispatcherManager.getRunningDispatchers()
-    }
-    val systemEventPublisher =
-        SystemEventPublisher(eventRepository, topicRepository, schemaValidator, dispatcherManager)
-    val createTenantService = CreateTenantService(tenantProjectionService, config, systemEventPublisher)
-    val getTenantService = GetTenantService(tenantProjectionService)
-    val updateTenantService = UpdateTenantService(tenantProjectionService, config, systemEventPublisher)
-    val deleteTenantService = DeleteTenantService(tenantProjectionService, config, systemEventPublisher)
-    val createNamespaceService = CreateNamespaceService(
-        tenantProjectionService,
-        namespaceProjectionService,
-        config,
-        systemEventPublisher
-    )
-    val getNamespaceService = GetNamespaceService(namespaceProjectionService)
-    val updateNamespaceService = UpdateNamespaceService(
-        tenantProjectionService,
-        namespaceProjectionService,
-        config,
-        systemEventPublisher
-    )
-    val deleteNamespaceService = DeleteNamespaceService(
-        tenantProjectionService,
-        namespaceProjectionService,
-        config,
-        systemEventPublisher
-    )
-    val createUserService =
-        CreateUserService(tenantProjectionService, userProjectionService, config, systemEventPublisher)
-    val getUserService = GetUserService(userProjectionService)
-    val updateUserService = UpdateUserService(userProjectionService, config, systemEventPublisher)
-    val deleteUserService = DeleteUserService(userProjectionService, config, systemEventPublisher)
-    val changePasswordService = ChangePasswordService(userProjectionService, config, systemEventPublisher)
-    val assignUserToTenantService = AssignUserToTenantService(
-        tenantProjectionService,
-        userProjectionService,
-        config,
-        systemEventPublisher
-    )
-    val removeUserFromTenantService =
-        RemoveUserFromTenantService(userProjectionService, config, systemEventPublisher)
+    // Create auth services needed for middleware
     val sessionManager = SessionManager()
-    val authenticationService = AuthenticationService(userProjectionService, sessionManager)
-
-    // Initialize API key services (projection already created above for consumer registration)
-    val createApiKeyService = CreateApiKeyService(userProjectionService, config, systemEventPublisher)
-    val getApiKeyService = GetApiKeyService(apiKeyProjectionService)
-    val revokeApiKeyService = RevokeApiKeyService(apiKeyProjectionService, config, systemEventPublisher)
-    val apiKeyAuthenticator = ApiKeyAuthenticator(apiKeyProjectionService, apiKeyProjectionRepository)
-
-    // Initialize permission management services
-    val grantPermissionService = GrantPermissionService(
-        resourceResolver = resourceResolver,
-        tenantProjectionService = tenantProjectionService,
-        namespaceProjectionService = namespaceProjectionService,
-        config = config,
-        eventPublisher = systemEventPublisher
+    val authenticationService = AuthenticationService(domainApplication.userProjectionService, sessionManager)
+    val authorizationService = AuthorizationService(
+        permissionProjectionService = domainApplication.permissionProjectionService,
+        resourceResolver = domainApplication.resourceResolver
     )
-    val revokePermissionService = RevokePermissionService(
-        resourceResolver = resourceResolver,
-        config = config,
-        eventPublisher = systemEventPublisher
-    )
-    val getPermissionsService = GetPermissionsService(
-        permissionProjectionService = permissionProjectionService,
-        resourceResolver = resourceResolver
+    val apiKeyAuthenticator = ApiKeyAuthenticator(
+        domainApplication.apiKeyProjectionService,
+        domainApplication.apiKeyRepository
     )
 
     // Ensure default/default namespace exists for legacy endpoints when multi-tenant is enabled
     if (config.multiTenantEnabled) {
         runBlocking {
-            if (tenantProjectionService.tenantExistsByName("default") &&
-                !namespaceProjectionService.namespaceExistsByName("default", "default")
+            if (domainApplication.tenantProjectionService.tenantExistsByName("default") &&
+                !domainApplication.namespaceProjectionService.namespaceExistsByName("default", "default")
             ) {
                 runCatching {
-                    createNamespaceService.execute(
-                        CreateNamespaceRequest(
-                            tenantName = "default",
-                            name = "default"
-                        )
-                    )
+                    domainApplication.createNamespace("default", "default")
                 }
             }
         }
@@ -414,7 +233,7 @@ fun Application.configureApplication(config: Config) {
     val authenticationMiddleware = AuthenticationMiddleware(authenticationService, apiKeyAuthenticator)
     val authorizationMiddleware = AuthorizationMiddleware(authorizationService)
 
-    // Configure routing
+    // Configure routing - routes now use domain Application instance
     routing {
         // Install authentication middleware
         authenticationMiddleware.install(this)
@@ -422,29 +241,24 @@ fun Application.configureApplication(config: Config) {
         // Install authorization middleware
         authorizationMiddleware.install(this)
 
-        topicRoutes(createTopicService, getTopicsService, updateTopicSchemasService, dispatcherManager)
-        eventRoutes(publishEventsService, getEventsService)
-        consumerRoutes(registerConsumerService, unregisterConsumerService, consumerRepository)
-        tenantRoutes(createTenantService, getTenantService, updateTenantService, deleteTenantService)
-        namespaceRoutes(createNamespaceService, getNamespaceService, updateNamespaceService, deleteNamespaceService)
-        userRoutes(
-            createUserService,
-            getUserService,
-            updateUserService,
-            deleteUserService,
-            assignUserToTenantService,
-            removeUserFromTenantService
-        )
-        apiKeyRoutes(createApiKeyService, getApiKeyService, revokeApiKeyService)
-        authRoutes(authenticationService, changePasswordService)
-        permissionRoutes(grantPermissionService, revokePermissionService, getPermissionsService)
-        healthRoutes(getHealthStatusService)
+        topicRoutes(domainApplication, dispatcherManager)
+        eventRoutes(domainApplication)
+        consumerRoutes(domainApplication)
+        tenantRoutes(domainApplication)
+        namespaceRoutes(domainApplication)
+        userRoutes(domainApplication)
+        apiKeyRoutes(domainApplication)
+        authRoutes(authenticationService, domainApplication)
+        permissionRoutes(domainApplication)
+        healthRoutes(domainApplication)
     }
 
     // Graceful shutdown
     environment.monitor.subscribe(ApplicationStopped) {
         runBlocking {
-            dispatcherManager.stopAllDispatchers()
+            if (dispatcherManager is AsyncDispatcherManager) {
+                dispatcherManager.stopAllDispatchers()
+            }
             applicationScope.cancel()
         }
     }
@@ -504,5 +318,3 @@ data class RateBucket(
     val count: AtomicInteger,
     val resetAt: Long
 )
-
-

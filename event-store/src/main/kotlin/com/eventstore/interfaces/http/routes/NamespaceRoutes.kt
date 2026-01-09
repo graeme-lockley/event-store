@@ -1,10 +1,10 @@
 package com.eventstore.interfaces.http.routes
 
+import com.eventstore.domain.Application
 import com.eventstore.domain.Namespace
 import com.eventstore.domain.exceptions.NamespaceAlreadyExistsException
 import com.eventstore.domain.exceptions.NamespaceNotFoundException
 import com.eventstore.domain.exceptions.TenantNotFoundException
-import com.eventstore.domain.services.namespace.*
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -15,10 +15,7 @@ import io.ktor.server.routing.*
 private data class NamespaceDeleteRequestDto(val reason: String? = null)
 
 fun Route.namespaceRoutes(
-    createNamespaceService: CreateNamespaceService,
-    getNamespaceService: GetNamespaceService,
-    updateNamespaceService: UpdateNamespaceService,
-    deleteNamespaceService: DeleteNamespaceService
+    application: Application
 ) {
     route("/tenants/{tenantName}/namespaces") {
         post {
@@ -34,13 +31,11 @@ fun Route.namespaceRoutes(
                     return@post
                 }
 
-                val created = createNamespaceService.execute(
-                    CreateNamespaceRequest(
-                        tenantName = tenantName,
-                        name = body.name,
-                        description = body.description,
-                        metadata = body.metadata
-                    )
+                val created = application.createNamespace(
+                    tenantName = tenantName,
+                    namespaceName = body.name,
+                    description = body.description,
+                    metadata = body.metadata
                 )
                 call.respond(HttpStatusCode.Created, created.toResponse())
             } catch (e: TenantNotFoundException) {
@@ -70,7 +65,7 @@ fun Route.namespaceRoutes(
             try {
                 val tenantName =
                     call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaces = getNamespaceService.listNamespaces(tenantName)
+                val namespaces = application.listNamespaces(tenantName)
                 call.respond(HttpStatusCode.OK, NamespaceListResponse(namespaces.map { it.toResponse() }))
             } catch (e: Exception) {
                 call.respond(
@@ -87,7 +82,7 @@ fun Route.namespaceRoutes(
                 val namespaceName =
                     call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val ns =
-                    getNamespaceService.getNamespace(tenantName, namespaceName) ?: throw NamespaceNotFoundException(
+                    application.getNamespace(tenantName, namespaceName) ?: throw NamespaceNotFoundException(
                         namespaceName
                     )
                 call.respond(HttpStatusCode.OK, ns.toResponse())
@@ -112,14 +107,12 @@ fun Route.namespaceRoutes(
                     call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val body = call.receive<NamespaceUpdateRequest>()
 
-                val updated = updateNamespaceService.execute(
-                    UpdateNamespaceRequest(
-                        tenantName = tenantName,
-                        namespaceName = namespaceName,
-                        name = body.name,
-                        description = body.description,
-                        metadata = body.metadata
-                    )
+                val updated = application.updateNamespace(
+                    tenantName = tenantName,
+                    namespaceName = namespaceName,
+                    name = body.name,
+                    description = body.description,
+                    metadata = body.metadata
                 )
                 call.respond(HttpStatusCode.OK, updated.toResponse())
             } catch (e: NamespaceNotFoundException) {
@@ -153,12 +146,10 @@ fun Route.namespaceRoutes(
                     call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val body = runCatching { call.receive<NamespaceDeleteRequestDto>() }.getOrNull()
 
-                deleteNamespaceService.execute(
-                    DeleteNamespaceRequest(
-                        tenantName = tenantName,
-                        namespaceName = namespaceName,
-                        reason = body?.reason
-                    )
+                application.deleteNamespace(
+                    tenantName = tenantName,
+                    namespaceName = namespaceName,
+                    reason = body?.reason
                 )
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Namespace '$namespaceName' deleted"))
             } catch (e: NamespaceNotFoundException) {
