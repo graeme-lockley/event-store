@@ -52,7 +52,6 @@ class EventStoreTestHelper(
             configDir = configDir.toString(),
             maxBodyBytes = 1048576L,
             rateLimitPerMinute = 600,
-            multiTenantEnabled = false,
             authEnabled = false
         )
         

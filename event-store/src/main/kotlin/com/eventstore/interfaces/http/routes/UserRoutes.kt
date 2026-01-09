@@ -14,23 +14,28 @@ import io.ktor.server.routing.*
 fun Route.userRoutes(
     application: Application
 ) {
-    route("/tenants/{tenantId}/users") {
+    // Global user management routes
+    route("/users") {
         post {
             try {
-                val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
                 val body = call.receive<UserCreateRequest>()
                 val created = application.createUser(
                     email = body.email,
                     name = body.name,
                     password = body.password,
                     metadata = body.metadata,
-                    primaryTenantId = body.primaryTenantId ?: tenantId
+                    primaryTenantId = body.primaryTenantId
                 )
-                application.assignUserToTenant(
-                    userId = created.id,
-                    tenantId = tenantId,
-                    isPrimary = body.primaryTenantId == tenantId || body.primaryTenantId == null
-                )
+                
+                // Optionally assign to tenant if provided
+                body.primaryTenantId?.let { tenantId ->
+                    application.assignUserToTenant(
+                        userId = created.id,
+                        tenantId = tenantId,
+                        isPrimary = true
+                    )
+                }
+                
                 call.respond(HttpStatusCode.Created, created.toResponse())
             } catch (e: UserAlreadyExistsException) {
                 call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "User exists", "USER_EXISTS"))
@@ -97,44 +102,47 @@ fun Route.userRoutes(
                 )
             }
         }
-
-        post("{userId}/tenants") {
-            try {
-                val userId = call.parameters["userId"] ?: throw IllegalArgumentException("userId is required")
-                val body = call.receive<AssignUserTenantRequest>()
-                application.assignUserToTenant(
-                    userId = userId,
-                    tenantId = body.tenantId,
-                    role = body.role,
-                    isPrimary = body.isPrimary
-                )
-                call.respond(
-                    HttpStatusCode.OK,
-                    mapOf("message" to "User '$userId' assigned to tenant '${body.tenantId}'")
-                )
-            } catch (e: Exception) {
-                call.respond(
-                    HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to assign tenant", "USER_ASSIGN_TENANT_FAILED")
-                )
-            }
+    }
+    
+    // Tenant assignment routes - separate route blocks
+    post("/users/{userId}/tenants/{tenantId}") {
+        try {
+            val userId = call.parameters["userId"] ?: throw IllegalArgumentException("userId is required")
+            val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
+            val body = runCatching { call.receive<AssignUserTenantRequest>() }.getOrNull()
+            
+            application.assignUserToTenant(
+                userId = userId,
+                tenantId = tenantId,
+                role = body?.role,
+                isPrimary = body?.isPrimary ?: false
+            )
+            call.respond(
+                HttpStatusCode.OK,
+                mapOf("message" to "User '$userId' assigned to tenant '$tenantId'")
+            )
+        } catch (e: Exception) {
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse(e.message ?: "Failed to assign tenant", "USER_ASSIGN_TENANT_FAILED")
+            )
         }
+    }
 
-        delete("{userId}/tenants/{tenantId}") {
-            try {
-                val userId = call.parameters["userId"] ?: throw IllegalArgumentException("userId is required")
-                val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
-                application.removeUserFromTenant(
-                    userId = userId,
-                    tenantId = tenantId
-                )
-                call.respond(HttpStatusCode.OK, mapOf("message" to "User '$userId' removed from tenant '$tenantId'"))
-            } catch (e: Exception) {
-                call.respond(
-                    HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to remove tenant", "USER_REMOVE_TENANT_FAILED")
-                )
-            }
+    delete("/users/{userId}/tenants/{tenantId}") {
+        try {
+            val userId = call.parameters["userId"] ?: throw IllegalArgumentException("userId is required")
+            val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
+            application.removeUserFromTenant(
+                userId = userId,
+                tenantId = tenantId
+            )
+            call.respond(HttpStatusCode.OK, mapOf("message" to "User '$userId' removed from tenant '$tenantId'"))
+        } catch (e: Exception) {
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse(e.message ?: "Failed to remove tenant", "USER_REMOVE_TENANT_FAILED")
+            )
         }
     }
 }

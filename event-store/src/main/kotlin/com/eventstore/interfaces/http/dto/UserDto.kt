@@ -15,7 +15,6 @@ data class UserUpdateRequest(
 )
 
 data class AssignUserTenantRequest(
-    val tenantId: String,
     val role: String? = null,
     val isPrimary: Boolean = false
 )
