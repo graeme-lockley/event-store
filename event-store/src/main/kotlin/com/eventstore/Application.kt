@@ -245,20 +245,19 @@ fun Application.configureApplication(config: Config) {
         systemEventPublisher
     )
     val createUserService =
-        CreateUserService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)
+        CreateUserService(tenantProjectionService, userProjectionService, config, systemEventPublisher)
     val getUserService = GetUserService(userProjectionService)
-    val updateUserService = UpdateUserService(eventRepository, topicRepository, userProjectionService, config)
-    val deleteUserService = DeleteUserService(eventRepository, topicRepository, userProjectionService, config)
-    val changePasswordService = ChangePasswordService(eventRepository, topicRepository, userProjectionService, config)
+    val updateUserService = UpdateUserService(userProjectionService, config, systemEventPublisher)
+    val deleteUserService = DeleteUserService(userProjectionService, config, systemEventPublisher)
+    val changePasswordService = ChangePasswordService(userProjectionService, config, systemEventPublisher)
     val assignUserToTenantService = AssignUserToTenantService(
-        eventRepository,
-        topicRepository,
         tenantProjectionService,
         userProjectionService,
-        config
+        config,
+        systemEventPublisher
     )
     val removeUserFromTenantService =
-        RemoveUserFromTenantService(eventRepository, topicRepository, userProjectionService, config)
+        RemoveUserFromTenantService(userProjectionService, config, systemEventPublisher)
     val sessionManager = SessionManager()
     val authenticationService = AuthenticationService(userProjectionService, sessionManager)
 

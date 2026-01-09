@@ -27,8 +27,19 @@ import com.eventstore.domain.services.tenant.*
 import com.eventstore.domain.services.topic.CreateTopicService
 import com.eventstore.domain.services.topic.GetTopicsService
 import com.eventstore.domain.services.topic.UpdateTopicSchemasService
+import com.eventstore.domain.services.user.AssignUserRequest
+import com.eventstore.domain.services.user.AssignUserToTenantService
+import com.eventstore.domain.services.user.ChangePasswordRequest
+import com.eventstore.domain.services.user.ChangePasswordService
 import com.eventstore.domain.services.user.CreateUserRequest
 import com.eventstore.domain.services.user.CreateUserService
+import com.eventstore.domain.services.user.DeleteUserRequest
+import com.eventstore.domain.services.user.DeleteUserService
+import com.eventstore.domain.services.user.GetUserService
+import com.eventstore.domain.services.user.RemoveUserTenantRequest
+import com.eventstore.domain.services.user.RemoveUserFromTenantService
+import com.eventstore.domain.services.user.UpdateUserRequest
+import com.eventstore.domain.services.user.UpdateUserService
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.background.SyncDispatcherManager
 import com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl
@@ -138,7 +149,25 @@ class Application(
         RevokeApiKeyService(apiKeyRepository)
 
     private val createUserService: CreateUserService =
-        CreateUserService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)
+        CreateUserService(tenantProjectionService, userProjectionService, config, systemEventPublisher)
+
+    private val getUserService: GetUserService =
+        GetUserService(userProjectionService)
+
+    private val updateUserService: UpdateUserService =
+        UpdateUserService(userProjectionService, config, systemEventPublisher)
+
+    private val deleteUserService: DeleteUserService =
+        DeleteUserService(userProjectionService, config, systemEventPublisher)
+
+    private val assignUserToTenantService: AssignUserToTenantService =
+        AssignUserToTenantService(tenantProjectionService, userProjectionService, config, systemEventPublisher)
+
+    private val removeUserFromTenantService: RemoveUserFromTenantService =
+        RemoveUserFromTenantService(userProjectionService, config, systemEventPublisher)
+
+    private val changePasswordService: ChangePasswordService =
+        ChangePasswordService(userProjectionService, config, systemEventPublisher)
 
     private val grantPermissionService: GrantPermissionService =
         GrantPermissionService(resourceResolver, tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
@@ -356,6 +385,92 @@ class Application(
                 createdBy = createdBy,
                 metadata = metadata,
                 primaryTenantId = primaryTenantId
+        )
+    )
+
+    suspend fun getUserById(userId: String): User? =
+        getUserService.getById(userId)
+
+    suspend fun getUserByEmail(email: String): User? =
+        getUserService.getByEmail(email)
+
+    suspend fun listUsers(): List<User> =
+        getUserService.list()
+
+    suspend fun updateUser(
+        userId: String,
+        email: String? = null,
+        name: String? = null,
+        metadata: Map<String, Any>? = null,
+        updatedBy: String = "system"
+    ): User =
+        updateUserService.execute(
+            UpdateUserRequest(
+                userId = userId,
+                email = email,
+                name = name,
+                metadata = metadata,
+                updatedBy = updatedBy
+            )
+        )
+
+    suspend fun deleteUser(
+        userId: String,
+        deletedBy: String = "system",
+        reason: String? = null
+    ): User =
+        deleteUserService.execute(
+            DeleteUserRequest(
+                userId = userId,
+                deletedBy = deletedBy,
+                reason = reason
+            )
+        )
+
+    suspend fun assignUserToTenant(
+        userId: String,
+        tenantId: String,
+        role: String? = null,
+        isPrimary: Boolean = false,
+        assignedBy: String = "system"
+    ): Boolean =
+        assignUserToTenantService.execute(
+            AssignUserRequest(
+                userId = userId,
+                tenantId = tenantId,
+                role = role,
+                isPrimary = isPrimary,
+                assignedBy = assignedBy
+            )
+        )
+
+    suspend fun removeUserFromTenant(
+        userId: String,
+        tenantId: String,
+        removedBy: String = "system",
+        reason: String? = null
+    ): Boolean =
+        removeUserFromTenantService.execute(
+            RemoveUserTenantRequest(
+                userId = userId,
+                tenantId = tenantId,
+                removedBy = removedBy,
+                reason = reason
+            )
+        )
+
+    suspend fun changePassword(
+        userId: String,
+        oldPassword: String,
+        newPassword: String,
+        changedBy: String = "self"
+    ): Boolean =
+        changePasswordService.execute(
+            ChangePasswordRequest(
+                userId = userId,
+                oldPassword = oldPassword,
+                newPassword = newPassword,
+                changedBy = changedBy
             )
         )
 

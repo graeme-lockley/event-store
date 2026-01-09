@@ -1,14 +1,12 @@
 package com.eventstore.domain.services.user
 
 import com.eventstore.Config
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
 import com.eventstore.domain.events.UserEventType
 import com.eventstore.domain.events.UserTenantAssignedEvent
 import com.eventstore.domain.exceptions.TenantNotFoundException
 import com.eventstore.domain.exceptions.UserNotFoundException
-import com.eventstore.domain.ports.outbound.EventRepository
-import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.services.BaseSystemService
+import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import com.eventstore.infrastructure.projections.UserProjectionService
@@ -23,16 +21,13 @@ data class AssignUserRequest(
 )
 
 class AssignUserToTenantService(
-    private val eventRepository: EventRepository,
-    private val topicRepository: TopicRepository,
     private val tenantProjectionService: TenantProjectionService,
     private val userProjectionService: UserProjectionService,
-    private val config: Config
-) {
+    config: Config,
+    eventPublisher: SystemEventPublisher
+) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: AssignUserRequest): Boolean {
-        if (!config.multiTenantEnabled) {
-            throw IllegalStateException("Multi-tenant support is disabled")
-        }
+        requireMultiTenantEnabled()
 
         if (!tenantProjectionService.tenantExistsByName(request.tenantId)) {
             throw TenantNotFoundException(request.tenantId)
@@ -50,27 +45,12 @@ class AssignUserToTenantService(
             isPrimary = request.isPrimary
         )
 
-        val seq = topicRepository.getAndIncrementSequence(
-            topicName = SystemTopics.USERS_TOPIC,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+        eventPublisher.publishEvent(
+            topic = SystemTopics.USERS_TOPIC,
+            eventType = UserEventType.TENANT_ASSIGNED,
+            payload = payload.toPayload(),
+            timestamp = now
         )
-
-        val event = Event(
-            id = EventId.create(
-                SystemTopics.USERS_TOPIC,
-                seq,
-                SystemTopics.SYSTEM_TENANT_ID,
-                SystemTopics.MANAGEMENT_NAMESPACE_ID
-            ),
-            timestamp = now,
-            type = UserEventType.TENANT_ASSIGNED,
-            payload = payload.toPayload()
-        )
-
-        eventRepository.storeEvents(listOf(event))
-        // TODO: the following line is an error
-        userProjectionService.handleEvents(listOf(event))
 
         return true
     }

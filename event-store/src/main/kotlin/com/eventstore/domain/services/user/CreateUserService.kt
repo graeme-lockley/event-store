@@ -1,16 +1,14 @@
 package com.eventstore.domain.services.user
 
 import com.eventstore.Config
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
 import com.eventstore.domain.User
 import com.eventstore.domain.UserStatus
 import com.eventstore.domain.events.UserCreatedEvent
 import com.eventstore.domain.events.UserEventType
 import com.eventstore.domain.exceptions.TenantNotFoundException
 import com.eventstore.domain.exceptions.UserAlreadyExistsException
-import com.eventstore.domain.ports.outbound.EventRepository
-import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.services.BaseSystemService
+import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import com.eventstore.infrastructure.projections.UserProjectionService
@@ -29,23 +27,20 @@ data class CreateUserRequest(
 )
 
 class CreateUserService(
-    private val eventRepository: EventRepository,
-    private val topicRepository: TopicRepository,
     private val tenantProjectionService: TenantProjectionService,
     private val userProjectionService: UserProjectionService,
-    private val config: Config
-) {
+    config: Config,
+    eventPublisher: SystemEventPublisher
+) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateUserRequest): User {
-        if (!config.multiTenantEnabled) {
-            throw IllegalStateException("Multi-tenant support is disabled")
-        }
+        requireMultiTenantEnabled()
 
         if (userProjectionService.userExistsByEmail(request.email)) {
             throw UserAlreadyExistsException(request.email)
         }
 
         request.primaryTenantId?.let {
-            if (!tenantProjectionService.tenantExists(it)) {
+            if (!tenantProjectionService.tenantExistsByName(it)) {
                 throw TenantNotFoundException(it)
             }
         }
@@ -65,27 +60,12 @@ class CreateUserService(
             metadata = request.metadata
         )
 
-        val seq = topicRepository.getAndIncrementSequence(
-            topicName = SystemTopics.USERS_TOPIC,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+        eventPublisher.publishEvent(
+            topic = SystemTopics.USERS_TOPIC,
+            eventType = UserEventType.CREATED,
+            payload = payload.toPayload(),
+            timestamp = now
         )
-
-        val event = Event(
-            id = EventId.create(
-                topic = SystemTopics.USERS_TOPIC,
-                sequence = seq,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-            ),
-            timestamp = now,
-            type = UserEventType.CREATED,
-            payload = payload.toPayload()
-        )
-
-        eventRepository.storeEvents(listOf(event))
-        // TODO: the following line is an error
-        userProjectionService.handleEvents(listOf(event))
 
         return User(
             id = userId,

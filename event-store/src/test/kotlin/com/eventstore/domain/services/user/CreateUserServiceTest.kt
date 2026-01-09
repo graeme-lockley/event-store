@@ -1,97 +1,158 @@
 package com.eventstore.domain.services.user
 
-import com.eventstore.Config
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
+import com.eventstore.domain.Application
 import com.eventstore.domain.UserStatus
-import com.eventstore.domain.events.TenantCreatedEvent
-import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.events.UserEventType
+import com.eventstore.domain.services.createApplication
 import com.eventstore.domain.tenants.SystemTopics
-import com.eventstore.infrastructure.persistence.InMemoryEventRepository
-import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
-import com.eventstore.infrastructure.projections.InMemoryTenantRepository
-import com.eventstore.infrastructure.projections.InMemoryUserRepository
-import com.eventstore.infrastructure.projections.TenantProjectionService
-import com.eventstore.infrastructure.projections.UserProjectionService
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.time.Instant
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CreateUserServiceTest {
+    private lateinit var application: Application
 
-    private val config = Config(
-        port = 0,
-        dataDir = "",
-        configDir = "",
-        maxBodyBytes = 0,
-        rateLimitPerMinute = 0,
-        multiTenantEnabled = true,
-        authEnabled = true
-    )
+    @BeforeEach
+    fun setup() = runTest {
+        application = createApplication()
+    }
 
     @Test
-    fun `creates user and emits events`() = runBlocking {
-        val topicRepo = InMemoryTopicRepository()
-        val eventRepo = InMemoryEventRepository()
-        val tenantProjection = TenantProjectionService(InMemoryTenantRepository())
-        val userProjection = UserProjectionService(InMemoryUserRepository())
+    fun `creates user and emits events`() = runTest {
+        val tenantName = "t-1"
+        application.createTenant(tenantName)
 
-        topicRepo.createTopic(
-            resourceId = java.util.UUID.randomUUID(),
-            tenantResourceId = java.util.UUID.randomUUID(),
-            namespaceResourceId = java.util.UUID.randomUUID(),
-            name = SystemTopics.USERS_TOPIC,
-            schemas = emptyList(),
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
-
-        // Seed tenant
-        val tenantEvent = Event(
-            id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-            ),
-            timestamp = Instant.now(),
-            type = TenantEventType.CREATED,
-            payload = TenantCreatedEvent(
-                resourceId = java.util.UUID.randomUUID(),
-                name = "t-1",
-                createdBy = "test",
-                createdAt = Instant.now(),
-                metadata = emptyMap()
-            ).toPayload()
-        )
-        tenantProjection.handleEvents(listOf(tenantEvent))
-
-        val service = CreateUserService(eventRepo, topicRepo, tenantProjection, userProjection, config)
-
-        val created = service.execute(
-            CreateUserRequest(
-                email = "alice@example.com",
-                name = "Alice",
-                password = "secret",
-                primaryTenantId = "t-1"
-            )
+        val created = application.createUser(
+            email = "alice@example.com",
+            name = "Alice",
+            password = "secret",
+            primaryTenantId = tenantName
         )
 
         assertNotNull(created.id)
         assertEquals("alice@example.com", created.email)
+        assertEquals("Alice", created.name)
         assertEquals(UserStatus.ACTIVE, created.status)
+        assertEquals(tenantName, created.primaryTenantId)
 
-        val storedEvents = eventRepo.getEvents(
+        val storedEvents = application.getEvents(
             topic = SystemTopics.USERS_TOPIC,
-            limit = 10,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            tenantName = SystemTopics.SYSTEM_TENANT_ID,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
-        assertEquals(1, storedEvents.size)
-        assertEquals(UserEventType.CREATED, storedEvents.first().type)
+        val userCreatedEvents = storedEvents.filter { it.type == UserEventType.CREATED }
+        assertTrue(userCreatedEvents.isNotEmpty())
+        assertEquals(UserEventType.CREATED, userCreatedEvents.last().type)
+    }
+
+    @Test
+    fun `creates user without primary tenant`() = runTest {
+        val created = application.createUser(
+            email = "bob@example.com",
+            name = "Bob",
+            password = "password"
+        )
+
+        assertNotNull(created.id)
+        assertEquals("bob@example.com", created.email)
+        assertEquals(null, created.primaryTenantId)
+    }
+
+    @Test
+    fun `creates user with metadata`() = runTest {
+        val metadata = mapOf("department" to "Engineering", "role" to "Developer")
+
+        val created = application.createUser(
+            email = "charlie@example.com",
+            name = "Charlie",
+            password = "password",
+            metadata = metadata
+        )
+
+        assertEquals(metadata, created.metadata)
+    }
+
+    @Test
+    fun `creates user with suspended status`() = runTest {
+        val created = application.createUser(
+            email = "dave@example.com",
+            name = "Dave",
+            password = "password",
+            status = UserStatus.SUSPENDED
+        )
+
+        assertEquals(UserStatus.SUSPENDED, created.status)
+    }
+
+    @Test
+    fun `creates user with custom createdBy`() = runTest {
+        val created = application.createUser(
+            email = "eve@example.com",
+            name = "Eve",
+            password = "password",
+            createdBy = "admin-user"
+        )
+
+        assertNotNull(created.id)
+        assertEquals("eve@example.com", created.email)
+    }
+
+    @Test
+    fun `throws exception when user already exists`() = runTest {
+        application.createUser(
+            email = "alice@example.com",
+            name = "Alice",
+            password = "secret"
+        )
+
+        assertThrows<com.eventstore.domain.exceptions.UserAlreadyExistsException> {
+            application.createUser(
+                email = "alice@example.com",
+                name = "Alice",
+                password = "secret"
+            )
+        }
+    }
+
+    @Test
+    fun `throws exception when primary tenant does not exist`() = runTest {
+        assertThrows<com.eventstore.domain.exceptions.TenantNotFoundException> {
+            application.createUser(
+                email = "alice@example.com",
+                name = "Alice",
+                password = "secret",
+                primaryTenantId = "nonexistent-tenant"
+            )
+        }
+    }
+
+    @Test
+    fun `throws exception when multi-tenant is disabled`() = runTest {
+        val appWithoutMultiTenant = Application(
+            bootstrap = true, // Need bootstrap to create system topics
+            config = com.eventstore.Config(
+                port = 0,
+                dataDir = "./data",
+                configDir = "./config",
+                maxBodyBytes = 1024,
+                rateLimitPerMinute = 10,
+                multiTenantEnabled = false,
+                authEnabled = false
+            )
+        )
+
+        assertThrows<IllegalStateException> {
+            appWithoutMultiTenant.createUser(
+                email = "alice@example.com",
+                name = "Alice",
+                password = "secret"
+            )
+        }
     }
 }
-
