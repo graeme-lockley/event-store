@@ -115,7 +115,6 @@ fun createApplication(): Application {
             configDir = "./config",
             maxBodyBytes = 1024,
             rateLimitPerMinute = 10,
-            multiTenantEnabled = true,
             authEnabled = false
         )
     )

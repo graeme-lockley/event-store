@@ -36,8 +36,6 @@ class GrantPermissionService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: GrantPermissionRequest): PermissionGrantedEvent {
-        requireMultiTenantEnabled()
-
         // Resolve tenant resourceId
         val tenantResourceId = resourceResolver.resolveTenantResourceId(request.tenantName)
 

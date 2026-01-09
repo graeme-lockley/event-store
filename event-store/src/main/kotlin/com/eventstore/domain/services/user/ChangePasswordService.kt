@@ -25,8 +25,6 @@ class ChangePasswordService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: ChangePasswordRequest): Boolean {
-        requireMultiTenantEnabled()
-
         val user = userProjectionService.getUser(request.userId) ?: throw UserNotFoundException(request.userId)
         if (!BCrypt.checkpw(request.oldPassword, user.passwordHash)) {
             throw InvalidCredentialsException()

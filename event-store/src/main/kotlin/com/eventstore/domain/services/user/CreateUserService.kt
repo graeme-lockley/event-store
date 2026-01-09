@@ -33,8 +33,6 @@ class CreateUserService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateUserRequest): User {
-        requireMultiTenantEnabled()
-
         if (userProjectionService.userExistsByEmail(request.email)) {
             throw UserAlreadyExistsException(request.email)
         }

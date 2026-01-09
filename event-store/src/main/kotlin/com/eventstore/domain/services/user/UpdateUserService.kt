@@ -25,8 +25,6 @@ class UpdateUserService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: UpdateUserRequest): User {
-        requireMultiTenantEnabled()
-
         val existing = userProjectionService.getUser(request.userId)
             ?: throw UserNotFoundException(request.userId)
 

@@ -25,8 +25,6 @@ class DeleteNamespaceService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: DeleteNamespaceRequest): Boolean {
-        requireMultiTenantEnabled()
-
         val existing = namespaceProjectionService.getNamespaceByName(request.tenantName, request.namespaceName)
             ?: throw NamespaceNotFoundException(request.namespaceName)
 

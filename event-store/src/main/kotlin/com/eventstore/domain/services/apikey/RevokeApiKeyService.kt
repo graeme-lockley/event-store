@@ -23,8 +23,6 @@ class RevokeApiKeyService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: RevokeApiKeyRequest) {
-        requireMultiTenantEnabled()
-
         val apiKey = apiKeyProjectionService.getApiKey(request.keyId)
             ?: throw ApiKeyNotFoundException(request.keyId)
 

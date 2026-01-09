@@ -29,8 +29,6 @@ class CreateApiKeyService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateApiKeyRequest): Pair<ApiKey, String> {
-        requireMultiTenantEnabled()
-
         // Validate user exists
         userProjectionService.getUser(request.userId)
             ?: throw UserNotFoundException(request.userId)

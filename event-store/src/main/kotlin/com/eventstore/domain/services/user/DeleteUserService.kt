@@ -24,8 +24,6 @@ class DeleteUserService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: DeleteUserRequest): User {
-        requireMultiTenantEnabled()
-
         val existing = userProjectionService.getUser(request.userId)
             ?: throw UserNotFoundException(request.userId)
 

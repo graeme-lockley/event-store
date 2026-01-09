@@ -110,15 +110,13 @@ fun Application.configureApplication(config: Config) {
         domainApplication.apiKeyRepository
     )
 
-    // Ensure default/default namespace exists for legacy endpoints when multi-tenant is enabled
-    if (config.multiTenantEnabled) {
-        runBlocking {
-            if (domainApplication.tenantProjectionService.tenantExistsByName("default") &&
-                !domainApplication.namespaceProjectionService.namespaceExistsByName("default", "default")
-            ) {
-                runCatching {
-                    domainApplication.createNamespace("default", "default")
-                }
+    // Ensure default/default namespace exists for legacy endpoints
+    runBlocking {
+        if (domainApplication.tenantProjectionService.tenantExistsByName("default") &&
+            !domainApplication.namespaceProjectionService.namespaceExistsByName("default", "default")
+        ) {
+            runCatching {
+                domainApplication.createNamespace("default", "default")
             }
         }
     }

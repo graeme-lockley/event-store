@@ -26,8 +26,6 @@ class CreateTenantService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateTenantRequest): Tenant {
-        requireMultiTenantEnabled()
-
         if (tenantProjectionService.tenantExistsByName(request.name)) {
             throw TenantAlreadyExistsException(request.name)
         }

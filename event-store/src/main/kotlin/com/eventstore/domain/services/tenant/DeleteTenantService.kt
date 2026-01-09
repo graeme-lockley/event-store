@@ -22,8 +22,6 @@ class DeleteTenantService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: DeleteTenantRequest): Boolean {
-        requireMultiTenantEnabled()
-
         val existing = tenantProjectionService.getTenantByName(request.tenantName)
             ?: throw TenantNotFoundException(request.tenantName)
 

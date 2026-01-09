@@ -23,8 +23,6 @@ class RemoveUserFromTenantService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: RemoveUserTenantRequest): Boolean {
-        requireMultiTenantEnabled()
-
         userProjectionService.getUser(request.userId) ?: throw UserNotFoundException(request.userId)
 
         val now = Instant.now()

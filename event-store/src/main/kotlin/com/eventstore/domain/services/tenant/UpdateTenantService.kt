@@ -26,8 +26,6 @@ class UpdateTenantService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: UpdateTenantRequest): Tenant {
-        requireMultiTenantEnabled()
-
         val existing = tenantProjectionService.getTenantByName(request.tenantName)
             ?: throw TenantNotFoundException(request.tenantName)
 

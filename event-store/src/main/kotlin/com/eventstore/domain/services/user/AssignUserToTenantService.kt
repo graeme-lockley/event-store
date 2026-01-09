@@ -27,8 +27,6 @@ class AssignUserToTenantService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: AssignUserRequest): Boolean {
-        requireMultiTenantEnabled()
-
         if (!tenantProjectionService.tenantExistsByName(request.tenantId)) {
             throw TenantNotFoundException(request.tenantId)
         }

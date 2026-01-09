@@ -32,8 +32,6 @@ class RevokePermissionService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: RevokePermissionRequest): PermissionRevokedEvent {
-        requireMultiTenantEnabled()
-
         // Resolve tenant resourceId
         val tenantResourceId = resourceResolver.resolveTenantResourceId(request.tenantName)
 

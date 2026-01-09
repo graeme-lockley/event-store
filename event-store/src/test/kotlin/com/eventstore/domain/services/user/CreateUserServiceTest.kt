@@ -132,27 +132,4 @@ class CreateUserServiceTest {
         }
     }
 
-    @Test
-    fun `throws exception when multi-tenant is disabled`() = runTest {
-        val appWithoutMultiTenant = Application(
-            bootstrap = true, // Need bootstrap to create system topics
-            config = com.eventstore.Config(
-                port = 0,
-                dataDir = "./data",
-                configDir = "./config",
-                maxBodyBytes = 1024,
-                rateLimitPerMinute = 10,
-                multiTenantEnabled = false,
-                authEnabled = false
-            )
-        )
-
-        assertThrows<IllegalStateException> {
-            appWithoutMultiTenant.createUser(
-                email = "alice@example.com",
-                name = "Alice",
-                password = "secret"
-            )
-        }
-    }
 }

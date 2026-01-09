@@ -6,7 +6,6 @@ data class Config(
     val configDir: String,
     val maxBodyBytes: Long,
     val rateLimitPerMinute: Int,
-    val multiTenantEnabled: Boolean = false,
     val authEnabled: Boolean = false,
     val createTestApiKey: Boolean = false
 ) {
@@ -18,7 +17,6 @@ data class Config(
                 configDir = System.getenv("CONFIG_DIR") ?: "./config",
                 maxBodyBytes = System.getenv("MAX_BODY_BYTES")?.toLongOrNull() ?: 1048576L,
                 rateLimitPerMinute = System.getenv("RATE_LIMIT_PER_MINUTE")?.toIntOrNull() ?: 600,
-                multiTenantEnabled = System.getenv("MULTI_TENANT_ENABLED")?.toBoolean() ?: false,
                 authEnabled = System.getenv("AUTH_ENABLED")?.toBoolean() ?: false,
                 createTestApiKey = System.getenv("CREATE_TEST_API_KEY")?.toBoolean() ?: false
             )

@@ -29,8 +29,6 @@ class CreateNamespaceService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateNamespaceRequest): Namespace {
-        requireMultiTenantEnabled()
-
         val tenant = tenantProjectionService.getTenantByName(request.tenantName)
             ?: throw TenantNotFoundException(request.tenantName)
 

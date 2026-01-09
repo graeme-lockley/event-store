@@ -28,8 +28,6 @@ class UpdateNamespaceService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: UpdateNamespaceRequest): Namespace {
-        requireMultiTenantEnabled()
-
         val existing = namespaceProjectionService.getNamespaceByName(request.tenantName, request.namespaceName)
             ?: throw NamespaceNotFoundException(request.namespaceName)
 
