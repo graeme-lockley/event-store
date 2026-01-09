@@ -122,3 +122,16 @@ fun createApplication(): Application {
 
     return application
 }
+
+class InMemoryEventDispatcher : com.eventstore.domain.ports.outbound.EventDispatcher {
+    val events = mutableListOf<Set<String>>()
+    val ensuredTopics = mutableListOf<Set<String>>()
+
+    override suspend fun notifyEventsPublished(topics: Set<String>) {
+        events.add(topics)
+    }
+
+    override suspend fun ensureDispatchersRunning(topics: Set<String>) {
+        ensuredTopics.add(topics)
+    }
+}

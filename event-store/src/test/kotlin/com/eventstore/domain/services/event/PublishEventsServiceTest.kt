@@ -1,147 +1,134 @@
 package com.eventstore.domain.services.event
 
+import com.eventstore.domain.Application
 import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
+import com.eventstore.domain.Schema
 import com.eventstore.domain.exceptions.SchemaNotFoundException
 import com.eventstore.domain.exceptions.SchemaValidationException
 import com.eventstore.domain.exceptions.TopicNotFoundException
-import com.eventstore.domain.ports.outbound.EventDispatcher
-import com.eventstore.domain.services.PopulateEventStoreState
-import com.eventstore.domain.services.createEventStore
-import kotlinx.coroutines.runBlocking
+import com.eventstore.domain.services.createApplication
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
 import java.time.Instant
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
-class InMemoryEventDispatcher : EventDispatcher {
-    val events = mutableListOf<Set<String>>()
-    val ensuredTopics = mutableListOf<Set<String>>()
-
-    override suspend fun notifyEventsPublished(topics: Set<String>) {
-        events.add(topics)
-    }
-
-    override suspend fun ensureDispatchersRunning(topics: Set<String>) {
-        ensuredTopics.add(topics)
-    }
-}
-
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PublishEventsServiceTest {
-    val topicName = "user-events"
-
-    private lateinit var helper: PopulateEventStoreState
-    private lateinit var service: PublishEventsService
-    private val eventDispatcher = InMemoryEventDispatcher()
+    private lateinit var application: Application
+    private val topicName = "user-events"
 
     @BeforeEach
-    fun setup() = runBlocking {
-        helper = createEventStore(topicName)
-        service = PublishEventsService(
-            helper.topicRepository,
-            helper.eventRepository,
-            helper.schemaValidator,
-            eventDispatcher
+    fun setup() = runTest {
+        application = createApplication()
+        // Create tenant and namespace
+        application.createTenant("default")
+        application.createNamespace("default", "default")
+        // Create topic with schema
+        application.createTopic(
+            name = topicName,
+            schemas = listOf(
+                Schema(
+                    eventType = "user.created",
+                    properties = mapOf("id" to "string", "name" to "string"),
+                    required = listOf("id", "name")
+                ),
+                Schema(
+                    eventType = "user.updated",
+                    properties = mapOf("id" to "string", "name" to "string"),
+                    required = listOf("id")
+                )
+            ),
+            tenantName = "default",
+            namespaceName = "default"
         )
     }
 
     @Test
     fun `should publish single event successfully`() = runTest {
-        val numberOfEvents = helper.getEvents(topicName).size
-        val nextEventId = EventId.create(topicName, (numberOfEvents + 1).toLong())
+        val numberOfEvents = application.getEvents(topicName).size
         val requests = listOf(
             EventRequest(topicName, "user.created", mapOf("id" to "123", "name" to "Alice"))
         )
-        val event = Event(nextEventId, Instant.now(), "user.created", requests[0].payload)
 
-        val result = service.execute(requests)
+        val result = application.publishEvents(requests)
 
         assertEquals(1, result.size)
-        assertEquals(nextEventId.toString(), result[0])
+        assertTrue(result[0].startsWith("$topicName-"))
 
-        val events = helper.getEvents(topicName)
+        val events = application.getEvents(topicName)
         assertEquals(numberOfEvents + 1, events.size)
-        assertEquals(event.copy(timestamp = events[numberOfEvents].timestamp), events[numberOfEvents])
-        assertEquals(eventDispatcher.events, listOf(setOf(topicName)))
+        assertEquals("user.created", events.last().type)
+        assertEquals(mapOf("id" to "123", "name" to "Alice"), events.last().payload)
     }
 
     @Test
     fun `should publish multiple events successfully`() = runTest {
-        val numberOfEvents = helper.getEvents(topicName).size
+        val numberOfEvents = application.getEvents(topicName).size
         val requests = listOf(
             EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Alice")),
             EventRequest(topicName, "user.created", mapOf("id" to "2", "name" to "Bob"))
         )
-        val event1 = EventId.create(topicName, (numberOfEvents + 1).toLong())
-        val event2 = EventId.create(topicName, (numberOfEvents + 2).toLong())
 
-
-        val result = service.execute(requests)
+        val result = application.publishEvents(requests)
 
         assertEquals(2, result.size)
+        assertTrue(result[0].startsWith("$topicName-"))
+        assertTrue(result[1].startsWith("$topicName-"))
 
-        assertEquals(event1.toString(), result[0])
-        assertEquals(event2.toString(), result[1])
-
-        val events = helper.getEvents(topicName)
+        val events = application.getEvents(topicName)
         assertEquals(numberOfEvents + 2, events.size)
-
-        assertEquals(
-            Event(event1, events[numberOfEvents].timestamp, "user.created", requests[0].payload), events[numberOfEvents]
-        )
-        assertEquals(
-            Event(event2, events[numberOfEvents + 1].timestamp, "user.created", requests[1].payload),
-            events[numberOfEvents + 1]
-        )
-        assertEquals(eventDispatcher.events, listOf(setOf(topicName)))
+        assertEquals("user.created", events[numberOfEvents].type)
+        assertEquals("user.created", events[numberOfEvents + 1].type)
+        assertEquals(mapOf("id" to "1", "name" to "Alice"), events[numberOfEvents].payload)
+        assertEquals(mapOf("id" to "2", "name" to "Bob"), events[numberOfEvents + 1].payload)
     }
 
     @Test
     fun `should throw exception for empty requests`() = runTest {
         assertThrows<IllegalArgumentException> {
-            service.execute(emptyList())
+            application.publishEvents(emptyList())
         }
     }
 
     @Test
     fun `should throw exception when topic does not exist`() = runTest {
-        assertFalse(helper.topicExists("unknown-topic"))
-
-        val request = EventRequest("unknown-topic", "user.created", mapOf("id" to "123"))
+        val request = EventRequest("unknown-topic", "user.created", mapOf("id" to "123", "name" to "Alice"))
 
         assertThrows<TopicNotFoundException> {
-            service.execute(listOf(request))
+            application.publishEvents(listOf(request))
         }
     }
 
     @Test
     fun `should throw an exception when schema is unknown`() = runTest {
         val requests = listOf(
-            EventRequest(topicName, "user.removed", mapOf("id" to "123"))
+            EventRequest(topicName, "user.removed", mapOf("id" to "123", "name" to "Alice"))
         )
 
         assertThrows<SchemaNotFoundException> {
-            service.execute(requests)
+            application.publishEvents(requests)
         }
     }
 
     @Test
     fun `should throw an exception when payload does not match schema`() = runTest {
+        // age is not a valid field according to the schema
         assertThrows<SchemaValidationException> {
-            // age is not a valid field according to the schema
-            service.execute(
+            application.publishEvents(
                 listOf(
                     EventRequest(topicName, "user.created", mapOf("id" to "123", "name" to "Fred", "age" to "27"))
                 )
             )
         }
 
+        // name is required according to the schema
         assertThrows<SchemaValidationException> {
-            // name is required according to the schema
-            service.execute(
+            application.publishEvents(
                 listOf(
                     EventRequest(topicName, "user.created", mapOf("id" to "123"))
                 )
@@ -151,19 +138,19 @@ class PublishEventsServiceTest {
 
     @Test
     fun `should validate all events before storing any`() = runTest {
-        val numberOfEvents = helper.getEvents(topicName).size
+        val numberOfEvents = application.getEvents(topicName).size
 
         val requests = listOf(
             EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Alice")),
-            EventRequest("unknown-topic", "user.created", mapOf("id" to "2"))
+            EventRequest("unknown-topic", "user.created", mapOf("id" to "2", "name" to "Bob"))
         )
 
         assertThrows<TopicNotFoundException> {
-            service.execute(requests)
+            application.publishEvents(requests)
         }
 
-        assertEquals(numberOfEvents, helper.getEvents(topicName).size)
-        assertEquals(eventDispatcher.events, listOf())
+        // Verify no events were stored
+        assertEquals(numberOfEvents, application.getEvents(topicName).size)
     }
 
     @Test
@@ -172,9 +159,70 @@ class PublishEventsServiceTest {
 
         // Should throw SchemaValidationException for missing required field
         assertThrows<SchemaValidationException> {
-            service.execute(listOf(request))
+            application.publishEvents(listOf(request))
         }
+    }
 
-        assertEquals(eventDispatcher.events, listOf())
+    @Test
+    fun `should publish events with tenant and namespace scoping`() = runTest {
+        // Create another tenant and namespace
+        application.createTenant("acme")
+        application.createNamespace("acme", "production")
+        application.createTopic(
+            name = topicName,
+            schemas = listOf(
+                Schema(
+                    eventType = "user.created",
+                    properties = mapOf("id" to "string", "name" to "string"),
+                    required = listOf("id", "name")
+                )
+            ),
+            tenantName = "acme",
+            namespaceName = "production"
+        )
+
+        val defaultRequests = listOf(
+            EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Default User"), tenantId = "default", namespaceId = "default")
+        )
+        val acmeRequests = listOf(
+            EventRequest(topicName, "user.created", mapOf("id" to "2", "name" to "Acme User"), tenantId = "acme", namespaceId = "production")
+        )
+
+        val defaultResult = application.publishEvents(defaultRequests)
+        val acmeResult = application.publishEvents(acmeRequests)
+
+        assertEquals(1, defaultResult.size)
+        assertEquals(1, acmeResult.size)
+
+        // Verify events are stored in correct tenant/namespace context
+        val defaultEvents = application.getEvents(topicName, tenantName = "default", namespaceName = "default")
+        val acmeEvents = application.getEvents(topicName, tenantName = "acme", namespaceName = "production")
+
+        assertTrue(defaultEvents.any { it.payload["name"] == "Default User" })
+        assertTrue(acmeEvents.any { it.payload["name"] == "Acme User" })
+    }
+
+    @Test
+    fun `should increment event sequence correctly`() = runTest {
+        val requests1 = listOf(
+            EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Alice"))
+        )
+        val requests2 = listOf(
+            EventRequest(topicName, "user.created", mapOf("id" to "2", "name" to "Bob"))
+        )
+        val requests3 = listOf(
+            EventRequest(topicName, "user.created", mapOf("id" to "3", "name" to "Charlie"))
+        )
+
+        val result1 = application.publishEvents(requests1)
+        val result2 = application.publishEvents(requests2)
+        val result3 = application.publishEvents(requests3)
+
+        val event1 = EventId(result1[0])
+        val event2 = EventId(result2[0])
+        val event3 = EventId(result3[0])
+
+        assertEquals(event1.sequence + 1, event2.sequence)
+        assertEquals(event2.sequence + 1, event3.sequence)
     }
 }

@@ -8,6 +8,9 @@ import com.eventstore.domain.services.consumer.ConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.RegisterConsumerService
 import com.eventstore.domain.services.consumer.UnregisterConsumerService
+import com.eventstore.domain.services.event.EventRequest
+import com.eventstore.domain.services.event.GetEventsService
+import com.eventstore.domain.services.event.PublishEventsService
 import com.eventstore.domain.services.namespace.*
 import com.eventstore.domain.services.tenant.*
 import com.eventstore.domain.services.topic.CreateTopicService
@@ -85,6 +88,12 @@ class Application(
 
     private val createTopicService: CreateTopicService =
         CreateTopicService(topicRepository, schemaValidator, tenantProjectionService, namespaceProjectionService)
+
+    private val publishEventsService: PublishEventsService =
+        PublishEventsService(topicRepository, eventRepository, schemaValidator, dispatcherManager)
+
+    private val getEventsService: GetEventsService =
+        GetEventsService(eventRepository, topicRepository)
 
     private val registerConsumerService: RegisterConsumerService =
         RegisterConsumerService(consumerRepository, topicRepository, consumerFactory, dispatcherManager)
@@ -332,4 +341,19 @@ class Application(
         namespaceName: String
     ): Boolean =
         unregisterConsumerService.execute(consumerId, tenantName, namespaceName)
+
+    suspend fun publishEvents(
+        requests: List<EventRequest>
+    ): List<String> =
+        publishEventsService.execute(requests)
+
+    suspend fun getEvents(
+        topic: String,
+        sinceEventId: String? = null,
+        date: String? = null,
+        limit: Int? = null,
+        tenantName: String = "default",
+        namespaceName: String = "default"
+    ): List<Event> =
+        getEventsService.execute(topic, sinceEventId, date, limit, tenantName, namespaceName)
 }
