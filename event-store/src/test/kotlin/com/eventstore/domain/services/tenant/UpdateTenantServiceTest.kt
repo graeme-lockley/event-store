@@ -220,7 +220,13 @@ class UpdateTenantServiceTest {
             maxEventSizeBytes = 1024
         )
         val newMetadata = mapOf("plan" to "pro")
-        application.updateTenant("payload-test", name = "updated-payload", quota = newQuota, metadata = newMetadata, updatedBy = "test-user")
+        application.updateTenant(
+            "payload-test",
+            name = "updated-payload",
+            quota = newQuota,
+            metadata = newMetadata,
+            updatedBy = "test-user"
+        )
 
         val event = getEvents().last { it.type == TenantEventType.UPDATED }
         val payload = event.payload
@@ -353,7 +359,7 @@ class UpdateTenantServiceTest {
     @Test
     fun `can update tenant multiple times sequentially`() = runTest {
         application.createTenant("multi-update")
-        
+
         val update1 = application.updateTenant("multi-update", name = "multi-update-1")
         assertEquals("multi-update-1", update1.name)
 

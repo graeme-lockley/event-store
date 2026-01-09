@@ -2,7 +2,6 @@ package com.eventstore.infrastructure.bootstrap
 
 import com.eventstore.domain.*
 import com.eventstore.domain.events.*
-import com.eventstore.domain.Schema
 import com.eventstore.domain.ports.outbound.ApiKeyRepository
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.SchemaValidator

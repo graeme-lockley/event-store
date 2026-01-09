@@ -47,13 +47,17 @@ class UpdateNamespaceServiceTest {
         val namespaceAfterUpdate = application.namespaceProjectionService.getNamespaceByName("acme", "billing-v2")
         assertNotNull(namespaceAfterUpdate, "Namespace should exist in projection after update with new name")
         assertEquals("billing-v2", namespaceAfterUpdate.name)
-        assertEquals(namespaceBeforeUpdate.resourceId, namespaceAfterUpdate.resourceId, "ResourceId should remain unchanged")
+        assertEquals(
+            namespaceBeforeUpdate.resourceId,
+            namespaceAfterUpdate.resourceId,
+            "ResourceId should remain unchanged"
+        )
     }
 
     @Test
     fun `throws when namespace does not exist`() = runTest {
         application.createTenant("acme")
-        
+
         assertFailsWith<NamespaceNotFoundException> {
             application.updateNamespace("acme", "non-existent")
         }
@@ -108,8 +112,10 @@ class UpdateNamespaceServiceTest {
     fun `updates namespace metadata only`() = runTest {
         application.createTenant("acme")
         val originalMetadata = mapOf("plan" to "basic")
-        application.createNamespaceService.execute(
-            CreateNamespaceRequest("acme", "billing", metadata = originalMetadata)
+        application.createNamespace(
+            tenantName = "acme",
+            namespaceName = "billing",
+            metadata = originalMetadata
         )
         val originalNamespace = application.namespaceProjectionService.getNamespaceByName("acme", "billing")!!
 
@@ -157,8 +163,11 @@ class UpdateNamespaceServiceTest {
     fun `preserves existing values when fields are null`() = runTest {
         application.createTenant("acme")
         val originalMetadata = mapOf("plan" to "basic")
-        application.createNamespaceService.execute(
-            CreateNamespaceRequest("acme", "billing", description = "Original description", metadata = originalMetadata)
+        application.createNamespace(
+            tenantName = "acme",
+            namespaceName = "billing",
+            description = "Original description",
+            metadata = originalMetadata
         )
         val originalNamespace = application.namespaceProjectionService.getNamespaceByName("acme", "billing")!!
 
@@ -201,7 +210,14 @@ class UpdateNamespaceServiceTest {
         val tenant = application.createTenant("acme")
         val namespace = application.createNamespace("acme", "billing")
         val newMetadata = mapOf("plan" to "pro")
-        application.updateNamespace("acme", "billing", name = "updated-billing", description = "Updated", metadata = newMetadata, updatedBy = "test-user")
+        application.updateNamespace(
+            "acme",
+            "billing",
+            name = "updated-billing",
+            description = "Updated",
+            metadata = newMetadata,
+            updatedBy = "test-user"
+        )
 
         val event = getEvents().last { it.type == NamespaceEventType.UPDATED }
         val payload = event.payload
@@ -239,7 +255,7 @@ class UpdateNamespaceServiceTest {
     @Test
     fun `event sequence is correctly incremented`() = runTest {
         application.createTenant("acme")
-        
+
         // Create and update first namespace
         application.createNamespace("acme", "namespace-1")
         application.updateNamespace("acme", "namespace-1", name = "updated-1")
@@ -277,7 +293,13 @@ class UpdateNamespaceServiceTest {
     fun `event payload matches NamespaceUpdatedEvent structure`() = runTest {
         val tenant = application.createTenant("acme")
         val namespace = application.createNamespace("acme", "billing")
-        application.updateNamespace("acme", "billing", name = "updated-billing", description = "Updated", updatedBy = "user")
+        application.updateNamespace(
+            "acme",
+            "billing",
+            name = "updated-billing",
+            description = "Updated",
+            updatedBy = "user"
+        )
 
         val payload = getEvents().last { it.type == NamespaceEventType.UPDATED }.payload
 
@@ -311,7 +333,7 @@ class UpdateNamespaceServiceTest {
     fun `can update namespace multiple times sequentially`() = runTest {
         application.createTenant("acme")
         application.createNamespace("acme", "multi-update")
-        
+
         val update1 = application.updateNamespace("acme", "multi-update", name = "multi-update-1")
         assertEquals("multi-update-1", update1.name)
 

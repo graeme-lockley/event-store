@@ -1,52 +1,28 @@
 package com.eventstore.domain
 
 import com.eventstore.Config
-import com.eventstore.domain.ports.outbound.ApiKeyRepository
-import com.eventstore.domain.ports.outbound.ConsumerFactory
-import com.eventstore.domain.ports.outbound.ConsumerRepository
-import com.eventstore.domain.ports.outbound.EventRepository
-import com.eventstore.domain.ports.outbound.NamespaceRepository
-import com.eventstore.domain.ports.outbound.PermissionRepository
-import com.eventstore.domain.ports.outbound.SchemaValidator
-import com.eventstore.domain.ports.outbound.TenantRepository
-import com.eventstore.domain.ports.outbound.TopicRepository
-import com.eventstore.domain.ports.outbound.UserRepository
+import com.eventstore.domain.ports.outbound.*
+import com.eventstore.domain.services.SystemEventPublisher
+import com.eventstore.domain.services.apikey.*
 import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.RegisterConsumerService
-import com.eventstore.domain.services.namespace.CreateNamespaceRequest
-import com.eventstore.domain.services.namespace.CreateNamespaceService
-import com.eventstore.domain.services.namespace.DeleteNamespaceRequest
-import com.eventstore.domain.services.namespace.DeleteNamespaceService
-import com.eventstore.domain.services.namespace.GetNamespaceService
-import com.eventstore.domain.services.namespace.UpdateNamespaceRequest
-import com.eventstore.domain.services.namespace.UpdateNamespaceService
-import com.eventstore.domain.services.tenant.CreateTenantRequest
-import com.eventstore.domain.services.tenant.CreateTenantService
-import com.eventstore.domain.services.tenant.DeleteTenantRequest
-import com.eventstore.domain.services.tenant.DeleteTenantService
-import com.eventstore.domain.services.tenant.GetTenantService
-import com.eventstore.domain.services.tenant.UpdateTenantRequest
-import com.eventstore.domain.services.tenant.UpdateTenantService
+import com.eventstore.domain.services.namespace.*
+import com.eventstore.domain.services.tenant.*
 import com.eventstore.domain.services.topic.CreateTopicService
-import com.eventstore.domain.services.SystemEventPublisher
+import com.eventstore.domain.services.user.CreateUserRequest
+import com.eventstore.domain.services.user.CreateUserService
 import com.eventstore.domain.tenants.SystemTopics
-import com.eventstore.infrastructure.background.AsyncDispatcherManager
 import com.eventstore.infrastructure.background.SyncDispatcherManager
 import com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl
 import com.eventstore.infrastructure.external.JsonSchemaValidator
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
-import com.eventstore.infrastructure.persistence.FileSystemApiKeyRepository
 import com.eventstore.infrastructure.persistence.InMemoryApiKeyRepository
 import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
 import com.eventstore.infrastructure.persistence.InMemoryEventRepository
 import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
-import com.eventstore.infrastructure.projections.InMemoryNamespaceRepository
-import com.eventstore.infrastructure.projections.InMemoryPermissionRepository
-import com.eventstore.infrastructure.projections.InMemoryTenantRepository
-import com.eventstore.infrastructure.projections.InMemoryUserRepository
-import com.eventstore.infrastructure.projections.PermissionProjectionService
-import com.eventstore.infrastructure.projections.UserProjectionService
+import com.eventstore.infrastructure.projections.*
 import kotlinx.coroutines.runBlocking
+import java.time.Instant
 
 class Application(
     val bootstrap: Boolean = false,
@@ -73,32 +49,33 @@ class Application(
     )
 
     val tenantProjectionService = com.eventstore.infrastructure.projections.TenantProjectionService(tenantRepository)
-    val namespaceProjectionService = com.eventstore.infrastructure.projections.NamespaceProjectionService(namespaceRepository)
+    val namespaceProjectionService =
+        com.eventstore.infrastructure.projections.NamespaceProjectionService(namespaceRepository)
     val userProjectionService = UserProjectionService(userRepository)
     val permissionProjectionService = PermissionProjectionService(permissionRepository)
 
     val systemEventPublisher: SystemEventPublisher =
         SystemEventPublisher(eventRepository, topicRepository, schemaValidator, dispatcherManager)
 
-    val createTenantService: CreateTenantService =
+    private val createTenantService: CreateTenantService =
         CreateTenantService(tenantProjectionService, config, systemEventPublisher)
 
-    val deleteTenantService: DeleteTenantService =
+    private val deleteTenantService: DeleteTenantService =
         DeleteTenantService(tenantProjectionService, config, systemEventPublisher)
 
-    val updateTenantService: UpdateTenantService =
+    private val updateTenantService: UpdateTenantService =
         UpdateTenantService(tenantProjectionService, config, systemEventPublisher)
 
     val getTenantService: GetTenantService =
         GetTenantService(tenantProjectionService)
 
-    val createNamespaceService: CreateNamespaceService =
+    private val createNamespaceService: CreateNamespaceService =
         CreateNamespaceService(tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
 
-    val deleteNamespaceService: DeleteNamespaceService =
+    private val deleteNamespaceService: DeleteNamespaceService =
         DeleteNamespaceService(tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
 
-    val updateNamespaceService: UpdateNamespaceService =
+    private val updateNamespaceService: UpdateNamespaceService =
         UpdateNamespaceService(tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
 
     val getNamespaceService: GetNamespaceService =
@@ -108,13 +85,33 @@ class Application(
         CreateTopicService(topicRepository, schemaValidator, tenantProjectionService, namespaceProjectionService)
 
     val registerConsumerService: RegisterConsumerService =
-        RegisterConsumerService(consumerRepository,  topicRepository, consumerFactory, dispatcherManager)
+        RegisterConsumerService(consumerRepository, topicRepository, consumerFactory, dispatcherManager)
+
+    private val createApiKeyService: CreateApiKeyService =
+        CreateApiKeyService(apiKeyRepository, userProjectionService)
+
+    val getApiKeyService: GetApiKeyService =
+        GetApiKeyService(apiKeyRepository)
+
+    private val revokeApiKeyService: RevokeApiKeyService =
+        RevokeApiKeyService(apiKeyRepository)
+
+    val createUserService: CreateUserService =
+        CreateUserService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)
 
     init {
         runBlocking {
             if (bootstrap) {
                 val objectMapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
-                BootstrapServiceImpl(eventRepository, topicRepository, schemaValidator, objectMapper, apiKeyRepository, null, false).run()
+                BootstrapServiceImpl(
+                    eventRepository,
+                    topicRepository,
+                    schemaValidator,
+                    objectMapper,
+                    apiKeyRepository,
+                    null,
+                    false
+                ).run()
             }
 
             // Register system consumers for projection services
@@ -207,9 +204,20 @@ class Application(
 
     suspend fun createNamespace(
         tenantName: String,
-        namespaceName: String = "default"
+        namespaceName: String = "default",
+        description: String? = null,
+        metadata: Map<String, Any> = emptyMap(),
+        createdBy: String = "system"
     ) =
-        createNamespaceService.execute(CreateNamespaceRequest(tenantName, namespaceName))
+        createNamespaceService.execute(
+            CreateNamespaceRequest(
+                tenantName = tenantName,
+                name = namespaceName,
+                description = description,
+                metadata = metadata,
+                createdBy = createdBy
+            )
+        )
 
     suspend fun deleteNamespace(
         tenantName: String,
@@ -258,4 +266,51 @@ class Application(
         namespaceName: String = "default"
     ): Topic =
         createTopicService.execute(name, schemas, tenantName, namespaceName)
+
+    suspend fun createUser(
+        email: String,
+        name: String,
+        password: String,
+        status: UserStatus = UserStatus.ACTIVE,
+        createdBy: String = "system",
+        metadata: Map<String, Any> = emptyMap(),
+        primaryTenantId: String? = null
+    ): User =
+        createUserService.execute(
+            CreateUserRequest(
+                email = email,
+                name = name,
+                password = password,
+                status = status,
+                createdBy = createdBy,
+                metadata = metadata,
+                primaryTenantId = primaryTenantId
+            )
+        )
+
+    suspend fun createApiKey(
+        userId: String,
+        name: String,
+        description: String? = null,
+        expiresAt: Instant? = null,
+        scopes: Set<String>? = null
+    ): Pair<ApiKey, String> =
+        createApiKeyService.execute(
+            CreateApiKeyRequest(
+                userId = userId,
+                name = name,
+                description = description,
+                expiresAt = expiresAt,
+                scopes = scopes
+            )
+        )
+
+    suspend fun getApiKey(keyId: String): ApiKey? =
+        getApiKeyService.getById(keyId)
+
+    suspend fun getApiKeysByUserId(userId: String): List<ApiKey> =
+        getApiKeyService.getByUserId(userId)
+
+    suspend fun revokeApiKey(keyId: String) =
+        revokeApiKeyService.execute(RevokeApiKeyRequest(keyId = keyId))
 }

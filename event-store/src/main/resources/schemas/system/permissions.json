@@ -9,11 +9,23 @@
       },
       "principalType": {
         "type": "string",
-        "enum": ["USER", "API_KEY", "ROLE", "GROUP"]
+        "enum": [
+          "USER",
+          "API_KEY",
+          "ROLE",
+          "GROUP"
+        ]
       },
       "resourceType": {
         "type": "string",
-        "enum": ["TENANT", "NAMESPACE", "TOPIC", "EVENT", "CONSUMER", "USER"]
+        "enum": [
+          "TENANT",
+          "NAMESPACE",
+          "TOPIC",
+          "EVENT",
+          "CONSUMER",
+          "USER"
+        ]
       },
       "resourceId": {
         "type": "string"
@@ -45,7 +57,15 @@
         "format": "date-time"
       }
     },
-    "required": ["principalId", "principalType", "resourceType", "tenantResourceId", "permissions", "grantedBy", "grantedAt"]
+    "required": [
+      "principalId",
+      "principalType",
+      "resourceType",
+      "tenantResourceId",
+      "permissions",
+      "grantedBy",
+      "grantedAt"
+    ]
   },
   {
     "eventType": "permission.revoked",
@@ -57,11 +77,23 @@
       },
       "principalType": {
         "type": "string",
-        "enum": ["USER", "API_KEY", "ROLE", "GROUP"]
+        "enum": [
+          "USER",
+          "API_KEY",
+          "ROLE",
+          "GROUP"
+        ]
       },
       "resourceType": {
         "type": "string",
-        "enum": ["TENANT", "NAMESPACE", "TOPIC", "EVENT", "CONSUMER", "USER"]
+        "enum": [
+          "TENANT",
+          "NAMESPACE",
+          "TOPIC",
+          "EVENT",
+          "CONSUMER",
+          "USER"
+        ]
       },
       "resourceId": {
         "type": "string"
@@ -92,7 +124,15 @@
         "type": "string"
       }
     },
-    "required": ["principalId", "principalType", "resourceType", "tenantResourceId", "permissions", "revokedBy", "revokedAt"]
+    "required": [
+      "principalId",
+      "principalType",
+      "resourceType",
+      "tenantResourceId",
+      "permissions",
+      "revokedBy",
+      "revokedAt"
+    ]
   }
 ]
 

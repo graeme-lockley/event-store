@@ -89,7 +89,8 @@ class GetNamespaceServiceTest {
 
     @Test
     fun `gets bootstrap management namespace`() = runTest {
-        val managementNamespace = application.getNamespace(SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID)
+        val managementNamespace =
+            application.getNamespace(SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID)
 
         assertNotNull(managementNamespace, "Should be able to retrieve bootstrap \$management namespace")
         assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, managementNamespace.name)
@@ -144,8 +145,10 @@ class GetNamespaceServiceTest {
     @Test
     fun `gets namespace with description`() = runTest {
         application.createTenant("acme")
-        val createdNamespace = application.createNamespaceService.execute(
-            CreateNamespaceRequest("acme", "billing", description = "Billing namespace")
+        val createdNamespace = application.createNamespace(
+            tenantName = "acme",
+            namespaceName = "billing",
+            description = "Billing namespace"
         )
         val retrievedNamespace = application.getNamespace("acme", "billing")
 
@@ -157,8 +160,10 @@ class GetNamespaceServiceTest {
     fun `gets namespace with metadata`() = runTest {
         application.createTenant("acme")
         val metadata = mapOf("plan" to "pro", "region" to "us-east")
-        val createdNamespace = application.createNamespaceService.execute(
-            CreateNamespaceRequest("acme", "billing", metadata = metadata)
+        val createdNamespace = application.createNamespace(
+            tenantName = "acme",
+            namespaceName = "billing",
+            metadata = metadata
         )
         val retrievedNamespace = application.getNamespace("acme", "billing")
 
@@ -173,7 +178,13 @@ class GetNamespaceServiceTest {
         application.createTenant("acme")
         application.createNamespace("acme", "billing")
         val newMetadata = mapOf("plan" to "pro", "tier" to "premium")
-        application.updateNamespace("acme", "billing", name = "updated-billing", description = "Updated billing", metadata = newMetadata)
+        application.updateNamespace(
+            "acme",
+            "billing",
+            name = "updated-billing",
+            description = "Updated billing",
+            metadata = newMetadata
+        )
 
         val retrievedNamespace = application.getNamespace("acme", "updated-billing")
 
@@ -221,7 +232,11 @@ class GetNamespaceServiceTest {
         val retrievedNamespace = application.getNamespace("acme", "renamed-billing")
 
         assertNotNull(retrievedNamespace)
-        assertEquals(originalResourceId, retrievedNamespace.resourceId, "ResourceId should remain unchanged after rename")
+        assertEquals(
+            originalResourceId,
+            retrievedNamespace.resourceId,
+            "ResourceId should remain unchanged after rename"
+        )
     }
 
     @Test
@@ -312,8 +327,10 @@ class GetNamespaceServiceTest {
     @Test
     fun `gets namespace with empty metadata`() = runTest {
         application.createTenant("acme")
-        application.createNamespaceService.execute(
-            CreateNamespaceRequest("acme", "empty-metadata-ns", metadata = emptyMap())
+        application.createNamespace(
+            tenantName = "acme",
+            namespaceName = "empty-metadata-ns",
+            metadata = emptyMap()
         )
         val retrievedNamespace = application.getNamespace("acme", "empty-metadata-ns")
 
@@ -325,8 +342,11 @@ class GetNamespaceServiceTest {
     fun `list namespaces returns all namespace fields correctly`() = runTest {
         application.createTenant("acme")
         val metadata = mapOf("environment" to "test")
-        val createdNamespace = application.createNamespaceService.execute(
-            CreateNamespaceRequest("acme", "complete-ns", description = "Complete namespace", metadata = metadata)
+        val createdNamespace = application.createNamespace(
+            tenantName = "acme",
+            namespaceName = "complete-ns",
+            description = "Complete namespace",
+            metadata = metadata
         )
 
         val namespaces = application.listNamespaces("acme")

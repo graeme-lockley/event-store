@@ -19,7 +19,11 @@
       },
       "status": {
         "type": "string",
-        "enum": ["ACTIVE", "SUSPENDED", "DELETED"]
+        "enum": [
+          "ACTIVE",
+          "SUSPENDED",
+          "DELETED"
+        ]
       },
       "createdBy": {
         "type": "string"
@@ -32,7 +36,16 @@
         "type": "object"
       }
     },
-    "required": ["userId", "email", "name", "passwordHash", "status", "createdBy", "createdAt", "metadata"]
+    "required": [
+      "userId",
+      "email",
+      "name",
+      "passwordHash",
+      "status",
+      "createdBy",
+      "createdAt",
+      "metadata"
+    ]
   },
   {
     "eventType": "user.updated",
@@ -60,7 +73,11 @@
         "type": "object"
       }
     },
-    "required": ["userId", "updatedBy", "updatedAt"]
+    "required": [
+      "userId",
+      "updatedBy",
+      "updatedAt"
+    ]
   },
   {
     "eventType": "user.status.changed",
@@ -72,7 +89,11 @@
       },
       "status": {
         "type": "string",
-        "enum": ["ACTIVE", "SUSPENDED", "DELETED"]
+        "enum": [
+          "ACTIVE",
+          "SUSPENDED",
+          "DELETED"
+        ]
       },
       "changedBy": {
         "type": "string"
@@ -82,7 +103,12 @@
         "format": "date-time"
       }
     },
-    "required": ["userId", "status", "changedBy", "changedAt"]
+    "required": [
+      "userId",
+      "status",
+      "changedBy",
+      "changedAt"
+    ]
   },
   {
     "eventType": "user.password.changed",
@@ -103,7 +129,12 @@
         "format": "date-time"
       }
     },
-    "required": ["userId", "passwordHash", "changedBy", "changedAt"]
+    "required": [
+      "userId",
+      "passwordHash",
+      "changedBy",
+      "changedAt"
+    ]
   },
   {
     "eventType": "user.tenant.assigned",
@@ -130,7 +161,13 @@
         "type": "boolean"
       }
     },
-    "required": ["userId", "tenantId", "assignedBy", "assignedAt", "isPrimary"]
+    "required": [
+      "userId",
+      "tenantId",
+      "assignedBy",
+      "assignedAt",
+      "isPrimary"
+    ]
   },
   {
     "eventType": "user.tenant.removed",
@@ -154,7 +191,12 @@
         "type": "string"
       }
     },
-    "required": ["userId", "tenantId", "removedBy", "removedAt"]
+    "required": [
+      "userId",
+      "tenantId",
+      "removedBy",
+      "removedAt"
+    ]
   }
 ]
 

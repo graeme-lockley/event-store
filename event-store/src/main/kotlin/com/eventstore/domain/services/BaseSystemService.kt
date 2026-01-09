@@ -1,7 +1,6 @@
 package com.eventstore.domain.services
 
 import com.eventstore.Config
-import com.eventstore.domain.services.SystemEventPublisher
 
 /**
  * Base class for system services that require multi-tenant configuration

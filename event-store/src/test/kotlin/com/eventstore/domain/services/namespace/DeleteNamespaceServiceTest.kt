@@ -51,7 +51,7 @@ class DeleteNamespaceServiceTest {
     @Test
     fun `throws when namespace does not exist`() = runTest {
         application.createTenant("acme")
-        
+
         assertFailsWith<NamespaceNotFoundException> {
             application.deleteNamespace("acme", "non-existent")
         }

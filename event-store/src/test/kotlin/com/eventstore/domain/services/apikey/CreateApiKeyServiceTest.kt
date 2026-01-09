@@ -1,138 +1,126 @@
 package com.eventstore.domain.services.apikey
 
+import com.eventstore.domain.Application
 import com.eventstore.domain.exceptions.UserNotFoundException
-import com.eventstore.infrastructure.persistence.InMemoryApiKeyRepository
-import com.eventstore.infrastructure.projections.InMemoryUserRepository
-import com.eventstore.infrastructure.projections.UserProjectionService
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.*
+import com.eventstore.domain.services.createApplication
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import java.time.Instant
-import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CreateApiKeyServiceTest {
-
-    private lateinit var apiKeyRepository: InMemoryApiKeyRepository
-    private lateinit var userProjectionService: UserProjectionService
-    private lateinit var createApiKeyService: CreateApiKeyService
+    private lateinit var application: Application
 
     @BeforeEach
-    fun setUp() {
-        apiKeyRepository = InMemoryApiKeyRepository()
-        val userRepository = InMemoryUserRepository()
-        userProjectionService = UserProjectionService(userRepository)
-        createApiKeyService = CreateApiKeyService(apiKeyRepository, userProjectionService)
+    fun setup() = runTest {
+        application = createApplication()
     }
 
     @Test
-    fun `creates API key successfully`() = runBlocking {
-        // Create a user first
-        val userId = UUID.randomUUID().toString()
-        val user = com.eventstore.domain.User(
-            id = userId,
+    fun `creates API key successfully`() = runTest {
+        val user = application.createUser(
             email = "test@example.com",
             name = "Test User",
-            passwordHash = "hash",
-            status = com.eventstore.domain.UserStatus.ACTIVE,
-            createdAt = Instant.now()
+            password = "password123"
         )
-        val userRepo = InMemoryUserRepository()
-        userRepo.save(user)
-        val testUserProjection = UserProjectionService(userRepo)
-        val testService = CreateApiKeyService(apiKeyRepository, testUserProjection)
 
-        val request = CreateApiKeyRequest(
-            userId = userId,
+        val (apiKey, plainKey) = application.createApiKey(
+            userId = user.id,
             name = "Test API Key",
             description = "Test description"
         )
 
-        val (apiKey, plainKey) = testService.execute(request)
-
         assertNotNull(apiKey)
         assertNotNull(plainKey)
         assertTrue(plainKey.startsWith("es_"))
-        assertEquals(userId, apiKey.userId)
+        assertEquals(user.id, apiKey.userId)
         assertEquals("Test API Key", apiKey.name)
         assertEquals("Test description", apiKey.description)
 
         // Verify it's saved
-        val retrieved = apiKeyRepository.findById(apiKey.id)
+        val retrieved = application.apiKeyRepository.findById(apiKey.id)
         assertNotNull(retrieved)
     }
 
     @Test
-    fun `throws exception when user does not exist`() = runBlocking {
-        val request = CreateApiKeyRequest(
-            userId = UUID.randomUUID().toString(),
-            name = "Test API Key"
-        )
-
-        try {
-            createApiKeyService.execute(request)
-            fail("Should have thrown UserNotFoundException")
-        } catch (e: UserNotFoundException) {
-            // Expected
+    fun `throws exception when user does not exist`() = runTest {
+        assertFailsWith<UserNotFoundException> {
+            application.createApiKey(
+                userId = "non-existent-user-id",
+                name = "Test API Key"
+            )
         }
     }
 
     @Test
-    fun `creates API key with expiration`() = runBlocking {
-        val userId = UUID.randomUUID().toString()
-        val user = com.eventstore.domain.User(
-            id = userId,
+    fun `creates API key with expiration`() = runTest {
+        val user = application.createUser(
             email = "test@example.com",
             name = "Test User",
-            passwordHash = "hash",
-            status = com.eventstore.domain.UserStatus.ACTIVE,
-            createdAt = Instant.now()
+            password = "password123"
         )
-        val userRepo = InMemoryUserRepository()
-        userRepo.save(user)
-        val testUserProjection = UserProjectionService(userRepo)
-        val testService = CreateApiKeyService(apiKeyRepository, testUserProjection)
 
         val expiresAt = Instant.now().plusSeconds(3600)
-        val request = CreateApiKeyRequest(
-            userId = userId,
+        val (apiKey, _) = application.createApiKey(
+            userId = user.id,
             name = "Test API Key",
             expiresAt = expiresAt
         )
-
-        val (apiKey, _) = testService.execute(request)
 
         assertNotNull(apiKey.expiresAt)
         assertEquals(expiresAt, apiKey.expiresAt)
     }
 
     @Test
-    fun `creates API key with scopes`() = runBlocking {
-        val userId = UUID.randomUUID().toString()
-        val user = com.eventstore.domain.User(
-            id = userId,
+    fun `creates API key with scopes`() = runTest {
+        val user = application.createUser(
             email = "test@example.com",
             name = "Test User",
-            passwordHash = "hash",
-            status = com.eventstore.domain.UserStatus.ACTIVE,
-            createdAt = Instant.now()
+            password = "password123"
         )
-        val userRepo = InMemoryUserRepository()
-        userRepo.save(user)
-        val testUserProjection = UserProjectionService(userRepo)
-        val testService = CreateApiKeyService(apiKeyRepository, testUserProjection)
 
         val scopes = setOf("read", "write")
-        val request = CreateApiKeyRequest(
-            userId = userId,
+        val (apiKey, _) = application.createApiKey(
+            userId = user.id,
             name = "Test API Key",
             scopes = scopes
         )
 
-        val (apiKey, _) = testService.execute(request)
-
         assertNotNull(apiKey.scopes)
         assertEquals(scopes, apiKey.scopes)
     }
-}
 
+    @Test
+    fun `creates multiple API keys for same user with unique IDs and plain keys`() = runTest {
+        val user = application.createUser(
+            email = "multi@example.com",
+            name = "Multi Key User",
+            password = "password123"
+        )
+
+        val (key1, plainKey1) = application.createApiKey(user.id, "Key 1")
+        val (key2, plainKey2) = application.createApiKey(user.id, "Key 2")
+        val (key3, plainKey3) = application.createApiKey(user.id, "Key 3")
+
+        // Verify all keys are retrievable
+        val userKeys = application.getApiKeysByUserId(user.id)
+        assertEquals(3, userKeys.size)
+        assertTrue(userKeys.any { it.id == key1.id })
+        assertTrue(userKeys.any { it.id == key2.id })
+        assertTrue(userKeys.any { it.id == key3.id })
+
+        // Verify each API key has a unique ID
+        val ids = setOf(key1.id, key2.id, key3.id)
+        assertEquals(3, ids.size, "Each API key should have a unique ID")
+
+        // Verify each API key has a unique plain key
+        val plainKeys = setOf(plainKey1, plainKey2, plainKey3)
+        assertEquals(3, plainKeys.size, "Each API key should have a unique plain key")
+    }
+}

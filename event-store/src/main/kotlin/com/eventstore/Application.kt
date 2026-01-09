@@ -1,6 +1,7 @@
 package com.eventstore
 
 import com.eventstore.domain.ports.outbound.*
+import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.services.apikey.CreateApiKeyService
 import com.eventstore.domain.services.apikey.GetApiKeyService
 import com.eventstore.domain.services.apikey.RevokeApiKeyService
@@ -18,7 +19,6 @@ import com.eventstore.domain.services.namespace.*
 import com.eventstore.domain.services.permission.GetPermissionsService
 import com.eventstore.domain.services.permission.GrantPermissionService
 import com.eventstore.domain.services.permission.RevokePermissionService
-import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.services.tenant.CreateTenantService
 import com.eventstore.domain.services.tenant.DeleteTenantService
 import com.eventstore.domain.services.tenant.GetTenantService
@@ -219,7 +219,8 @@ fun Application.configureApplication(config: Config) {
     val getHealthStatusService = GetHealthStatusService(consumerRepository) {
         dispatcherManager.getRunningDispatchers()
     }
-    val systemEventPublisher = SystemEventPublisher(eventRepository, topicRepository, schemaValidator, dispatcherManager)
+    val systemEventPublisher =
+        SystemEventPublisher(eventRepository, topicRepository, schemaValidator, dispatcherManager)
     val createTenantService = CreateTenantService(tenantProjectionService, config, systemEventPublisher)
     val getTenantService = GetTenantService(tenantProjectionService)
     val updateTenantService = UpdateTenantService(tenantProjectionService, config, systemEventPublisher)

@@ -44,7 +44,7 @@ class CreateTenantService(
         )
 
         val payload = tenantCreated.toPayload()
-        
+
         eventPublisher.publishEvent(
             topic = SystemTopics.TENANTS_TOPIC,
             eventType = TenantEventType.CREATED,

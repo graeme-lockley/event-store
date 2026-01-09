@@ -10,7 +10,10 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.io.path.ExperimentalPathApi
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class CreateNamespaceServiceTest {
     private lateinit var application: Application
@@ -48,7 +51,7 @@ class CreateNamespaceServiceTest {
     fun `fails when namespace exists`() = runTest {
         application.createTenant("acme")
         application.createNamespace("acme", "billing")
-        
+
         assertFailsWith<NamespaceAlreadyExistsException> {
             application.createNamespace("acme", "billing")
         }
@@ -57,8 +60,10 @@ class CreateNamespaceServiceTest {
     @Test
     fun `creates namespace with description`() = runTest {
         application.createTenant("acme")
-        val namespace = application.createNamespaceService.execute(
-            CreateNamespaceRequest("acme", "billing", description = "Billing namespace")
+        val namespace = application.createNamespace(
+            tenantName = "acme",
+            namespaceName = "billing",
+            description = "Billing namespace"
         )
 
         assertEquals("billing", namespace.name)
@@ -69,8 +74,10 @@ class CreateNamespaceServiceTest {
     fun `creates namespace with metadata`() = runTest {
         application.createTenant("acme")
         val metadata = mapOf("plan" to "pro", "region" to "us-east")
-        val namespace = application.createNamespaceService.execute(
-            CreateNamespaceRequest("acme", "billing", metadata = metadata)
+        val namespace = application.createNamespace(
+            tenantName = "acme",
+            namespaceName = "billing",
+            metadata = metadata
         )
 
         assertEquals(metadata, namespace.metadata)
@@ -99,7 +106,7 @@ class CreateNamespaceServiceTest {
     @Test
     fun `event sequence is correctly incremented`() = runTest {
         application.createTenant("acme")
-        
+
         // Create first namespace
         application.createNamespace("acme", "namespace-1")
         val sequence1 = getEvents().last().id.sequence
@@ -129,7 +136,7 @@ class CreateNamespaceServiceTest {
     fun `can create multiple namespaces in same tenant`() = runTest {
         application.createTenant("acme")
         val initialEventCount = numberOfEvents()
-        
+
         val ns1 = application.createNamespace("acme", "namespace-1")
         val ns2 = application.createNamespace("acme", "namespace-2")
         val ns3 = application.createNamespace("acme", "namespace-3")

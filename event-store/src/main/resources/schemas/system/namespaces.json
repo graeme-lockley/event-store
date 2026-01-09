@@ -32,7 +32,15 @@
         "type": "object"
       }
     },
-    "required": ["resourceId", "tenantResourceId", "tenantName", "name", "createdBy", "createdAt", "metadata"]
+    "required": [
+      "resourceId",
+      "tenantResourceId",
+      "tenantName",
+      "name",
+      "createdBy",
+      "createdAt",
+      "metadata"
+    ]
   },
   {
     "eventType": "namespace.updated",
@@ -64,7 +72,12 @@
         "type": "object"
       }
     },
-    "required": ["resourceId", "tenantResourceId", "updatedBy", "updatedAt"]
+    "required": [
+      "resourceId",
+      "tenantResourceId",
+      "updatedBy",
+      "updatedAt"
+    ]
   },
   {
     "eventType": "namespace.deleted",
@@ -90,7 +103,12 @@
         "type": "string"
       }
     },
-    "required": ["resourceId", "tenantResourceId", "deletedBy", "deletedAt"]
+    "required": [
+      "resourceId",
+      "tenantResourceId",
+      "deletedBy",
+      "deletedAt"
+    ]
   }
 ]
 
