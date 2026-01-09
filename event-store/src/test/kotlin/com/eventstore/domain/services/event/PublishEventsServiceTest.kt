@@ -1,7 +1,6 @@
 package com.eventstore.domain.services.event
 
 import com.eventstore.domain.Application
-import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
 import com.eventstore.domain.Schema
 import com.eventstore.domain.exceptions.SchemaNotFoundException
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -182,10 +180,22 @@ class PublishEventsServiceTest {
         )
 
         val defaultRequests = listOf(
-            EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Default User"), tenantId = "default", namespaceId = "default")
+            EventRequest(
+                topicName,
+                "user.created",
+                mapOf("id" to "1", "name" to "Default User"),
+                tenantId = "default",
+                namespaceId = "default"
+            )
         )
         val acmeRequests = listOf(
-            EventRequest(topicName, "user.created", mapOf("id" to "2", "name" to "Acme User"), tenantId = "acme", namespaceId = "production")
+            EventRequest(
+                topicName,
+                "user.created",
+                mapOf("id" to "2", "name" to "Acme User"),
+                tenantId = "acme",
+                namespaceId = "production"
+            )
         )
 
         val defaultResult = application.publishEvents(defaultRequests)

@@ -28,7 +28,7 @@ class GetTopicsServiceTest {
     fun `should get all topics in namespace`() = runTest {
         val topic1 = "user-events"
         val topic2 = "order-events"
-        
+
         application.createTopic(topic1, listOf(Schema(eventType = "user.created")))
         application.createTopic(topic2, listOf(Schema(eventType = "order.created")))
 

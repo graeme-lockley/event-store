@@ -40,7 +40,7 @@ class UpdateTopicSchemasServiceTest {
         assertEquals(newSchemas.size, result.schemas.size)
         assertTrue(result.schemas.any { it.eventType == "user.created" })
         assertTrue(result.schemas.any { it.eventType == "user.deleted" })
-        
+
         val retrieved = application.getTopic(topicName)
         assertEquals(newSchemas.size, retrieved.schemas.size)
     }
@@ -62,7 +62,7 @@ class UpdateTopicSchemasServiceTest {
         val updatedSchema = result.schemas.find { it.eventType == "user.created" }
         assertNotNull(updatedSchema)
         assertTrue(updatedSchema.properties.containsKey("email"))
-        
+
         val retrieved = application.getTopic(topicName)
         assertEquals(newSchemas.size, retrieved.schemas.size)
     }

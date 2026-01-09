@@ -2,8 +2,8 @@ package com.eventstore.domain.services.health
 
 import com.eventstore.domain.Application
 import com.eventstore.domain.Schema
-import com.eventstore.domain.services.createApplication
 import com.eventstore.domain.services.consumer.HttpConsumerRegistrationRequest
+import com.eventstore.domain.services.createApplication
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

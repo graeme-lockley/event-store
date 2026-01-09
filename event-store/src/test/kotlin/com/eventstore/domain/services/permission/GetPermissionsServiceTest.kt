@@ -25,7 +25,7 @@ class GetPermissionsServiceTest {
         application = createApplication()
         tenantName = "test-tenant"
         userId = UUID.randomUUID().toString()
-        
+
         // Create tenant
         application.createTenant(tenantName)
     }
@@ -63,7 +63,7 @@ class GetPermissionsServiceTest {
     @Test
     fun `gets permissions for namespace`() = runTest {
         val namespaceName = "test-namespace"
-        
+
         // Create namespace
         application.createNamespace(tenantName, namespaceName)
 
@@ -98,7 +98,7 @@ class GetPermissionsServiceTest {
     fun `gets permissions for topic`() = runTest {
         val namespaceName = "test-namespace"
         val topicName = "test-topic"
-        
+
         // Create namespace and topic
         application.createNamespace(tenantName, namespaceName)
         application.createTopic(
@@ -152,7 +152,7 @@ class GetPermissionsServiceTest {
     @Test
     fun `gets multiple permissions for same principal`() = runTest {
         val namespaceName = "test-namespace"
-        
+
         // Create namespace
         application.createNamespace(tenantName, namespaceName)
 

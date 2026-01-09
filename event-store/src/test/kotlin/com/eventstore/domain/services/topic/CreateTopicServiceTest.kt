@@ -10,8 +10,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CreateTopicServiceTest {
@@ -47,7 +45,7 @@ class CreateTopicServiceTest {
     @Test
     fun `should throw exception when topic already exists`() = runTest {
         application.createTopic(topicName, listOf(Schema(eventType = "user.created")))
-        
+
         assertThrows<TopicAlreadyExistsException> {
             application.createTopic(topicName, listOf(Schema(eventType = "user.created")))
         }
@@ -102,7 +100,7 @@ class CreateTopicServiceTest {
         assertEquals(name, topic.name)
         assertEquals(tenantName, topic.tenantName)
         assertEquals(namespaceName, topic.namespaceName)
-        
+
         val retrieved = application.getTopic(name, tenantName, namespaceName)
         assertEquals(name, retrieved.name)
         assertEquals(tenantName, retrieved.tenantName)
@@ -119,7 +117,7 @@ class CreateTopicServiceTest {
     @Test
     fun `should throw exception when namespace does not exist`() = runTest {
         application.createTenant("acme")
-        
+
         assertThrows<com.eventstore.domain.exceptions.NamespaceNotFoundException> {
             application.createTopic("test-topic", emptyList(), "acme", "nonexistent-namespace")
         }

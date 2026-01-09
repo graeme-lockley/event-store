@@ -5,8 +5,8 @@ import com.eventstore.domain.events.PermissionGrantedEvent
 import com.eventstore.domain.events.PermissionRevokedEvent
 import com.eventstore.domain.ports.outbound.*
 import com.eventstore.domain.services.SystemEventPublisher
-import com.eventstore.domain.services.auth.ResourceResolverImpl
 import com.eventstore.domain.services.apikey.*
+import com.eventstore.domain.services.auth.ResourceResolverImpl
 import com.eventstore.domain.services.consumer.ConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.RegisterConsumerService
@@ -17,29 +17,12 @@ import com.eventstore.domain.services.event.PublishEventsService
 import com.eventstore.domain.services.health.GetHealthStatusService
 import com.eventstore.domain.services.health.HealthStatus
 import com.eventstore.domain.services.namespace.*
-import com.eventstore.domain.services.permission.GetPermissionsRequest
-import com.eventstore.domain.services.permission.GetPermissionsService
-import com.eventstore.domain.services.permission.GrantPermissionRequest
-import com.eventstore.domain.services.permission.GrantPermissionService
-import com.eventstore.domain.services.permission.RevokePermissionRequest
-import com.eventstore.domain.services.permission.RevokePermissionService
+import com.eventstore.domain.services.permission.*
 import com.eventstore.domain.services.tenant.*
 import com.eventstore.domain.services.topic.CreateTopicService
 import com.eventstore.domain.services.topic.GetTopicsService
 import com.eventstore.domain.services.topic.UpdateTopicSchemasService
-import com.eventstore.domain.services.user.AssignUserRequest
-import com.eventstore.domain.services.user.AssignUserToTenantService
-import com.eventstore.domain.services.user.ChangePasswordRequest
-import com.eventstore.domain.services.user.ChangePasswordService
-import com.eventstore.domain.services.user.CreateUserRequest
-import com.eventstore.domain.services.user.CreateUserService
-import com.eventstore.domain.services.user.DeleteUserRequest
-import com.eventstore.domain.services.user.DeleteUserService
-import com.eventstore.domain.services.user.GetUserService
-import com.eventstore.domain.services.user.RemoveUserTenantRequest
-import com.eventstore.domain.services.user.RemoveUserFromTenantService
-import com.eventstore.domain.services.user.UpdateUserRequest
-import com.eventstore.domain.services.user.UpdateUserService
+import com.eventstore.domain.services.user.*
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.background.SyncDispatcherManager
 import com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl
@@ -170,7 +153,13 @@ class Application(
         ChangePasswordService(userProjectionService, config, systemEventPublisher)
 
     private val grantPermissionService: GrantPermissionService =
-        GrantPermissionService(resourceResolver, tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
+        GrantPermissionService(
+            resourceResolver,
+            tenantProjectionService,
+            namespaceProjectionService,
+            config,
+            systemEventPublisher
+        )
 
     private val revokePermissionService: RevokePermissionService =
         RevokePermissionService(resourceResolver, config, systemEventPublisher)
@@ -385,8 +374,8 @@ class Application(
                 createdBy = createdBy,
                 metadata = metadata,
                 primaryTenantId = primaryTenantId
+            )
         )
-    )
 
     suspend fun getUserById(userId: String): User? =
         getUserService.getById(userId)

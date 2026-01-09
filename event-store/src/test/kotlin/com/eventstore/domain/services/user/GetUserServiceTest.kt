@@ -2,13 +2,11 @@ package com.eventstore.domain.services.user
 
 import com.eventstore.domain.Application
 import com.eventstore.domain.UserStatus
-import com.eventstore.domain.exceptions.UserNotFoundException
 import com.eventstore.domain.services.createApplication
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull

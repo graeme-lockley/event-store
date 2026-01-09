@@ -27,7 +27,7 @@ class RevokePermissionServiceTest {
         application = createApplication()
         tenantName = "test-tenant"
         userId = UUID.randomUUID().toString()
-        
+
         // Create tenant
         application.createTenant(tenantName)
     }
@@ -99,7 +99,7 @@ class RevokePermissionServiceTest {
     @Test
     fun `revokes permission for namespace`() = runTest {
         val namespaceName = "test-namespace"
-        
+
         // Create namespace
         application.createNamespace(tenantName, namespaceName)
 
@@ -123,7 +123,7 @@ class RevokePermissionServiceTest {
     fun `revokes permission for topic`() = runTest {
         val namespaceName = "test-namespace"
         val topicName = "test-topic"
-        
+
         // Create namespace and topic
         application.createNamespace(tenantName, namespaceName)
         application.createTopic(

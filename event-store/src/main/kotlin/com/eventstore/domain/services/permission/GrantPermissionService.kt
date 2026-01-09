@@ -1,7 +1,9 @@
 package com.eventstore.domain.services.permission
 
 import com.eventstore.Config
-import com.eventstore.domain.*
+import com.eventstore.domain.Permission
+import com.eventstore.domain.PrincipalType
+import com.eventstore.domain.ResourceType
 import com.eventstore.domain.events.PermissionEventType
 import com.eventstore.domain.events.PermissionGrantedEvent
 import com.eventstore.domain.ports.outbound.ResourceResolver

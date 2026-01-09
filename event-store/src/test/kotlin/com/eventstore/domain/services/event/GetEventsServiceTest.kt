@@ -111,7 +111,13 @@ class GetEventsServiceTest {
         // Publish events to acme namespace
         application.publishEvents(
             listOf(
-                EventRequest(topicName, "user.created", mapOf("id" to "10", "name" to "Acme User"), tenantId = "acme", namespaceId = "production")
+                EventRequest(
+                    topicName,
+                    "user.created",
+                    mapOf("id" to "10", "name" to "Acme User"),
+                    tenantId = "acme",
+                    namespaceId = "production"
+                )
             )
         )
 
