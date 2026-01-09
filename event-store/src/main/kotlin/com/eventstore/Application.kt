@@ -225,7 +225,8 @@ fun Application.configureApplication(config: Config) {
         topicRepository,
         tenantProjectionService,
         namespaceProjectionService,
-        config
+        config,
+        dispatcherManager
     )
     val getNamespaceService = GetNamespaceService(namespaceProjectionService)
     val updateNamespaceService = UpdateNamespaceService(
@@ -233,14 +234,16 @@ fun Application.configureApplication(config: Config) {
         topicRepository,
         tenantProjectionService,
         namespaceProjectionService,
-        config
+        config,
+        dispatcherManager
     )
     val deleteNamespaceService = DeleteNamespaceService(
         eventRepository,
         topicRepository,
         tenantProjectionService,
         namespaceProjectionService,
-        config
+        config,
+        dispatcherManager
     )
     val createUserService =
         CreateUserService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)

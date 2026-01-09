@@ -7,6 +7,7 @@ import com.eventstore.domain.Namespace
 import com.eventstore.domain.events.NamespaceEventType
 import com.eventstore.domain.events.NamespaceUpdatedEvent
 import com.eventstore.domain.exceptions.NamespaceNotFoundException
+import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.tenants.SystemTopics
@@ -28,7 +29,8 @@ class UpdateNamespaceService(
     private val topicRepository: TopicRepository,
     private val tenantProjectionService: TenantProjectionService,
     private val namespaceProjectionService: NamespaceProjectionService,
-    private val config: Config
+    private val config: Config,
+    private val eventDispatcher: EventDispatcher
 ) {
     suspend fun execute(request: UpdateNamespaceRequest): Namespace {
         if (!config.multiTenantEnabled) {
@@ -68,8 +70,7 @@ class UpdateNamespaceService(
         )
 
         eventRepository.storeEvents(listOf(event))
-        // TODO: the following line is an error
-        namespaceProjectionService.handleEvents(listOf(event))
+        eventDispatcher.notifyEventsPublished(setOf(event.id.qualifiedTopic))
 
         return existing.copy(
             name = request.name ?: existing.name,

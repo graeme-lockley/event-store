@@ -15,6 +15,11 @@ import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationReque
 import com.eventstore.domain.services.consumer.RegisterConsumerService
 import com.eventstore.domain.services.namespace.CreateNamespaceRequest
 import com.eventstore.domain.services.namespace.CreateNamespaceService
+import com.eventstore.domain.services.namespace.DeleteNamespaceRequest
+import com.eventstore.domain.services.namespace.DeleteNamespaceService
+import com.eventstore.domain.services.namespace.GetNamespaceService
+import com.eventstore.domain.services.namespace.UpdateNamespaceRequest
+import com.eventstore.domain.services.namespace.UpdateNamespaceService
 import com.eventstore.domain.services.tenant.CreateTenantRequest
 import com.eventstore.domain.services.tenant.CreateTenantService
 import com.eventstore.domain.services.tenant.DeleteTenantRequest
@@ -84,7 +89,16 @@ class Application(
         GetTenantService(tenantProjectionService)
 
     val createNamespaceService: CreateNamespaceService =
-        CreateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config)
+        CreateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager)
+
+    val deleteNamespaceService: DeleteNamespaceService =
+        DeleteNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager)
+
+    val updateNamespaceService: UpdateNamespaceService =
+        UpdateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager)
+
+    val getNamespaceService: GetNamespaceService =
+        GetNamespaceService(namespaceProjectionService)
 
     val createTopicService: CreateTopicService =
         CreateTopicService(topicRepository, schemaValidator, tenantProjectionService, namespaceProjectionService)
@@ -191,6 +205,46 @@ class Application(
         namespaceName: String = "default"
     ) =
         createNamespaceService.execute(CreateNamespaceRequest(tenantName, namespaceName))
+
+    suspend fun deleteNamespace(
+        tenantName: String,
+        namespaceName: String,
+        deletedBy: String = "system",
+        reason: String? = null
+    ): Boolean =
+        deleteNamespaceService.execute(
+            DeleteNamespaceRequest(
+                tenantName = tenantName,
+                namespaceName = namespaceName,
+                deletedBy = deletedBy,
+                reason = reason
+            )
+        )
+
+    suspend fun updateNamespace(
+        tenantName: String,
+        namespaceName: String,
+        name: String? = null,
+        description: String? = null,
+        metadata: Map<String, Any>? = null,
+        updatedBy: String = "system"
+    ): Namespace =
+        updateNamespaceService.execute(
+            UpdateNamespaceRequest(
+                tenantName = tenantName,
+                namespaceName = namespaceName,
+                name = name,
+                description = description,
+                metadata = metadata,
+                updatedBy = updatedBy
+            )
+        )
+
+    suspend fun getNamespace(tenantName: String, namespaceName: String): Namespace? =
+        getNamespaceService.getNamespace(tenantName, namespaceName)
+
+    suspend fun listNamespaces(tenantName: String): List<Namespace> =
+        getNamespaceService.listNamespaces(tenantName)
 
     suspend fun createTopic(
         name: String,

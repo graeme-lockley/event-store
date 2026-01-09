@@ -8,6 +8,7 @@ import com.eventstore.domain.events.NamespaceCreatedEvent
 import com.eventstore.domain.events.NamespaceEventType
 import com.eventstore.domain.exceptions.NamespaceAlreadyExistsException
 import com.eventstore.domain.exceptions.TenantNotFoundException
+import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.tenants.SystemTopics
@@ -29,7 +30,8 @@ class CreateNamespaceService(
     private val topicRepository: TopicRepository,
     private val tenantProjectionService: TenantProjectionService,
     private val namespaceProjectionService: NamespaceProjectionService,
-    private val config: Config
+    private val config: Config,
+    private val eventDispatcher: EventDispatcher
 ) {
     suspend fun execute(request: CreateNamespaceRequest): Namespace {
         if (!config.multiTenantEnabled) {
@@ -75,8 +77,7 @@ class CreateNamespaceService(
         )
 
         eventRepository.storeEvents(listOf(event))
-        // TODO: the following line is an error
-        namespaceProjectionService.handleEvents(listOf(event))
+        eventDispatcher.notifyEventsPublished(setOf(event.id.qualifiedTopic))
 
         return Namespace(
             resourceId = resourceId,
