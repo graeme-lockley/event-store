@@ -127,6 +127,10 @@ class InMemoryEventDispatcher : com.eventstore.domain.ports.outbound.EventDispat
     val events = mutableListOf<Set<String>>()
     val ensuredTopics = mutableListOf<Set<String>>()
 
+    override suspend fun notifyEventPublished(topic: String) {
+        events.add(setOf(topic))
+    }
+
     override suspend fun notifyEventsPublished(topics: Set<String>) {
         events.add(topics)
     }

@@ -29,6 +29,15 @@ class InMemoryEventRepository : EventRepository {
         }
     }
 
+    override suspend fun storeEvent(event: Event): Event {
+        return mutex.withLock {
+            val key = topicKey(event.id.topic, event.id.tenantId, event.id.namespaceId, event.id)
+            val events = eventsByTopic.getOrPut(key) { mutableListOf() }
+            events.add(event)
+            event
+        }
+    }
+
     override suspend fun storeEvents(
         events: List<Event>
     ): List<Event> {

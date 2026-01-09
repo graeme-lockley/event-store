@@ -7,6 +7,14 @@ package com.eventstore.domain.ports.outbound
  */
 interface EventDispatcher {
     /**
+     * Notifies the dispatcher that an event has been published for the given topic.
+     * This triggers immediate delivery checks for consumers subscribed to this topic.
+     *
+     * @param topic The topic name that received a new event
+     */
+    suspend fun notifyEventPublished(topic: String)
+
+    /**
      * Notifies the dispatcher that events have been published for the given topics.
      * This triggers immediate delivery checks for consumers subscribed to these topics.
      *

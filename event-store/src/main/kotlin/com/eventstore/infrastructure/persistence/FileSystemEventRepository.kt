@@ -107,6 +107,31 @@ class FileSystemEventRepository(
         }
     }
 
+    override suspend fun storeEvent(event: Event): Event {
+        return withContext(Dispatchers.IO) {
+            try {
+                val filePath = getEventFilePath(event.id.topic, event.id)
+
+                Files.createDirectories(filePath.parent)
+
+                val eventFile = EventFile(
+                    id = event.id.value,
+                    timestamp = event.timestamp.toString(),
+                    type = event.type,
+                    payload = event.payload
+                )
+                val json = objectMapper.writeValueAsString(eventFile)
+                Files.writeString(filePath, json)
+
+                event
+            } catch (e: EventStorageException) {
+                throw e
+            } catch (e: Exception) {
+                throw EventStorageException("Failed to store event ${event.id.value} for topic ${event.id.topic}", e)
+            }
+        }
+    }
+
     override suspend fun storeEvents(
         events: List<Event>
     ): List<Event> {

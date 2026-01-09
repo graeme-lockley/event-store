@@ -25,6 +25,11 @@ class SyncDispatcherManager(
         return processedTopics.toList()
     }
 
+    override suspend fun notifyEventPublished(topic: String) {
+        processEventsForTopic(topic)
+        processedTopics.add(topic)
+    }
+
     override suspend fun notifyEventsPublished(topics: Set<String>) {
         // Process events synchronously for each topic, one after another
         for (topic in topics) {

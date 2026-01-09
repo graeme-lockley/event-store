@@ -15,6 +15,8 @@ interface EventRepository {
         timestamp: java.time.Instant
     ): Event
 
+    suspend fun storeEvent(event: Event): Event
+
     suspend fun storeEvents(
         events: List<Event>
     ): List<Event>

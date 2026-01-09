@@ -49,8 +49,8 @@ class SystemEventPublisher(
         )
 
         // Store and notify
-        eventRepository.storeEvents(listOf(event))
-        eventDispatcher.notifyEventsPublished(setOf(event.id.qualifiedTopic))
+        eventRepository.storeEvent(event)
+        eventDispatcher.notifyEventPublished(event.id.qualifiedTopic)
 
         return event
     }

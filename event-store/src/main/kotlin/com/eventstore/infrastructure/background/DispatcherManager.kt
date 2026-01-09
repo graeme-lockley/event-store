@@ -67,6 +67,10 @@ class AsyncDispatcherManager(
         }
     }
 
+    override suspend fun notifyEventPublished(topic: String) {
+        triggerDelivery(topic)
+    }
+
     override suspend fun notifyEventsPublished(topics: Set<String>) {
         for (topic in topics) {
             triggerDelivery(topic)
