@@ -1,0 +1,121 @@
+[
+  {
+    "eventType": "tenant.created",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "resourceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "name": {
+        "type": "string"
+      },
+      "quota": {
+        "type": "object",
+        "properties": {
+          "maxTopics": {
+            "type": "integer"
+          },
+          "maxNamespaces": {
+            "type": "integer"
+          },
+          "maxEventsPerDay": {
+            "type": "integer"
+          },
+          "maxConsumers": {
+            "type": "integer"
+          },
+          "maxUsers": {
+            "type": "integer"
+          },
+          "maxEventSizeBytes": {
+            "type": "integer"
+          }
+        }
+      },
+      "createdBy": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "metadata": {
+        "type": "object"
+      }
+    },
+    "required": ["resourceId", "name", "createdBy", "createdAt", "metadata"]
+  },
+  {
+    "eventType": "tenant.updated",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "resourceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "name": {
+        "type": "string"
+      },
+      "quota": {
+        "type": "object",
+        "properties": {
+          "maxTopics": {
+            "type": "integer"
+          },
+          "maxNamespaces": {
+            "type": "integer"
+          },
+          "maxEventsPerDay": {
+            "type": "integer"
+          },
+          "maxConsumers": {
+            "type": "integer"
+          },
+          "maxUsers": {
+            "type": "integer"
+          },
+          "maxEventSizeBytes": {
+            "type": "integer"
+          }
+        }
+      },
+      "updatedBy": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "metadata": {
+        "type": "object"
+      }
+    },
+    "required": ["resourceId", "updatedBy", "updatedAt"]
+  },
+  {
+    "eventType": "tenant.deleted",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "resourceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "deletedBy": {
+        "type": "string"
+      },
+      "deletedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "reason": {
+        "type": "string"
+      }
+    },
+    "required": ["resourceId", "deletedBy", "deletedAt"]
+  }
+]
+

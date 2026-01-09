@@ -102,6 +102,8 @@ fun Application.configureApplication(config: Config) {
     val bootstrapService: BootstrapService = BootstrapServiceImpl(
         eventRepository = eventRepository,
         topicRepository = topicRepository,
+        schemaValidator = schemaValidator,
+        objectMapper = objectMapper,
         apiKeyRepository = apiKeyRepository,
         configDir = if (config.createTestApiKey) configDir else null,
         createTestApiKey = config.createTestApiKey
@@ -216,17 +218,18 @@ fun Application.configureApplication(config: Config) {
     val getHealthStatusService = GetHealthStatusService(consumerRepository) {
         dispatcherManager.getRunningDispatchers()
     }
-    val createTenantService = CreateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager)
+    val createTenantService = CreateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager, schemaValidator)
     val getTenantService = GetTenantService(tenantProjectionService)
-    val updateTenantService = UpdateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager)
-    val deleteTenantService = DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager)
+    val updateTenantService = UpdateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager, schemaValidator)
+    val deleteTenantService = DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager, schemaValidator)
     val createNamespaceService = CreateNamespaceService(
         eventRepository,
         topicRepository,
         tenantProjectionService,
         namespaceProjectionService,
         config,
-        dispatcherManager
+        dispatcherManager,
+        schemaValidator
     )
     val getNamespaceService = GetNamespaceService(namespaceProjectionService)
     val updateNamespaceService = UpdateNamespaceService(
@@ -235,7 +238,8 @@ fun Application.configureApplication(config: Config) {
         tenantProjectionService,
         namespaceProjectionService,
         config,
-        dispatcherManager
+        dispatcherManager,
+        schemaValidator
     )
     val deleteNamespaceService = DeleteNamespaceService(
         eventRepository,
@@ -243,7 +247,8 @@ fun Application.configureApplication(config: Config) {
         tenantProjectionService,
         namespaceProjectionService,
         config,
-        dispatcherManager
+        dispatcherManager,
+        schemaValidator
     )
     val createUserService =
         CreateUserService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)

@@ -2,13 +2,17 @@ package com.eventstore.infrastructure.bootstrap
 
 import com.eventstore.domain.*
 import com.eventstore.domain.events.*
+import com.eventstore.domain.Schema
 import com.eventstore.domain.ports.outbound.ApiKeyRepository
 import com.eventstore.domain.ports.outbound.EventRepository
+import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.services.bootstrap.BootstrapService
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.auth.ApiKeyGenerator
 import com.eventstore.infrastructure.auth.ApiKeyHasher
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import org.mindrot.jbcrypt.BCrypt
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
@@ -18,6 +22,8 @@ import java.util.*
 class BootstrapServiceImpl(
     private val eventRepository: EventRepository,
     private val topicRepository: TopicRepository,
+    private val schemaValidator: SchemaValidator,
+    private val objectMapper: ObjectMapper,
     private val apiKeyRepository: ApiKeyRepository? = null,
     private val configDir: java.nio.file.Path? = null,
     private val createTestApiKey: Boolean = false
@@ -70,16 +76,46 @@ class BootstrapServiceImpl(
                 val systemTenantResourceId = UUID.randomUUID() // Temporary - will be replaced when tenant is created
                 val managementNamespaceResourceId =
                     UUID.randomUUID() // Temporary - will be replaced when namespace is created
+                val schemas = getSchemasForTopic(topic)
                 topicRepository.createTopic(
                     resourceId = topicResourceId,
                     tenantResourceId = systemTenantResourceId,
                     namespaceResourceId = managementNamespaceResourceId,
                     name = topic,
-                    schemas = emptyList(),
+                    schemas = schemas,
                     tenantName = systemTenantId,
                     namespaceName = managementNamespaceId
                 )
+                // Register schemas with validator
+                schemaValidator.registerSchemas(topic, schemas)
+                logger.info("Registered ${schemas.size} schemas for topic: $topic")
             }
+        }
+    }
+
+    private fun getSchemasForTopic(topic: String): List<Schema> {
+        val resourcePath = when (topic) {
+            tenantTopicName -> "/schemas/system/tenants.json"
+            namespaceTopicName -> "/schemas/system/namespaces.json"
+            usersTopicName -> "/schemas/system/users.json"
+            SystemTopics.PERMISSIONS_TOPIC -> "/schemas/system/permissions.json"
+            SystemTopics.API_KEYS_TOPIC -> null // API keys topic schemas not yet defined
+            else -> null
+        }
+
+        if (resourcePath == null) {
+            return emptyList()
+        }
+
+        return try {
+            val inputStream = BootstrapServiceImpl::class.java.getResourceAsStream(resourcePath)
+                ?: throw IllegalStateException("Schema resource not found: $resourcePath")
+            val schemas: List<Schema> = objectMapper.readValue(inputStream)
+            logger.info("Loaded ${schemas.size} schemas from $resourcePath")
+            schemas
+        } catch (e: Exception) {
+            logger.error("Failed to load schemas from $resourcePath", e)
+            throw IllegalStateException("Failed to load schemas for topic $topic", e)
         }
     }
 

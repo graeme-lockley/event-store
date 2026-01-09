@@ -77,25 +77,25 @@ class Application(
     val permissionProjectionService = PermissionProjectionService(permissionRepository)
 
     val createTenantService: CreateTenantService =
-        CreateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager)
+        CreateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager, schemaValidator)
 
     val deleteTenantService: DeleteTenantService =
-        DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager)
+        DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager, schemaValidator)
 
     val updateTenantService: UpdateTenantService =
-        UpdateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager)
+        UpdateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager, schemaValidator)
 
     val getTenantService: GetTenantService =
         GetTenantService(tenantProjectionService)
 
     val createNamespaceService: CreateNamespaceService =
-        CreateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager)
+        CreateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager, schemaValidator)
 
     val deleteNamespaceService: DeleteNamespaceService =
-        DeleteNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager)
+        DeleteNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager, schemaValidator)
 
     val updateNamespaceService: UpdateNamespaceService =
-        UpdateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager)
+        UpdateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager, schemaValidator)
 
     val getNamespaceService: GetNamespaceService =
         GetNamespaceService(namespaceProjectionService)
@@ -109,7 +109,8 @@ class Application(
     init {
         runBlocking {
             if (bootstrap) {
-                BootstrapServiceImpl(eventRepository, topicRepository, apiKeyRepository, null, false).run()
+                val objectMapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+                BootstrapServiceImpl(eventRepository, topicRepository, schemaValidator, objectMapper, apiKeyRepository, null, false).run()
             }
 
             // Register system consumers for projection services

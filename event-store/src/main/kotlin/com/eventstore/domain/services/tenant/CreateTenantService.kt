@@ -10,6 +10,7 @@ import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.exceptions.TenantAlreadyExistsException
 import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.EventRepository
+import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.TenantProjectionService
@@ -28,7 +29,8 @@ class CreateTenantService(
     private val topicRepository: TopicRepository,
     private val tenantProjectionService: TenantProjectionService,
     private val config: Config,
-    private val eventDispatcher: EventDispatcher
+    private val eventDispatcher: EventDispatcher,
+    private val schemaValidator: SchemaValidator
 ) {
     suspend fun execute(request: CreateTenantRequest): Tenant {
         if (!config.multiTenantEnabled) {
@@ -56,6 +58,11 @@ class CreateTenantService(
             namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
 
+        val payload = tenantCreated.toPayload()
+        
+        // Validate event payload against schema
+        schemaValidator.validateEvent(SystemTopics.TENANTS_TOPIC, TenantEventType.CREATED, payload)
+
         val event = Event(
             id = EventId.create(
                 topic = SystemTopics.TENANTS_TOPIC,
@@ -65,7 +72,7 @@ class CreateTenantService(
             ),
             timestamp = now,
             type = TenantEventType.CREATED,
-            payload = tenantCreated.toPayload()
+            payload = payload
         )
 
         eventRepository.storeEvents(listOf(event))

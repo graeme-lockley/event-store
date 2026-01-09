@@ -1,0 +1,160 @@
+[
+  {
+    "eventType": "user.created",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "userId": {
+        "type": "string"
+      },
+      "email": {
+        "type": "string",
+        "format": "email"
+      },
+      "name": {
+        "type": "string"
+      },
+      "passwordHash": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string",
+        "enum": ["ACTIVE", "SUSPENDED", "DELETED"]
+      },
+      "createdBy": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "metadata": {
+        "type": "object"
+      }
+    },
+    "required": ["userId", "email", "name", "passwordHash", "status", "createdBy", "createdAt", "metadata"]
+  },
+  {
+    "eventType": "user.updated",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "userId": {
+        "type": "string"
+      },
+      "email": {
+        "type": "string",
+        "format": "email"
+      },
+      "name": {
+        "type": "string"
+      },
+      "updatedBy": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "metadata": {
+        "type": "object"
+      }
+    },
+    "required": ["userId", "updatedBy", "updatedAt"]
+  },
+  {
+    "eventType": "user.status.changed",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "userId": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string",
+        "enum": ["ACTIVE", "SUSPENDED", "DELETED"]
+      },
+      "changedBy": {
+        "type": "string"
+      },
+      "changedAt": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": ["userId", "status", "changedBy", "changedAt"]
+  },
+  {
+    "eventType": "user.password.changed",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "userId": {
+        "type": "string"
+      },
+      "passwordHash": {
+        "type": "string"
+      },
+      "changedBy": {
+        "type": "string"
+      },
+      "changedAt": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": ["userId", "passwordHash", "changedBy", "changedAt"]
+  },
+  {
+    "eventType": "user.tenant.assigned",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "userId": {
+        "type": "string"
+      },
+      "tenantId": {
+        "type": "string"
+      },
+      "role": {
+        "type": "string"
+      },
+      "assignedBy": {
+        "type": "string"
+      },
+      "assignedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "isPrimary": {
+        "type": "boolean"
+      }
+    },
+    "required": ["userId", "tenantId", "assignedBy", "assignedAt", "isPrimary"]
+  },
+  {
+    "eventType": "user.tenant.removed",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "userId": {
+        "type": "string"
+      },
+      "tenantId": {
+        "type": "string"
+      },
+      "removedBy": {
+        "type": "string"
+      },
+      "removedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "reason": {
+        "type": "string"
+      }
+    },
+    "required": ["userId", "tenantId", "removedBy", "removedAt"]
+  }
+]
+

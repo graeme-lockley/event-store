@@ -1,0 +1,96 @@
+[
+  {
+    "eventType": "namespace.created",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "resourceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "tenantResourceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "tenantName": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "createdBy": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "metadata": {
+        "type": "object"
+      }
+    },
+    "required": ["resourceId", "tenantResourceId", "tenantName", "name", "createdBy", "createdAt", "metadata"]
+  },
+  {
+    "eventType": "namespace.updated",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "resourceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "tenantResourceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "name": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "updatedBy": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "metadata": {
+        "type": "object"
+      }
+    },
+    "required": ["resourceId", "tenantResourceId", "updatedBy", "updatedAt"]
+  },
+  {
+    "eventType": "namespace.deleted",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "resourceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "tenantResourceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "deletedBy": {
+        "type": "string"
+      },
+      "deletedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "reason": {
+        "type": "string"
+      }
+    },
+    "required": ["resourceId", "tenantResourceId", "deletedBy", "deletedAt"]
+  }
+]
+

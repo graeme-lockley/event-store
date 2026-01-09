@@ -8,6 +8,7 @@ import com.eventstore.domain.events.NamespaceEventType
 import com.eventstore.domain.exceptions.NamespaceNotFoundException
 import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.EventRepository
+import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
@@ -27,7 +28,8 @@ class DeleteNamespaceService(
     private val tenantProjectionService: TenantProjectionService,
     private val namespaceProjectionService: NamespaceProjectionService,
     private val config: Config,
-    private val eventDispatcher: EventDispatcher
+    private val eventDispatcher: EventDispatcher,
+    private val schemaValidator: SchemaValidator
 ) {
     suspend fun execute(request: DeleteNamespaceRequest): Boolean {
         if (!config.multiTenantEnabled) {
@@ -56,6 +58,11 @@ class DeleteNamespaceService(
             namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
 
+        val eventPayload = payload.toPayload()
+        
+        // Validate event payload against schema
+        schemaValidator.validateEvent(SystemTopics.NAMESPACES_TOPIC, NamespaceEventType.DELETED, eventPayload)
+
         val event = Event(
             id = EventId.create(
                 topic = SystemTopics.NAMESPACES_TOPIC,
@@ -65,7 +72,7 @@ class DeleteNamespaceService(
             ),
             timestamp = now,
             type = NamespaceEventType.DELETED,
-            payload = payload.toPayload()
+            payload = eventPayload
         )
 
         eventRepository.storeEvents(listOf(event))

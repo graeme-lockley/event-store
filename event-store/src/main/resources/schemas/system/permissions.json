@@ -1,0 +1,98 @@
+[
+  {
+    "eventType": "permission.granted",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "principalId": {
+        "type": "string"
+      },
+      "principalType": {
+        "type": "string",
+        "enum": ["USER", "API_KEY", "ROLE", "GROUP"]
+      },
+      "resourceType": {
+        "type": "string",
+        "enum": ["TENANT", "NAMESPACE", "TOPIC", "EVENT", "CONSUMER", "USER"]
+      },
+      "resourceId": {
+        "type": "string"
+      },
+      "tenantResourceId": {
+        "type": "string"
+      },
+      "namespaceResourceId": {
+        "type": "string"
+      },
+      "topicResourceId": {
+        "type": "string"
+      },
+      "permissions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "grantedBy": {
+        "type": "string"
+      },
+      "grantedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "expiresAt": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": ["principalId", "principalType", "resourceType", "tenantResourceId", "permissions", "grantedBy", "grantedAt"]
+  },
+  {
+    "eventType": "permission.revoked",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "principalId": {
+        "type": "string"
+      },
+      "principalType": {
+        "type": "string",
+        "enum": ["USER", "API_KEY", "ROLE", "GROUP"]
+      },
+      "resourceType": {
+        "type": "string",
+        "enum": ["TENANT", "NAMESPACE", "TOPIC", "EVENT", "CONSUMER", "USER"]
+      },
+      "resourceId": {
+        "type": "string"
+      },
+      "tenantResourceId": {
+        "type": "string"
+      },
+      "namespaceResourceId": {
+        "type": "string"
+      },
+      "topicResourceId": {
+        "type": "string"
+      },
+      "permissions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "revokedBy": {
+        "type": "string"
+      },
+      "revokedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "reason": {
+        "type": "string"
+      }
+    },
+    "required": ["principalId", "principalType", "resourceType", "tenantResourceId", "permissions", "revokedBy", "revokedAt"]
+  }
+]
+
