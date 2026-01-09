@@ -1,17 +1,13 @@
 package com.eventstore.domain.services.tenant
 
 import com.eventstore.Config
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
 import com.eventstore.domain.Quota
 import com.eventstore.domain.Tenant
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.events.TenantUpdatedEvent
 import com.eventstore.domain.exceptions.TenantNotFoundException
-import com.eventstore.domain.ports.outbound.EventDispatcher
-import com.eventstore.domain.ports.outbound.EventRepository
-import com.eventstore.domain.ports.outbound.SchemaValidator
-import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.services.BaseSystemService
+import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import java.time.Instant
@@ -25,17 +21,12 @@ data class UpdateTenantRequest(
 )
 
 class UpdateTenantService(
-    private val eventRepository: EventRepository,
-    private val topicRepository: TopicRepository,
     private val tenantProjectionService: TenantProjectionService,
-    private val config: Config,
-    private val eventDispatcher: EventDispatcher,
-    private val schemaValidator: SchemaValidator
-) {
+    config: Config,
+    eventPublisher: SystemEventPublisher
+) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: UpdateTenantRequest): Tenant {
-        if (!config.multiTenantEnabled) {
-            throw IllegalStateException("Multi-tenant support is disabled")
-        }
+        requireMultiTenantEnabled()
 
         val existing = tenantProjectionService.getTenantByName(request.tenantName)
             ?: throw TenantNotFoundException(request.tenantName)
@@ -50,31 +41,14 @@ class UpdateTenantService(
             metadata = request.metadata
         )
 
-        val sequence = topicRepository.getAndIncrementSequence(
-            topicName = SystemTopics.TENANTS_TOPIC,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
-
         val payload = eventPayload.toPayload()
         
-        // Validate event payload against schema
-        schemaValidator.validateEvent(SystemTopics.TENANTS_TOPIC, TenantEventType.UPDATED, payload)
-
-        val event = Event(
-            id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC,
-                sequence = sequence,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-            ),
-            timestamp = now,
-            type = TenantEventType.UPDATED,
-            payload = payload
+        eventPublisher.publishEvent(
+            topic = SystemTopics.TENANTS_TOPIC,
+            eventType = TenantEventType.UPDATED,
+            payload = payload,
+            timestamp = now
         )
-
-        eventRepository.storeEvents(listOf(event))
-        eventDispatcher.notifyEventsPublished(setOf(event.id.qualifiedTopic))
 
         return existing.copy(
             name = request.name ?: existing.name,

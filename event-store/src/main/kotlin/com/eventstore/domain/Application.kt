@@ -28,6 +28,7 @@ import com.eventstore.domain.services.tenant.GetTenantService
 import com.eventstore.domain.services.tenant.UpdateTenantRequest
 import com.eventstore.domain.services.tenant.UpdateTenantService
 import com.eventstore.domain.services.topic.CreateTopicService
+import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.background.AsyncDispatcherManager
 import com.eventstore.infrastructure.background.SyncDispatcherManager
@@ -76,26 +77,29 @@ class Application(
     val userProjectionService = UserProjectionService(userRepository)
     val permissionProjectionService = PermissionProjectionService(permissionRepository)
 
+    val systemEventPublisher: SystemEventPublisher =
+        SystemEventPublisher(eventRepository, topicRepository, schemaValidator, dispatcherManager)
+
     val createTenantService: CreateTenantService =
-        CreateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager, schemaValidator)
+        CreateTenantService(tenantProjectionService, config, systemEventPublisher)
 
     val deleteTenantService: DeleteTenantService =
-        DeleteTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager, schemaValidator)
+        DeleteTenantService(tenantProjectionService, config, systemEventPublisher)
 
     val updateTenantService: UpdateTenantService =
-        UpdateTenantService(eventRepository, topicRepository, tenantProjectionService, config, dispatcherManager, schemaValidator)
+        UpdateTenantService(tenantProjectionService, config, systemEventPublisher)
 
     val getTenantService: GetTenantService =
         GetTenantService(tenantProjectionService)
 
     val createNamespaceService: CreateNamespaceService =
-        CreateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager, schemaValidator)
+        CreateNamespaceService(tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
 
     val deleteNamespaceService: DeleteNamespaceService =
-        DeleteNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager, schemaValidator)
+        DeleteNamespaceService(tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
 
     val updateNamespaceService: UpdateNamespaceService =
-        UpdateNamespaceService(eventRepository, topicRepository, tenantProjectionService, namespaceProjectionService, config, dispatcherManager, schemaValidator)
+        UpdateNamespaceService(tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
 
     val getNamespaceService: GetNamespaceService =
         GetNamespaceService(namespaceProjectionService)

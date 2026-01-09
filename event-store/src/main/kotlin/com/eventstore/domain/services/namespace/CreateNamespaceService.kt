@@ -1,17 +1,13 @@
 package com.eventstore.domain.services.namespace
 
 import com.eventstore.Config
-import com.eventstore.domain.Event
-import com.eventstore.domain.EventId
 import com.eventstore.domain.Namespace
 import com.eventstore.domain.events.NamespaceCreatedEvent
 import com.eventstore.domain.events.NamespaceEventType
 import com.eventstore.domain.exceptions.NamespaceAlreadyExistsException
 import com.eventstore.domain.exceptions.TenantNotFoundException
-import com.eventstore.domain.ports.outbound.EventDispatcher
-import com.eventstore.domain.ports.outbound.EventRepository
-import com.eventstore.domain.ports.outbound.SchemaValidator
-import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.services.BaseSystemService
+import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
 import com.eventstore.infrastructure.projections.TenantProjectionService
@@ -27,18 +23,13 @@ data class CreateNamespaceRequest(
 )
 
 class CreateNamespaceService(
-    private val eventRepository: EventRepository,
-    private val topicRepository: TopicRepository,
     private val tenantProjectionService: TenantProjectionService,
     private val namespaceProjectionService: NamespaceProjectionService,
-    private val config: Config,
-    private val eventDispatcher: EventDispatcher,
-    private val schemaValidator: SchemaValidator
-) {
+    config: Config,
+    eventPublisher: SystemEventPublisher
+) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateNamespaceRequest): Namespace {
-        if (!config.multiTenantEnabled) {
-            throw IllegalStateException("Multi-tenant support is disabled")
-        }
+        requireMultiTenantEnabled()
 
         val tenant = tenantProjectionService.getTenantByName(request.tenantName)
             ?: throw TenantNotFoundException(request.tenantName)
@@ -60,31 +51,14 @@ class CreateNamespaceService(
             metadata = request.metadata
         )
 
-        val sequence = topicRepository.getAndIncrementSequence(
-            topicName = SystemTopics.NAMESPACES_TOPIC,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
-
         val eventPayload = payload.toPayload()
         
-        // Validate event payload against schema
-        schemaValidator.validateEvent(SystemTopics.NAMESPACES_TOPIC, NamespaceEventType.CREATED, eventPayload)
-
-        val event = Event(
-            id = EventId.create(
-                topic = SystemTopics.NAMESPACES_TOPIC,
-                sequence = sequence,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-            ),
-            timestamp = now,
-            type = NamespaceEventType.CREATED,
-            payload = eventPayload
+        eventPublisher.publishEvent(
+            topic = SystemTopics.NAMESPACES_TOPIC,
+            eventType = NamespaceEventType.CREATED,
+            payload = eventPayload,
+            timestamp = now
         )
-
-        eventRepository.storeEvents(listOf(event))
-        eventDispatcher.notifyEventsPublished(setOf(event.id.qualifiedTopic))
 
         return Namespace(
             resourceId = resourceId,
