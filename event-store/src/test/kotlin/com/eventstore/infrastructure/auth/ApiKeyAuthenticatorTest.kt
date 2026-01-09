@@ -2,6 +2,7 @@ package com.eventstore.infrastructure.auth
 
 import com.eventstore.domain.exceptions.InvalidApiKeyException
 import com.eventstore.infrastructure.persistence.InMemoryApiKeyRepository
+import com.eventstore.infrastructure.projections.ApiKeyProjectionService
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -11,12 +12,14 @@ import java.time.Instant
 class ApiKeyAuthenticatorTest {
 
     private lateinit var apiKeyRepository: InMemoryApiKeyRepository
+    private lateinit var apiKeyProjectionService: ApiKeyProjectionService
     private lateinit var apiKeyAuthenticator: ApiKeyAuthenticator
 
     @BeforeEach
     fun setUp() {
         apiKeyRepository = InMemoryApiKeyRepository()
-        apiKeyAuthenticator = ApiKeyAuthenticator(apiKeyRepository)
+        apiKeyProjectionService = ApiKeyProjectionService(apiKeyRepository)
+        apiKeyAuthenticator = ApiKeyAuthenticator(apiKeyProjectionService, apiKeyRepository)
     }
 
     @Test

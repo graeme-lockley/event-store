@@ -2,19 +2,15 @@ package com.eventstore.infrastructure.bootstrap
 
 import com.eventstore.domain.*
 import com.eventstore.domain.events.*
-import com.eventstore.domain.ports.outbound.ApiKeyRepository
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.services.bootstrap.BootstrapService
 import com.eventstore.domain.tenants.SystemTopics
-import com.eventstore.infrastructure.auth.ApiKeyGenerator
-import com.eventstore.infrastructure.auth.ApiKeyHasher
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.mindrot.jbcrypt.BCrypt
 import org.slf4j.LoggerFactory
-import java.nio.file.Files
 import java.time.Instant
 import java.util.*
 
@@ -22,12 +18,8 @@ class BootstrapServiceImpl(
     private val eventRepository: EventRepository,
     private val topicRepository: TopicRepository,
     private val schemaValidator: SchemaValidator,
-    private val objectMapper: ObjectMapper,
-    private val apiKeyRepository: ApiKeyRepository? = null,
-    private val configDir: java.nio.file.Path? = null,
-    private val createTestApiKey: Boolean = false
+    private val objectMapper: ObjectMapper
 ) : BootstrapService {
-
     private val logger = LoggerFactory.getLogger(BootstrapServiceImpl::class.java)
 
     private val systemTenantId = SystemTopics.SYSTEM_TENANT_ID
@@ -98,7 +90,7 @@ class BootstrapServiceImpl(
             namespaceTopicName -> "/schemas/system/namespaces.json"
             usersTopicName -> "/schemas/system/users.json"
             SystemTopics.PERMISSIONS_TOPIC -> "/schemas/system/permissions.json"
-            SystemTopics.API_KEYS_TOPIC -> null // API keys topic schemas not yet defined
+            SystemTopics.API_KEYS_TOPIC -> "/schemas/system/api-keys.json"
             else -> null
         }
 
@@ -272,53 +264,6 @@ class BootstrapServiceImpl(
         )
 
         eventRepository.storeEvents(events)
-
-        // Create test API key if requested
-        if (createTestApiKey && apiKeyRepository != null && configDir != null) {
-            createTestApiKey(adminId, configDir, apiKeyRepository)
-        }
-    }
-
-    private suspend fun createTestApiKey(
-        userId: String,
-        configDir: java.nio.file.Path,
-        apiKeyRepository: ApiKeyRepository
-    ) {
-        try {
-            logger.info("Creating test API key for user: $userId")
-            val plainKey = ApiKeyGenerator.generate()
-            val keyHash = ApiKeyHasher.hash(plainKey)
-
-            val apiKey = ApiKey(
-                id = UUID.randomUUID().toString(),
-                userId = userId,
-                keyHash = keyHash,
-                name = "test-api-key",
-                description = "Test API key created during bootstrap for integration tests",
-                createdAt = Instant.now(),
-                expiresAt = null,
-                scopes = null
-            )
-
-            // Save API key (this is a suspend function and will complete synchronously)
-            apiKeyRepository.save(apiKey)
-
-            // Verify the key was saved by looking it up
-            val savedKey = apiKeyRepository.findByKeyHash(keyHash)
-            if (savedKey == null) {
-                logger.warn("Test API key was saved but could not be retrieved immediately - this may indicate a timing issue")
-            } else {
-                logger.info("Test API key successfully saved and verified (ID: ${savedKey.id})")
-            }
-
-            // Write the plain API key to a file for tests to read
-            val testApiKeyFile = configDir.resolve("test-api-key.txt")
-            Files.write(testApiKeyFile, plainKey.toByteArray())
-            logger.info("Test API key written to: $testApiKeyFile")
-        } catch (e: Exception) {
-            logger.error("Failed to create test API key", e)
-            // Don't fail bootstrap if test API key creation fails
-        }
     }
 }
 

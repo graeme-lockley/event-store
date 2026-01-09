@@ -2,6 +2,7 @@ package com.eventstore.infrastructure.auth
 
 import com.eventstore.domain.exceptions.InvalidApiKeyException
 import com.eventstore.domain.ports.outbound.ApiKeyRepository
+import com.eventstore.infrastructure.projections.ApiKeyProjectionService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -13,6 +14,7 @@ data class ApiKeyAuthResult(
 )
 
 class ApiKeyAuthenticator(
+    private val apiKeyProjectionService: ApiKeyProjectionService,
     private val apiKeyRepository: ApiKeyRepository,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
@@ -20,8 +22,8 @@ class ApiKeyAuthenticator(
         // Hash the provided key
         val keyHash = ApiKeyHasher.hash(apiKey)
 
-        // Look up API key by hash
-        val storedKey = apiKeyRepository.findByKeyHash(keyHash)
+        // Look up API key by hash from projection
+        val storedKey = apiKeyProjectionService.getApiKeyByKeyHash(keyHash)
             ?: throw InvalidApiKeyException("API key not found")
 
         // Validate key is active (not revoked, not expired)

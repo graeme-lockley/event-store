@@ -1,0 +1,75 @@
+[
+  {
+    "eventType": "api-key.created",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "apiKeyId": {
+        "type": "string"
+      },
+      "userId": {
+        "type": "string"
+      },
+      "keyHash": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "expiresAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "scopes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "createdBy": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "apiKeyId",
+      "userId",
+      "keyHash",
+      "name",
+      "createdAt",
+      "createdBy"
+    ]
+  },
+  {
+    "eventType": "api-key.revoked",
+    "type": "object",
+    "schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "apiKeyId": {
+        "type": "string"
+      },
+      "revokedBy": {
+        "type": "string"
+      },
+      "revokedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "reason": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "apiKeyId",
+      "revokedBy",
+      "revokedAt"
+    ]
+  }
+]
+

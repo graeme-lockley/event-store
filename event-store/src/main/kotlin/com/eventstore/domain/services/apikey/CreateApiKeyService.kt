@@ -1,8 +1,13 @@
 package com.eventstore.domain.services.apikey
 
+import com.eventstore.Config
 import com.eventstore.domain.ApiKey
+import com.eventstore.domain.events.ApiKeyCreatedEvent
+import com.eventstore.domain.events.ApiKeyEventType
 import com.eventstore.domain.exceptions.UserNotFoundException
-import com.eventstore.domain.ports.outbound.ApiKeyRepository
+import com.eventstore.domain.services.BaseSystemService
+import com.eventstore.domain.services.SystemEventPublisher
+import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.auth.ApiKeyGenerator
 import com.eventstore.infrastructure.auth.ApiKeyHasher
 import com.eventstore.infrastructure.projections.UserProjectionService
@@ -14,14 +19,18 @@ data class CreateApiKeyRequest(
     val name: String,
     val description: String? = null,
     val expiresAt: Instant? = null,
-    val scopes: Set<String>? = null
+    val scopes: Set<String>? = null,
+    val createdBy: String = "system"
 )
 
 class CreateApiKeyService(
-    private val apiKeyRepository: ApiKeyRepository,
-    private val userProjectionService: UserProjectionService
-) {
+    private val userProjectionService: UserProjectionService,
+    config: Config,
+    eventPublisher: SystemEventPublisher
+) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateApiKeyRequest): Pair<ApiKey, String> {
+        requireMultiTenantEnabled()
+
         // Validate user exists
         userProjectionService.getUser(request.userId)
             ?: throw UserNotFoundException(request.userId)
@@ -32,8 +41,9 @@ class CreateApiKeyService(
 
         // Create API key domain object
         val now = Instant.now()
+        val apiKeyId = UUID.randomUUID().toString()
         val apiKey = ApiKey(
-            id = UUID.randomUUID().toString(),
+            id = apiKeyId,
             userId = request.userId,
             keyHash = keyHash,
             name = request.name,
@@ -43,8 +53,25 @@ class CreateApiKeyService(
             scopes = request.scopes
         )
 
-        // Save to repository
-        apiKeyRepository.save(apiKey)
+        // Publish event
+        val payload = ApiKeyCreatedEvent(
+            apiKeyId = apiKeyId,
+            userId = request.userId,
+            keyHash = keyHash,
+            name = request.name,
+            description = request.description,
+            createdAt = now,
+            expiresAt = request.expiresAt,
+            scopes = request.scopes,
+            createdBy = request.createdBy
+        )
+
+        eventPublisher.publishEvent(
+            topic = SystemTopics.API_KEYS_TOPIC,
+            eventType = ApiKeyEventType.CREATED,
+            payload = payload.toPayload(),
+            timestamp = now
+        )
 
         // Return both domain object and plain key (only time plain key is returned)
         return apiKey to plainKey

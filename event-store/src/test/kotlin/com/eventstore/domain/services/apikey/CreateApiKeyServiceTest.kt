@@ -43,8 +43,8 @@ class CreateApiKeyServiceTest {
         assertEquals("Test API Key", apiKey.name)
         assertEquals("Test description", apiKey.description)
 
-        // Verify it's saved
-        val retrieved = application.apiKeyRepository.findById(apiKey.id)
+        // Verify it's saved (via projection)
+        val retrieved = application.getApiKey(apiKey.id)
         assertNotNull(retrieved)
     }
 

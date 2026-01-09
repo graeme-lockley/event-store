@@ -1,27 +1,51 @@
 package com.eventstore.domain.services.apikey
 
+import com.eventstore.Config
+import com.eventstore.domain.events.ApiKeyEventType
+import com.eventstore.domain.events.ApiKeyRevokedEvent
 import com.eventstore.domain.exceptions.ApiKeyAlreadyRevokedException
 import com.eventstore.domain.exceptions.ApiKeyNotFoundException
-import com.eventstore.domain.ports.outbound.ApiKeyRepository
+import com.eventstore.domain.services.BaseSystemService
+import com.eventstore.domain.services.SystemEventPublisher
+import com.eventstore.domain.tenants.SystemTopics
+import com.eventstore.infrastructure.projections.ApiKeyProjectionService
 import java.time.Instant
 
 data class RevokeApiKeyRequest(
-    val keyId: String
+    val keyId: String,
+    val revokedBy: String = "system",
+    val reason: String? = null
 )
 
 class RevokeApiKeyService(
-    private val apiKeyRepository: ApiKeyRepository
-) {
+    private val apiKeyProjectionService: ApiKeyProjectionService,
+    config: Config,
+    eventPublisher: SystemEventPublisher
+) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: RevokeApiKeyRequest) {
-        val apiKey = apiKeyRepository.findById(request.keyId)
+        requireMultiTenantEnabled()
+
+        val apiKey = apiKeyProjectionService.getApiKey(request.keyId)
             ?: throw ApiKeyNotFoundException(request.keyId)
 
         if (apiKey.revokedAt != null) {
             throw ApiKeyAlreadyRevokedException(request.keyId)
         }
 
-        val revokedKey = apiKey.copy(revokedAt = Instant.now())
-        apiKeyRepository.save(revokedKey)
+        val now = Instant.now()
+        val payload = ApiKeyRevokedEvent(
+            apiKeyId = request.keyId,
+            revokedBy = request.revokedBy,
+            revokedAt = now,
+            reason = request.reason
+        )
+
+        eventPublisher.publishEvent(
+            topic = SystemTopics.API_KEYS_TOPIC,
+            eventType = ApiKeyEventType.REVOKED,
+            payload = payload.toPayload(),
+            timestamp = now
+        )
     }
 }
 

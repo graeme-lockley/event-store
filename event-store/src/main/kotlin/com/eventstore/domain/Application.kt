@@ -60,11 +60,12 @@ class Application(
         eventRepository = eventRepository
     )
 
-    val tenantProjectionService = com.eventstore.infrastructure.projections.TenantProjectionService(tenantRepository)
+    val tenantProjectionService = TenantProjectionService(tenantRepository)
     val namespaceProjectionService =
-        com.eventstore.infrastructure.projections.NamespaceProjectionService(namespaceRepository)
+        NamespaceProjectionService(namespaceRepository)
     val userProjectionService = UserProjectionService(userRepository)
     val permissionProjectionService = PermissionProjectionService(permissionRepository)
+    val apiKeyProjectionService = ApiKeyProjectionService(apiKeyRepository)
 
     val resourceResolver: ResourceResolverImpl =
         ResourceResolverImpl(tenantProjectionService, namespaceProjectionService, topicRepository)
@@ -123,13 +124,13 @@ class Application(
         UnregisterConsumerService(consumerRepository)
 
     private val createApiKeyService: CreateApiKeyService =
-        CreateApiKeyService(apiKeyRepository, userProjectionService)
+        CreateApiKeyService(userProjectionService, config, systemEventPublisher)
 
     val getApiKeyService: GetApiKeyService =
-        GetApiKeyService(apiKeyRepository)
+        GetApiKeyService(apiKeyProjectionService)
 
     private val revokeApiKeyService: RevokeApiKeyService =
-        RevokeApiKeyService(apiKeyRepository)
+        RevokeApiKeyService(apiKeyProjectionService, config, systemEventPublisher)
 
     private val createUserService: CreateUserService =
         CreateUserService(tenantProjectionService, userProjectionService, config, systemEventPublisher)
@@ -175,10 +176,7 @@ class Application(
                     eventRepository,
                     topicRepository,
                     schemaValidator,
-                    objectMapper,
-                    apiKeyRepository,
-                    null,
-                    false
+                    objectMapper
                 ).run()
             }
 
@@ -212,6 +210,14 @@ class Application(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> permissionProjectionService.handleEvents(events) },
                     topics = mapOf(SystemTopics.PERMISSIONS_TOPIC to null)
+                ),
+                tenantName = SystemTopics.SYSTEM_TENANT_ID,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            )
+            registerConsumerService.execute(
+                InMemoryConsumerRegistrationRequest(
+                    handler = { events -> apiKeyProjectionService.handleEvents(events) },
+                    topics = mapOf(SystemTopics.API_KEYS_TOPIC to null)
                 ),
                 tenantName = SystemTopics.SYSTEM_TENANT_ID,
                 namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
