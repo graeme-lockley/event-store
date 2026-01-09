@@ -11,6 +11,8 @@ import com.eventstore.domain.services.consumer.UnregisterConsumerService
 import com.eventstore.domain.services.event.EventRequest
 import com.eventstore.domain.services.event.GetEventsService
 import com.eventstore.domain.services.event.PublishEventsService
+import com.eventstore.domain.services.health.GetHealthStatusService
+import com.eventstore.domain.services.health.HealthStatus
 import com.eventstore.domain.services.namespace.*
 import com.eventstore.domain.services.tenant.*
 import com.eventstore.domain.services.topic.CreateTopicService
@@ -94,6 +96,11 @@ class Application(
 
     private val getEventsService: GetEventsService =
         GetEventsService(eventRepository, topicRepository)
+
+    private val getHealthStatusService: GetHealthStatusService =
+        GetHealthStatusService(consumerRepository) {
+            dispatcherManager.getRunningDispatchers()
+        }
 
     private val registerConsumerService: RegisterConsumerService =
         RegisterConsumerService(consumerRepository, topicRepository, consumerFactory, dispatcherManager)
@@ -356,4 +363,7 @@ class Application(
         namespaceName: String = "default"
     ): List<Event> =
         getEventsService.execute(topic, sinceEventId, date, limit, tenantName, namespaceName)
+
+    suspend fun getHealthStatus(): HealthStatus =
+        getHealthStatusService.execute()
 }

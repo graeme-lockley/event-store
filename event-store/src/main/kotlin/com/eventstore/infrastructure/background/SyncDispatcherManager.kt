@@ -17,11 +17,19 @@ class SyncDispatcherManager(
     private val eventRepository: EventRepository
 ) : EventDispatcher {
     private val logger = LoggerFactory.getLogger(SyncDispatcherManager::class.java)
+    private val processedTopics = mutableSetOf<String>()
+
+    suspend fun getRunningDispatchers(): List<String> {
+        // For synchronous dispatcher, return topics that have been processed
+        // This is a simplified implementation for tests
+        return processedTopics.toList()
+    }
 
     override suspend fun notifyEventsPublished(topics: Set<String>) {
         // Process events synchronously for each topic, one after another
         for (topic in topics) {
             processEventsForTopic(topic)
+            processedTopics.add(topic)
         }
     }
 
@@ -30,6 +38,7 @@ class SyncDispatcherManager(
         // No need to track running state or start background jobs
         for (topic in topics) {
             processEventsForTopic(topic)
+            processedTopics.add(topic)
         }
     }
 
