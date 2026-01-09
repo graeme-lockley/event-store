@@ -1,11 +1,12 @@
 package com.eventstore.domain.services.permission
 
+import com.eventstore.Config
 import com.eventstore.domain.*
 import com.eventstore.domain.events.PermissionEventType
 import com.eventstore.domain.events.PermissionGrantedEvent
-import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.ResourceResolver
-import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.services.BaseSystemService
+import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
 import com.eventstore.infrastructure.projections.TenantProjectionService
@@ -26,13 +27,15 @@ data class GrantPermissionRequest(
 )
 
 class GrantPermissionService(
-    private val eventRepository: EventRepository,
-    private val topicRepository: TopicRepository,
     private val resourceResolver: ResourceResolver,
     private val tenantProjectionService: TenantProjectionService,
-    private val namespaceProjectionService: NamespaceProjectionService
-) {
+    private val namespaceProjectionService: NamespaceProjectionService,
+    config: Config,
+    eventPublisher: SystemEventPublisher
+) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: GrantPermissionRequest): PermissionGrantedEvent {
+        requireMultiTenantEnabled()
+
         // Resolve tenant resourceId
         val tenantResourceId = resourceResolver.resolveTenantResourceId(request.tenantName)
 
@@ -75,25 +78,14 @@ class GrantPermissionService(
             expiresAt = request.expiresAt
         )
 
-        val sequence = topicRepository.getAndIncrementSequence(
-            topicName = SystemTopics.PERMISSIONS_TOPIC,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
+        val eventPayload = event.toPayload()
 
-        val storedEvent = Event(
-            id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC,
-                sequence = sequence,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-            ),
-            timestamp = now,
-            type = PermissionEventType.GRANTED,
-            payload = event.toPayload()
+        eventPublisher.publishEvent(
+            topic = SystemTopics.PERMISSIONS_TOPIC,
+            eventType = PermissionEventType.GRANTED,
+            payload = eventPayload,
+            timestamp = now
         )
-
-        eventRepository.storeEvents(listOf(storedEvent))
 
         return event
     }

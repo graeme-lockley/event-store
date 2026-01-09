@@ -11,14 +11,13 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class GrantPermissionServiceTest {
+class RevokePermissionServiceTest {
     private lateinit var application: Application
     private lateinit var tenantName: String
     private lateinit var userId: String
@@ -34,10 +33,11 @@ class GrantPermissionServiceTest {
     }
 
     @Test
-    fun `grants permission and emits event`() = runTest {
+    fun `revokes permission and emits event`() = runTest {
         val permissions = setOf(Permission.READ, Permission.UPDATE)
 
-        val event = application.grantPermission(
+        // First grant permission
+        application.grantPermission(
             GrantPermissionRequest(
                 principalId = userId,
                 principalType = PrincipalType.USER,
@@ -45,6 +45,18 @@ class GrantPermissionServiceTest {
                 tenantName = tenantName,
                 permissions = permissions,
                 grantedBy = "admin"
+            )
+        )
+
+        // Then revoke permission
+        val event = application.revokePermission(
+            RevokePermissionRequest(
+                principalId = userId,
+                principalType = PrincipalType.USER,
+                resourceType = ResourceType.TENANT,
+                tenantName = tenantName,
+                permissions = permissions,
+                revokedBy = "admin"
             )
         )
 
@@ -59,46 +71,47 @@ class GrantPermissionServiceTest {
             tenantName = SystemTopics.SYSTEM_TENANT_ID,
             namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
         )
-        val permissionEvents = storedEvents.filter { it.type == PermissionEventType.GRANTED }
-        assertTrue(permissionEvents.isNotEmpty())
-        assertEquals(PermissionEventType.GRANTED, permissionEvents.last().type)
+        val revokedEvents = storedEvents.filter { it.type == PermissionEventType.REVOKED }
+        assertTrue(revokedEvents.isNotEmpty())
+        assertEquals(PermissionEventType.REVOKED, revokedEvents.last().type)
     }
 
     @Test
-    fun `grants permission for specific resource`() = runTest {
-        val resourceId = UUID.randomUUID()
-
-        val event = application.grantPermission(
-            GrantPermissionRequest(
+    fun `revokes permission for specific resource`() = runTest {
+        // RevokePermissionService doesn't use resourceName parameter the same way as GrantPermissionService
+        // It resolves resourceId based on resourceType, so we test that it resolves correctly
+        val event = application.revokePermission(
+            RevokePermissionRequest(
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
-                resourceName = resourceId.toString(),
                 tenantName = tenantName,
                 permissions = setOf(Permission.READ),
-                grantedBy = "admin"
+                revokedBy = "admin"
             )
         )
 
-        assertEquals(resourceId.toString(), event.resourceId)
+        // Verify event was created with correct tenant resourceId
+        assertNotNull(event.tenantResourceId)
+        assertEquals(ResourceType.TENANT, event.resourceType)
     }
 
     @Test
-    fun `grants permission for namespace`() = runTest {
+    fun `revokes permission for namespace`() = runTest {
         val namespaceName = "test-namespace"
         
         // Create namespace
         application.createNamespace(tenantName, namespaceName)
 
-        val event = application.grantPermission(
-            GrantPermissionRequest(
+        val event = application.revokePermission(
+            RevokePermissionRequest(
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.NAMESPACE,
                 tenantName = tenantName,
                 namespaceName = namespaceName,
                 permissions = setOf(Permission.READ),
-                grantedBy = "admin"
+                revokedBy = "admin"
             )
         )
 
@@ -107,7 +120,7 @@ class GrantPermissionServiceTest {
     }
 
     @Test
-    fun `grants permission for topic`() = runTest {
+    fun `revokes permission for topic`() = runTest {
         val namespaceName = "test-namespace"
         val topicName = "test-topic"
         
@@ -120,8 +133,8 @@ class GrantPermissionServiceTest {
             namespaceName = namespaceName
         )
 
-        val event = application.grantPermission(
-            GrantPermissionRequest(
+        val event = application.revokePermission(
+            RevokePermissionRequest(
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TOPIC,
@@ -129,7 +142,7 @@ class GrantPermissionServiceTest {
                 namespaceName = namespaceName,
                 topicName = topicName,
                 permissions = setOf(Permission.READ),
-                grantedBy = "admin"
+                revokedBy = "admin"
             )
         )
 
@@ -138,36 +151,36 @@ class GrantPermissionServiceTest {
     }
 
     @Test
-    fun `grants permission with expiration`() = runTest {
-        val expiresAt = Instant.now().plusSeconds(3600)
+    fun `revokes permission with reason`() = runTest {
+        val reason = "Access no longer needed"
 
-        val event = application.grantPermission(
-            GrantPermissionRequest(
+        val event = application.revokePermission(
+            RevokePermissionRequest(
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
                 tenantName = tenantName,
                 permissions = setOf(Permission.READ),
-                expiresAt = expiresAt,
-                grantedBy = "admin"
+                revokedBy = "admin",
+                reason = reason
             )
         )
 
-        assertEquals(expiresAt, event.expiresAt)
+        assertEquals(reason, event.reason)
     }
 
     @Test
-    fun `grants permission for API key principal`() = runTest {
+    fun `revokes permission for API key principal`() = runTest {
         val apiKeyId = UUID.randomUUID().toString()
 
-        val event = application.grantPermission(
-            GrantPermissionRequest(
+        val event = application.revokePermission(
+            RevokePermissionRequest(
                 principalId = apiKeyId,
                 principalType = PrincipalType.API_KEY,
                 resourceType = ResourceType.TENANT,
                 tenantName = tenantName,
                 permissions = setOf(Permission.READ),
-                grantedBy = "admin"
+                revokedBy = "admin"
             )
         )
 
@@ -175,3 +188,4 @@ class GrantPermissionServiceTest {
         assertEquals(PrincipalType.API_KEY, event.principalType)
     }
 }
+

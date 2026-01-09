@@ -1,11 +1,12 @@
 package com.eventstore.domain.services.permission
 
+import com.eventstore.Config
 import com.eventstore.domain.*
 import com.eventstore.domain.events.PermissionEventType
 import com.eventstore.domain.events.PermissionRevokedEvent
-import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.ResourceResolver
-import com.eventstore.domain.ports.outbound.TopicRepository
+import com.eventstore.domain.services.BaseSystemService
+import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
 import java.time.Instant
 import java.util.*
@@ -24,11 +25,13 @@ data class RevokePermissionRequest(
 )
 
 class RevokePermissionService(
-    private val eventRepository: EventRepository,
-    private val topicRepository: TopicRepository,
-    private val resourceResolver: ResourceResolver
-) {
+    private val resourceResolver: ResourceResolver,
+    config: Config,
+    eventPublisher: SystemEventPublisher
+) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: RevokePermissionRequest): PermissionRevokedEvent {
+        requireMultiTenantEnabled()
+
         // Resolve tenant resourceId
         val tenantResourceId = resourceResolver.resolveTenantResourceId(request.tenantName)
 
@@ -66,25 +69,14 @@ class RevokePermissionService(
             reason = request.reason
         )
 
-        val sequence = topicRepository.getAndIncrementSequence(
-            topicName = SystemTopics.PERMISSIONS_TOPIC,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
+        val eventPayload = event.toPayload()
 
-        val storedEvent = Event(
-            id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC,
-                sequence = sequence,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
-            ),
-            timestamp = now,
-            type = PermissionEventType.REVOKED,
-            payload = event.toPayload()
+        eventPublisher.publishEvent(
+            topic = SystemTopics.PERMISSIONS_TOPIC,
+            eventType = PermissionEventType.REVOKED,
+            payload = eventPayload,
+            timestamp = now
         )
-
-        eventRepository.storeEvents(listOf(storedEvent))
 
         return event
     }

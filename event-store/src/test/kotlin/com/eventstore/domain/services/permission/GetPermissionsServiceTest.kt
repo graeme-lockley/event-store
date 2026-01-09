@@ -4,21 +4,18 @@ import com.eventstore.domain.Application
 import com.eventstore.domain.Permission
 import com.eventstore.domain.PrincipalType
 import com.eventstore.domain.ResourceType
-import com.eventstore.domain.events.PermissionEventType
 import com.eventstore.domain.services.createApplication
-import com.eventstore.domain.tenants.SystemTopics
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class GrantPermissionServiceTest {
+class GetPermissionsServiceTest {
     private lateinit var application: Application
     private lateinit var tenantName: String
     private lateinit var userId: String
@@ -34,10 +31,11 @@ class GrantPermissionServiceTest {
     }
 
     @Test
-    fun `grants permission and emits event`() = runTest {
+    fun `gets permissions for tenant`() = runTest {
         val permissions = setOf(Permission.READ, Permission.UPDATE)
 
-        val event = application.grantPermission(
+        // Grant permission
+        application.grantPermission(
             GrantPermissionRequest(
                 principalId = userId,
                 principalType = PrincipalType.USER,
@@ -48,49 +46,29 @@ class GrantPermissionServiceTest {
             )
         )
 
-        assertEquals(userId, event.principalId)
-        assertEquals(PrincipalType.USER, event.principalType)
-        assertEquals(ResourceType.TENANT, event.resourceType)
-        assertEquals(permissions, event.permissions)
-
-        // Verify event was stored
-        val storedEvents = application.getEvents(
-            topic = SystemTopics.PERMISSIONS_TOPIC,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
-        )
-        val permissionEvents = storedEvents.filter { it.type == PermissionEventType.GRANTED }
-        assertTrue(permissionEvents.isNotEmpty())
-        assertEquals(PermissionEventType.GRANTED, permissionEvents.last().type)
-    }
-
-    @Test
-    fun `grants permission for specific resource`() = runTest {
-        val resourceId = UUID.randomUUID()
-
-        val event = application.grantPermission(
-            GrantPermissionRequest(
+        // Get permissions
+        val result = application.getPermissions(
+            GetPermissionsRequest(
                 principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                resourceName = resourceId.toString(),
-                tenantName = tenantName,
-                permissions = setOf(Permission.READ),
-                grantedBy = "admin"
+                tenantName = tenantName
             )
         )
 
-        assertEquals(resourceId.toString(), event.resourceId)
+        assertTrue(result.isNotEmpty())
+        val tenantPermission = result.find { it.resourceType == ResourceType.TENANT }
+        assertNotNull(tenantPermission)
+        assertEquals(permissions, tenantPermission.permissions)
     }
 
     @Test
-    fun `grants permission for namespace`() = runTest {
+    fun `gets permissions for namespace`() = runTest {
         val namespaceName = "test-namespace"
         
         // Create namespace
         application.createNamespace(tenantName, namespaceName)
 
-        val event = application.grantPermission(
+        // Grant permission
+        application.grantPermission(
             GrantPermissionRequest(
                 principalId = userId,
                 principalType = PrincipalType.USER,
@@ -102,12 +80,22 @@ class GrantPermissionServiceTest {
             )
         )
 
-        assertEquals(ResourceType.NAMESPACE, event.resourceType)
-        assertNotNull(event.namespaceResourceId)
+        // Get permissions
+        val result = application.getPermissions(
+            GetPermissionsRequest(
+                principalId = userId,
+                tenantName = tenantName,
+                namespaceName = namespaceName
+            )
+        )
+
+        assertTrue(result.isNotEmpty())
+        val namespacePermission = result.find { it.resourceType == ResourceType.NAMESPACE }
+        assertNotNull(namespacePermission)
     }
 
     @Test
-    fun `grants permission for topic`() = runTest {
+    fun `gets permissions for topic`() = runTest {
         val namespaceName = "test-namespace"
         val topicName = "test-topic"
         
@@ -120,7 +108,8 @@ class GrantPermissionServiceTest {
             namespaceName = namespaceName
         )
 
-        val event = application.grantPermission(
+        // Grant permission
+        application.grantPermission(
             GrantPermissionRequest(
                 principalId = userId,
                 principalType = PrincipalType.USER,
@@ -133,45 +122,74 @@ class GrantPermissionServiceTest {
             )
         )
 
-        assertEquals(ResourceType.TOPIC, event.resourceType)
-        assertNotNull(event.topicResourceId)
+        // Get permissions
+        val result = application.getPermissions(
+            GetPermissionsRequest(
+                principalId = userId,
+                tenantName = tenantName,
+                namespaceName = namespaceName,
+                topicName = topicName
+            )
+        )
+
+        assertTrue(result.isNotEmpty())
+        val topicPermission = result.find { it.resourceType == ResourceType.TOPIC }
+        assertNotNull(topicPermission)
     }
 
     @Test
-    fun `grants permission with expiration`() = runTest {
-        val expiresAt = Instant.now().plusSeconds(3600)
+    fun `returns empty list when no permissions granted`() = runTest {
+        val result = application.getPermissions(
+            GetPermissionsRequest(
+                principalId = userId,
+                tenantName = tenantName
+            )
+        )
 
-        val event = application.grantPermission(
+        assertEquals(emptyList(), result)
+    }
+
+    @Test
+    fun `gets multiple permissions for same principal`() = runTest {
+        val namespaceName = "test-namespace"
+        
+        // Create namespace
+        application.createNamespace(tenantName, namespaceName)
+
+        // Grant multiple permissions
+        application.grantPermission(
             GrantPermissionRequest(
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
                 tenantName = tenantName,
                 permissions = setOf(Permission.READ),
-                expiresAt = expiresAt,
                 grantedBy = "admin"
             )
         )
-
-        assertEquals(expiresAt, event.expiresAt)
-    }
-
-    @Test
-    fun `grants permission for API key principal`() = runTest {
-        val apiKeyId = UUID.randomUUID().toString()
-
-        val event = application.grantPermission(
+        application.grantPermission(
             GrantPermissionRequest(
-                principalId = apiKeyId,
-                principalType = PrincipalType.API_KEY,
-                resourceType = ResourceType.TENANT,
+                principalId = userId,
+                principalType = PrincipalType.USER,
+                resourceType = ResourceType.NAMESPACE,
                 tenantName = tenantName,
-                permissions = setOf(Permission.READ),
+                namespaceName = namespaceName,
+                permissions = setOf(Permission.UPDATE),
                 grantedBy = "admin"
             )
         )
 
-        assertEquals(apiKeyId, event.principalId)
-        assertEquals(PrincipalType.API_KEY, event.principalType)
+        // Get permissions
+        val result = application.getPermissions(
+            GetPermissionsRequest(
+                principalId = userId,
+                tenantName = tenantName
+            )
+        )
+
+        assertTrue(result.size >= 2)
+        assertTrue(result.any { it.resourceType == ResourceType.TENANT })
+        assertTrue(result.any { it.resourceType == ResourceType.NAMESPACE })
     }
 }
+

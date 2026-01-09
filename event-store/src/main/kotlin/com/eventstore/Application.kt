@@ -272,16 +272,16 @@ fun Application.configureApplication(config: Config) {
 
     // Initialize permission management services
     val grantPermissionService = GrantPermissionService(
-        eventRepository = eventRepository,
-        topicRepository = topicRepository,
         resourceResolver = resourceResolver,
         tenantProjectionService = tenantProjectionService,
-        namespaceProjectionService = namespaceProjectionService
+        namespaceProjectionService = namespaceProjectionService,
+        config = config,
+        eventPublisher = systemEventPublisher
     )
     val revokePermissionService = RevokePermissionService(
-        eventRepository = eventRepository,
-        topicRepository = topicRepository,
-        resourceResolver = resourceResolver
+        resourceResolver = resourceResolver,
+        config = config,
+        eventPublisher = systemEventPublisher
     )
     val getPermissionsService = GetPermissionsService(
         permissionProjectionService = permissionProjectionService,

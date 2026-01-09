@@ -1,8 +1,11 @@
 package com.eventstore.domain
 
 import com.eventstore.Config
+import com.eventstore.domain.events.PermissionGrantedEvent
+import com.eventstore.domain.events.PermissionRevokedEvent
 import com.eventstore.domain.ports.outbound.*
 import com.eventstore.domain.services.SystemEventPublisher
+import com.eventstore.domain.services.auth.ResourceResolverImpl
 import com.eventstore.domain.services.apikey.*
 import com.eventstore.domain.services.consumer.ConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
@@ -14,6 +17,12 @@ import com.eventstore.domain.services.event.PublishEventsService
 import com.eventstore.domain.services.health.GetHealthStatusService
 import com.eventstore.domain.services.health.HealthStatus
 import com.eventstore.domain.services.namespace.*
+import com.eventstore.domain.services.permission.GetPermissionsRequest
+import com.eventstore.domain.services.permission.GetPermissionsService
+import com.eventstore.domain.services.permission.GrantPermissionRequest
+import com.eventstore.domain.services.permission.GrantPermissionService
+import com.eventstore.domain.services.permission.RevokePermissionRequest
+import com.eventstore.domain.services.permission.RevokePermissionService
 import com.eventstore.domain.services.tenant.*
 import com.eventstore.domain.services.topic.CreateTopicService
 import com.eventstore.domain.services.user.CreateUserRequest
@@ -60,6 +69,9 @@ class Application(
         com.eventstore.infrastructure.projections.NamespaceProjectionService(namespaceRepository)
     val userProjectionService = UserProjectionService(userRepository)
     val permissionProjectionService = PermissionProjectionService(permissionRepository)
+
+    val resourceResolver: ResourceResolverImpl =
+        ResourceResolverImpl(tenantProjectionService, namespaceProjectionService, topicRepository)
 
     val systemEventPublisher: SystemEventPublisher =
         SystemEventPublisher(eventRepository, topicRepository, schemaValidator, dispatcherManager)
@@ -119,6 +131,15 @@ class Application(
 
     private val createUserService: CreateUserService =
         CreateUserService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)
+
+    private val grantPermissionService: GrantPermissionService =
+        GrantPermissionService(resourceResolver, tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
+
+    private val revokePermissionService: RevokePermissionService =
+        RevokePermissionService(resourceResolver, config, systemEventPublisher)
+
+    private val getPermissionsService: GetPermissionsService =
+        GetPermissionsService(permissionProjectionService, resourceResolver)
 
     init {
         runBlocking {
@@ -366,4 +387,13 @@ class Application(
 
     suspend fun getHealthStatus(): HealthStatus =
         getHealthStatusService.execute()
+
+    suspend fun grantPermission(request: GrantPermissionRequest): PermissionGrantedEvent =
+        grantPermissionService.execute(request)
+
+    suspend fun revokePermission(request: RevokePermissionRequest): PermissionRevokedEvent =
+        revokePermissionService.execute(request)
+
+    suspend fun getPermissions(request: GetPermissionsRequest): List<PermissionGrant> =
+        getPermissionsService.execute(request)
 }
