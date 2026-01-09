@@ -1,33 +1,41 @@
 package com.eventstore.domain.services.consumer
 
+import com.eventstore.domain.Application
+import com.eventstore.domain.Schema
 import com.eventstore.domain.exceptions.ConsumerNotFoundException
-import com.eventstore.domain.services.PopulateEventStoreState
-import com.eventstore.domain.services.createEventStore
-import com.eventstore.domain.services.event.InMemoryEventDispatcher
-import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
-import kotlinx.coroutines.runBlocking
+import com.eventstore.domain.services.createApplication
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UnregisterConsumerServiceTest {
-    val topicName = "user-events"
-
-    private lateinit var helper: PopulateEventStoreState
-    private lateinit var registerConsumerService: RegisterConsumerService
-    private lateinit var unregisterConsumerService: UnregisterConsumerService
+    private lateinit var application: Application
+    private val topicName = "user-events"
 
     @BeforeEach
-    fun setup() = runBlocking {
-        helper = createEventStore(topicName)
-        val consumerFactory = ConsumerFactoryImpl()
-        val eventDispatcher = InMemoryEventDispatcher()
-        registerConsumerService =
-            RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, eventDispatcher)
-        unregisterConsumerService = UnregisterConsumerService(helper.consumerRepository)
+    fun setup() = runTest {
+        application = createApplication()
+        // Create tenant and namespace
+        application.createTenant("default")
+        application.createNamespace("default", "default")
+        // Create topic
+        application.createTopic(
+            name = topicName,
+            schemas = listOf(
+                Schema(
+                    eventType = "user.created",
+                    properties = mapOf("id" to "string", "name" to "string"),
+                    required = listOf("id", "name")
+                )
+            ),
+            tenantName = "default",
+            namespaceName = "default"
+        )
     }
 
     @Test
@@ -37,22 +45,41 @@ class UnregisterConsumerServiceTest {
             topics = mapOf(topicName to null)
         )
 
-        val consumerId = registerConsumerService.execute(request, "default", "default")
+        val consumerId = application.registerConsumer(request, "default", "default")
 
-        assertNotNull(helper.findConsumer(consumerId))
-        unregisterConsumerService.execute(consumerId, "default", "default")
+        assertNotNull(application.consumerRepository.findById(consumerId))
+        application.unregisterConsumer(consumerId, "default", "default")
 
-        assertNull(helper.findConsumer(consumerId))
+        assertNull(application.consumerRepository.findById(consumerId))
     }
 
     @Test
     fun `should throw exception when consumer not found`() = runTest {
         val consumerId = "unknown-consumer"
 
-        assertNull(helper.findConsumer(consumerId))
+        assertNull(application.consumerRepository.findById(consumerId))
 
         assertThrows<ConsumerNotFoundException> {
-            unregisterConsumerService.execute(consumerId, "default", "default")
+            application.unregisterConsumer(consumerId, "default", "default")
+        }
+    }
+
+    @Test
+    fun `should throw exception when unregistering already unregistered consumer`() = runTest {
+        val request = HttpConsumerRegistrationRequest(
+            callbackUrl = "https://example.com/webhook",
+            topics = mapOf(topicName to null)
+        )
+
+        val consumerId = application.registerConsumer(request, "default", "default")
+
+        // First unregister should succeed
+        application.unregisterConsumer(consumerId, "default", "default")
+        assertNull(application.consumerRepository.findById(consumerId))
+
+        // Second unregister should fail
+        assertThrows<ConsumerNotFoundException> {
+            application.unregisterConsumer(consumerId, "default", "default")
         }
     }
 }

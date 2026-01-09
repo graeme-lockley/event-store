@@ -4,8 +4,10 @@ import com.eventstore.Config
 import com.eventstore.domain.ports.outbound.*
 import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.services.apikey.*
+import com.eventstore.domain.services.consumer.ConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.RegisterConsumerService
+import com.eventstore.domain.services.consumer.UnregisterConsumerService
 import com.eventstore.domain.services.namespace.*
 import com.eventstore.domain.services.tenant.*
 import com.eventstore.domain.services.topic.CreateTopicService
@@ -81,11 +83,14 @@ class Application(
     val getNamespaceService: GetNamespaceService =
         GetNamespaceService(namespaceProjectionService)
 
-    val createTopicService: CreateTopicService =
+    private val createTopicService: CreateTopicService =
         CreateTopicService(topicRepository, schemaValidator, tenantProjectionService, namespaceProjectionService)
 
-    val registerConsumerService: RegisterConsumerService =
+    private val registerConsumerService: RegisterConsumerService =
         RegisterConsumerService(consumerRepository, topicRepository, consumerFactory, dispatcherManager)
+
+    private val unregisterConsumerService: UnregisterConsumerService =
+        UnregisterConsumerService(consumerRepository)
 
     private val createApiKeyService: CreateApiKeyService =
         CreateApiKeyService(apiKeyRepository, userProjectionService)
@@ -96,7 +101,7 @@ class Application(
     private val revokeApiKeyService: RevokeApiKeyService =
         RevokeApiKeyService(apiKeyRepository)
 
-    val createUserService: CreateUserService =
+    private val createUserService: CreateUserService =
         CreateUserService(eventRepository, topicRepository, tenantProjectionService, userProjectionService, config)
 
     init {
@@ -313,4 +318,18 @@ class Application(
 
     suspend fun revokeApiKey(keyId: String) =
         revokeApiKeyService.execute(RevokeApiKeyRequest(keyId = keyId))
+
+    suspend fun registerConsumer(
+        request: ConsumerRegistrationRequest,
+        tenantName: String,
+        namespaceName: String
+    ): String =
+        registerConsumerService.execute(request, tenantName, namespaceName)
+
+    suspend fun unregisterConsumer(
+        consumerId: String,
+        tenantName: String,
+        namespaceName: String
+    ): Boolean =
+        unregisterConsumerService.execute(consumerId, tenantName, namespaceName)
 }
