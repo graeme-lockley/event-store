@@ -31,7 +31,7 @@ class InMemoryEventRepository : EventRepository {
 
     override suspend fun storeEvent(event: Event): Event {
         return mutex.withLock {
-            val key = topicKey(event.id.topic, event.id.tenantId, event.id.namespaceId, event.id)
+            val key = topicKey(event.id.topicId, event.id.tenantId, event.id.namespaceId, event.id)
             val events = eventsByTopic.getOrPut(key) { mutableListOf() }
             events.add(event)
             event
@@ -49,7 +49,7 @@ class InMemoryEventRepository : EventRepository {
             val storedEvents = mutableListOf<Event>()
             try {
                 for (event in events) {
-                    val key = topicKey(event.id.topic, event.id.tenantId, event.id.namespaceId, event.id)
+                    val key = topicKey(event.id.topicId, event.id.tenantId, event.id.namespaceId, event.id)
                     val eventsList = eventsByTopic.getOrPut(key) { mutableListOf() }
                     eventsList.add(event)
                     storedEvents.add(event)
@@ -58,7 +58,7 @@ class InMemoryEventRepository : EventRepository {
             } catch (e: Exception) {
                 // Rollback: remove events that were added
                 for (event in storedEvents) {
-                    val key = topicKey(event.id.topic, event.id.tenantId, event.id.namespaceId, event.id)
+                    val key = topicKey(event.id.topicId, event.id.tenantId, event.id.namespaceId, event.id)
                     eventsByTopic[key]?.remove(event)
                 }
                 throw e
@@ -135,8 +135,8 @@ class InMemoryEventRepository : EventRepository {
     }
 
     private fun compareEventIds(id1: EventId, id2: EventId): Int {
-        if (id1.topic != id2.topic) {
-            return id1.topic.compareTo(id2.topic)
+        if (id1.topicId != id2.topicId) {
+            return id1.topicId.compareTo(id2.topicId)
         }
         return id1.sequence.compareTo(id2.sequence)
     }

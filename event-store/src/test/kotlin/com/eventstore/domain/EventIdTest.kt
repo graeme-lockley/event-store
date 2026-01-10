@@ -10,14 +10,14 @@ class EventIdTest {
     fun `should create valid EventId`() {
         val eventId = EventId.create("user-events", 42L, "default", "default")
         assertEquals("default/default/user-events-42", eventId.value)
-        assertEquals("user-events", eventId.topic)
+        assertEquals("user-events", eventId.topicId)
         assertEquals(42L, eventId.sequence)
     }
 
     @Test
     fun `should parse topic with multiple hyphens`() {
         val eventId = EventId("default/default/my-topic-name-123")
-        assertEquals("my-topic-name", eventId.topic)
+        assertEquals("my-topic-name", eventId.topicId)
         assertEquals(123L, eventId.sequence)
         assertEquals("default", eventId.tenantId)
         assertEquals("default", eventId.namespaceId)
@@ -26,7 +26,7 @@ class EventIdTest {
     @Test
     fun `should extract topic correctly`() {
         val eventId = EventId("default/default/user-events-1")
-        assertEquals("user-events", eventId.topic)
+        assertEquals("user-events", eventId.topicId)
         assertEquals("default", eventId.tenantId)
         assertEquals("default", eventId.namespaceId)
     }
@@ -63,7 +63,7 @@ class EventIdTest {
     @Test
     fun `should handle different tenant and namespace`() {
         val eventId = EventId("acme/production/users-42")
-        assertEquals("users", eventId.topic)
+        assertEquals("users", eventId.topicId)
         assertEquals(42L, eventId.sequence)
         assertEquals("acme", eventId.tenantId)
         assertEquals("production", eventId.namespaceId)

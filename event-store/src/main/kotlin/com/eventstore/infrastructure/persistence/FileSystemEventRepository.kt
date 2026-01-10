@@ -112,8 +112,8 @@ class FileSystemEventRepository(
     override suspend fun storeEvent(event: Event): Event {
         return withContext(Dispatchers.IO) {
             try {
-                // Use event.id.topic for the topic parameter, and event.id for tenant/namespace extraction
-                val filePath = getEventFilePath(event.id.topic, event.id)
+                // Use event.id.topicId for the topic parameter, and event.id for tenant/namespace extraction
+                val filePath = getEventFilePath(event.id.topicId, event.id)
 
                 Files.createDirectories(filePath.parent)
 
@@ -130,7 +130,7 @@ class FileSystemEventRepository(
             } catch (e: EventStorageException) {
                 throw e
             } catch (e: Exception) {
-                throw EventStorageException("Failed to store event ${event.id.value} for topic ${event.id.topic}", e)
+                throw EventStorageException("Failed to store event ${event.id.value} for topic ${event.id.topicId}", e)
             }
         }
     }
@@ -148,7 +148,7 @@ class FileSystemEventRepository(
 
             try {
                 for (event in events) {
-                    val filePath = getEventFilePath(event.id.topic, event.id)
+                    val filePath = getEventFilePath(event.id.topicId, event.id)
 
                     Files.createDirectories(filePath.parent)
 
@@ -296,7 +296,7 @@ class FileSystemEventRepository(
                                                                 
                                                                 // Verify the EventId matches the expected topic and tenant/namespace
                                                                 // This ensures we only return events that belong to the queried topic
-                                                                if (parsedEventId.topic != topic ||
+                                                                if (parsedEventId.topicId != topic ||
                                                                     (tenantId != null && parsedEventId.tenantId != tenantId) ||
                                                                     (namespaceId != null && parsedEventId.namespaceId != namespaceId)
                                                                 ) {
@@ -376,8 +376,8 @@ class FileSystemEventRepository(
     }
 
     private fun compareEventIds(id1: EventId, id2: EventId): Int {
-        if (id1.topic != id2.topic) {
-            return id1.topic.compareTo(id2.topic)
+        if (id1.topicId != id2.topicId) {
+            return id1.topicId.compareTo(id2.topicId)
         }
         return id1.sequence.compareTo(id2.sequence)
     }
