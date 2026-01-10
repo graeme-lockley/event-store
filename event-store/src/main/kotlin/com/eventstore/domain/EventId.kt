@@ -1,11 +1,11 @@
 package com.eventstore.domain
 
-private val TENANT_PATTERN = Regex("^[^/]+/[^/]+/.+-[0-9]+$")
+private val TENANT_PATTERN = Regex("^[^/]+/[^/]+/[^/]+/[0-9]+$")
 
 /**
  * Value object representing a globally unique event ID.
  *
- * Format: <tenant>/<namespace>/<topic>-<sequence> (e.g., "acme/default/users-42")
+ * Format: <tenant>/<namespace>/<topic>/<sequence> (e.g., "acme/default/users/42")
  */
 data class EventId(
     val tenantId: String,
@@ -27,11 +27,11 @@ data class EventId(
     constructor(value: String) : this(
         tenantId = value.substringBefore("/"),
         namespaceId = value.substringAfter("/").substringBefore("/"),
-        topicId = value.substringAfter("/").substringAfter("/").substringBeforeLast("-"),
-        sequence = value.substringAfterLast("-").toLong()
+        topicId = value.split("/").getOrNull(2) ?: throw IllegalArgumentException("Invalid EventId format: missing topic"),
+        sequence = value.substringAfterLast("/").toLong()
     ) {
         require(value.matches(TENANT_PATTERN)) {
-            "Event ID must be in format '<tenant>/<namespace>/<topic>-<sequence>'"
+            "Event ID must be in format '<tenant>/<namespace>/<topic>/<sequence>'"
         }
     }
 
@@ -45,7 +45,7 @@ data class EventId(
     val qualifiedTopic: String
         get() = "$tenantId/$namespaceId/$topicId"
 
-    override fun toString(): String = "$tenantId/$namespaceId/$topicId-$sequence"
+    override fun toString(): String = "$tenantId/$namespaceId/$topicId/$sequence"
 
     companion object {
         /**
@@ -56,7 +56,7 @@ data class EventId(
         }
 
         /**
-         * Parses an EventId from a string in format <tenant>/<namespace>/<topic>-<sequence>
+         * Parses an EventId from a string in format <tenant>/<namespace>/<topic>/<sequence>
          */
         fun parse(value: String): EventId {
             return EventId(value)
