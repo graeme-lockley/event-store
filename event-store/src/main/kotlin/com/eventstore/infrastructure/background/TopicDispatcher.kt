@@ -149,22 +149,26 @@ class TopicDispatcher(
     /**
      * Parse a topic name that may be in qualified format (tenant/namespace/topic) or simple format (topic).
      * Returns (simpleTopicName, tenantId, namespaceId).
-     * For qualified names, extracts tenant/namespace. For simple names, uses null (legacy format).
+     * Since legacy format is no longer supported, we always extract tenant/namespace from qualified names,
+     * or use "default"/"default" for simple topic names.
      */
-    private fun parseTopicName(topicName: String): Triple<String, String?, String?> {
+    private fun parseTopicName(topicName: String): Triple<String, String, String> {
         val parts = topicName.split("/")
         return when (parts.size) {
             3 -> {
                 // Qualified name: tenant/namespace/topic
-                // For "default/default/topic", we still pass "default"/"default" to match events stored with those values
-                // But if events are stored in legacy format (null/null), we need to handle that
-                val tenant = if (parts[0] == "default") null else parts[0]
-                val namespace = if (parts[1] == "default") null else parts[1]
-                Triple(parts[2], tenant, namespace)
+                // Always use the actual values, even if "default"
+                Triple(parts[2], parts[0], parts[1])
             }
 
-            1 -> Triple(parts[0], null, null) // topic (legacy format)
-            else -> Triple(topicName, null, null) // fallback to original
+            1 -> {
+                // Simple topic name - use default tenant/namespace since legacy format is removed
+                Triple(parts[0], "default", "default")
+            }
+            else -> {
+                // Fallback: treat as simple topic name with defaults
+                Triple(topicName, "default", "default")
+            }
         }
     }
 }

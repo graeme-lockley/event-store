@@ -9,7 +9,7 @@ class EventTest {
 
     @Test
     fun `should create valid event`() {
-        val eventId = EventId.create("user-events", 1L)
+        val eventId = EventId.create("user-events", 1L, "default", "default")
         val timestamp = Instant.now()
         val payload = mapOf("id" to "123", "name" to "Alice")
 
@@ -23,7 +23,7 @@ class EventTest {
 
     @Test
     fun `should throw exception for blank event type`() {
-        val eventId = EventId.create("user-events", 1L)
+        val eventId = EventId.create("user-events", 1L, "default", "default")
         val timestamp = Instant.now()
         val payload = mapOf<String, Any>()
 
@@ -34,7 +34,7 @@ class EventTest {
 
     @Test
     fun `should throw exception for whitespace-only event type`() {
-        val eventId = EventId.create("user-events", 1L)
+        val eventId = EventId.create("user-events", 1L, "default", "default")
         val timestamp = Instant.now()
         val payload = mapOf<String, Any>()
 
@@ -45,7 +45,7 @@ class EventTest {
 
     @Test
     fun `should accept empty payload`() {
-        val eventId = EventId.create("user-events", 1L)
+        val eventId = EventId.create("user-events", 1L, "default", "default")
         val timestamp = Instant.now()
         val payload = emptyMap<String, Any>()
 
@@ -55,7 +55,7 @@ class EventTest {
 
     @Test
     fun `should accept complex payload`() {
-        val eventId = EventId.create("user-events", 1L)
+        val eventId = EventId.create("user-events", 1L, "default", "default")
         val timestamp = Instant.now()
         val payload = mapOf(
             "id" to "123",

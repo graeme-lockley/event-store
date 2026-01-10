@@ -67,7 +67,9 @@ class FileSystemEventRepository(
         val group2 = String.format("%02d", (sequence / 10_000) % 100)
         val group3 = String.format("%02d", (sequence / 100) % 100)
 
-        val fileName = "${eventId.value}.json"
+        // Use sequence number as filename to avoid issues with EventId.value containing slashes
+        // The full EventId.value is stored in the JSON content
+        val fileName = "$sequence.json"
         return resolveBaseDir(topic, eventId)
             .resolve(group1)
             .resolve(group2)
@@ -110,6 +112,7 @@ class FileSystemEventRepository(
     override suspend fun storeEvent(event: Event): Event {
         return withContext(Dispatchers.IO) {
             try {
+                // Use event.id.topic for the topic parameter, and event.id for tenant/namespace extraction
                 val filePath = getEventFilePath(event.id.topic, event.id)
 
                 Files.createDirectories(filePath.parent)
@@ -289,8 +292,19 @@ class FileSystemEventRepository(
                                                             try {
                                                                 val json = Files.readString(path)
                                                                 val eventFile: EventFile = objectMapper.readValue(json)
+                                                                val parsedEventId = EventId(eventFile.id)
+                                                                
+                                                                // Verify the EventId matches the expected topic and tenant/namespace
+                                                                // This ensures we only return events that belong to the queried topic
+                                                                if (parsedEventId.topic != topic ||
+                                                                    (tenantId != null && parsedEventId.tenantId != tenantId) ||
+                                                                    (namespaceId != null && parsedEventId.namespaceId != namespaceId)
+                                                                ) {
+                                                                    return@fileLoop
+                                                                }
+                                                                
                                                                 val event = Event(
-                                                                    id = EventId(eventFile.id),
+                                                                    id = parsedEventId,
                                                                     timestamp = Instant.parse(eventFile.timestamp),
                                                                     type = eventFile.type,
                                                                     payload = eventFile.payload
@@ -328,6 +342,8 @@ class FileSystemEventRepository(
                                                                     "Failed to read event file ${path}: ${e.message}",
                                                                     e
                                                                 )
+                                                                // Skip invalid event files (e.g., legacy format or parsing errors)
+                                                                return@fileLoop
                                                             }
                                                         }
                                                 }

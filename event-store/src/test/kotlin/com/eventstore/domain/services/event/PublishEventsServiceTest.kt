@@ -56,7 +56,9 @@ class PublishEventsServiceTest {
         val result = application.publishEvents(requests)
 
         assertEquals(1, result.size)
-        assertTrue(result[0].startsWith("$topicName-"))
+        // EventId format is now: tenantId/namespaceId/topic-sequence
+        assertTrue(result[0].startsWith("default/default/$topicName-"))
+        assertTrue(result[0].endsWith("-1")) // Should be sequence 1
 
         val events = application.getEvents(topicName)
         assertEquals(numberOfEvents + 1, events.size)
@@ -75,8 +77,9 @@ class PublishEventsServiceTest {
         val result = application.publishEvents(requests)
 
         assertEquals(2, result.size)
-        assertTrue(result[0].startsWith("$topicName-"))
-        assertTrue(result[1].startsWith("$topicName-"))
+        // EventId format is now: tenantId/namespaceId/topic-sequence
+        assertTrue(result[0].startsWith("default/default/$topicName-"))
+        assertTrue(result[1].startsWith("default/default/$topicName-"))
 
         val events = application.getEvents(topicName)
         assertEquals(numberOfEvents + 2, events.size)

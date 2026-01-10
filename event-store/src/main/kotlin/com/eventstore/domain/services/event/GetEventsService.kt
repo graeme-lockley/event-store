@@ -24,16 +24,15 @@ class GetEventsService(
         }
 
         val sinceId = sinceEventId?.let { EventId(it) }
-        val tenantForStorage = if (tenantName == "default" && namespaceName == "default") null else tenantName
-        val namespaceForStorage = if (tenantName == "default" && namespaceName == "default") null else namespaceName
-
+        
+        // Always pass tenant/namespace since legacy format is no longer supported
         return eventRepository.getEvents(
             topic = topic,
             sinceEventId = sinceId,
             date = date,
             limit = limit,
-            tenantId = tenantForStorage,
-            namespaceId = namespaceForStorage
+            tenantId = tenantName,
+            namespaceId = namespaceName
         )
     }
 }

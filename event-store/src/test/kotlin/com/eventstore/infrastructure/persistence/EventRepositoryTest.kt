@@ -168,7 +168,7 @@ class EventRepositoryTest {
 
     private suspend fun testStoreEvent(repository: EventRepository) {
         val topic = "test-topic"
-        val eventId = EventId.create(topic, 1L)
+        val eventId = EventId.create(topic, 1L, "default", "default")
         val timestamp = Instant.now()
         val type = "user.created"
         val payload = mapOf("id" to "123", "name" to "Alice")
@@ -183,7 +183,7 @@ class EventRepositoryTest {
 
     private suspend fun testGetEvent(repository: EventRepository) {
         val topic = "get-topic"
-        val eventId = EventId.create(topic, 1L)
+        val eventId = EventId.create(topic, 1L, "default", "default")
         val timestamp = Instant.now()
         val type = "user.created"
         val payload = mapOf("id" to "123", "name" to "Alice")
@@ -197,7 +197,7 @@ class EventRepositoryTest {
 
     private suspend fun testGetEventNotFound(repository: EventRepository) {
         val topic = "not-found-topic"
-        val eventId = EventId.create(topic, 999L)
+        val eventId = EventId.create(topic, 999L, "default", "default")
 
         val retrieved = repository.getEvent(topic, eventId)
         assertNull(retrieved)
@@ -209,18 +209,18 @@ class EventRepositoryTest {
 
         val event1 = repository.storeEvent(
             topic, "user.created", mapOf("id" to "1"),
-            EventId.create(topic, 1L), timestamp
+            EventId.create(topic, 1L, "default", "default"), timestamp
         )
         val event2 = repository.storeEvent(
             topic, "user.updated", mapOf("id" to "2"),
-            EventId.create(topic, 2L), timestamp
+            EventId.create(topic, 2L, "default", "default"), timestamp
         )
         val event3 = repository.storeEvent(
             topic, "user.deleted", mapOf("id" to "3"),
-            EventId.create(topic, 3L), timestamp
+            EventId.create(topic, 3L, "default", "default"), timestamp
         )
 
-        val events = repository.getEvents(topic)
+        val events = repository.getEvents(topic, tenantId = "default", namespaceId = "default")
 
         assertEquals(3, events.size)
         assertTrue(events.contains(event1))
@@ -229,7 +229,7 @@ class EventRepositoryTest {
     }
 
     private suspend fun testGetEventsEmpty(repository: EventRepository) {
-        val events = repository.getEvents("empty-topic")
+        val events = repository.getEvents("empty-topic", tenantId = "default", namespaceId = "default")
         assertTrue(events.isEmpty())
     }
 
@@ -237,12 +237,12 @@ class EventRepositoryTest {
         val topic = "since-topic"
         val timestamp = Instant.now()
 
-        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L), timestamp)
-        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 2L), timestamp)
-        repository.storeEvent(topic, "event3", mapOf("id" to "3"), EventId.create(topic, 3L), timestamp)
+        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L, "default", "default"), timestamp)
+        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 2L, "default", "default"), timestamp)
+        repository.storeEvent(topic, "event3", mapOf("id" to "3"), EventId.create(topic, 3L, "default", "default"), timestamp)
 
-        val sinceEventId = EventId.create(topic, 1L)
-        val events = repository.getEvents(topic, sinceEventId = sinceEventId)
+        val sinceEventId = EventId.create(topic, 1L, "default", "default")
+        val events = repository.getEvents(topic, sinceEventId = sinceEventId, tenantId = "default", namespaceId = "default")
 
         assertEquals(2, events.size)
         assertTrue(events.any { it.id.sequence == 2L })
@@ -258,11 +258,11 @@ class EventRepositoryTest {
 
         val todayDate = today.atZone(java.time.ZoneId.systemDefault()).format(dateFormatter)
 
-        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L), today)
-        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 2L), yesterday)
-        repository.storeEvent(topic, "event3", mapOf("id" to "3"), EventId.create(topic, 3L), today)
+        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L, "default", "default"), today)
+        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 2L, "default", "default"), yesterday)
+        repository.storeEvent(topic, "event3", mapOf("id" to "3"), EventId.create(topic, 3L, "default", "default"), today)
 
-        val events = repository.getEvents(topic, date = todayDate)
+        val events = repository.getEvents(topic, date = todayDate, tenantId = "default", namespaceId = "default")
 
         assertEquals(2, events.size)
         assertTrue(events.all { event ->
@@ -278,11 +278,11 @@ class EventRepositoryTest {
         repeat(10) { i ->
             repository.storeEvent(
                 topic, "event$i", mapOf("id" to i.toString()),
-                EventId.create(topic, (i + 1).toLong()), timestamp
+                EventId.create(topic, (i + 1).toLong(), "default", "default"), timestamp
             )
         }
 
-        val events = repository.getEvents(topic, limit = 5)
+        val events = repository.getEvents(topic, limit = 5, tenantId = "default", namespaceId = "default")
 
         assertEquals(5, events.size)
     }
@@ -293,12 +293,12 @@ class EventRepositoryTest {
         val dateFormatter = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
         val date = timestamp.atZone(java.time.ZoneId.systemDefault()).format(dateFormatter)
 
-        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L), timestamp)
-        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 2L), timestamp)
-        repository.storeEvent(topic, "event3", mapOf("id" to "3"), EventId.create(topic, 3L), timestamp)
+        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L, "default", "default"), timestamp)
+        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 2L, "default", "default"), timestamp)
+        repository.storeEvent(topic, "event3", mapOf("id" to "3"), EventId.create(topic, 3L, "default", "default"), timestamp)
 
-        val sinceEventId = EventId.create(topic, 1L)
-        val events = repository.getEvents(topic, sinceEventId = sinceEventId, date = date, limit = 1)
+        val sinceEventId = EventId.create(topic, 1L, "default", "default")
+        val events = repository.getEvents(topic, sinceEventId = sinceEventId, date = date, limit = 1, tenantId = "default", namespaceId = "default")
 
         assertEquals(1, events.size)
         assertTrue(events.first().id.sequence > 1L)
@@ -308,21 +308,21 @@ class EventRepositoryTest {
         val topic = "latest-topic"
         val timestamp = Instant.now()
 
-        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L), timestamp)
-        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 2L), timestamp)
+        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L, "default", "default"), timestamp)
+        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 2L, "default", "default"), timestamp)
         val latestEvent = repository.storeEvent(
             topic, "event3", mapOf("id" to "3"),
-            EventId.create(topic, 3L), timestamp
+            EventId.create(topic, 3L, "default", "default"), timestamp
         )
 
-        val latestEventId = repository.getLatestEventId(topic)
+        val latestEventId = repository.getLatestEventId(topic, tenantId = "default", namespaceId = "default")
 
         assertNotNull(latestEventId)
         assertEquals(latestEvent.id, latestEventId)
     }
 
     private suspend fun testGetLatestEventIdEmpty(repository: EventRepository) {
-        val latestEventId = repository.getLatestEventId("empty-topic")
+        val latestEventId = repository.getLatestEventId("empty-topic", tenantId = "default", namespaceId = "default")
         assertNull(latestEventId)
     }
 
@@ -333,15 +333,15 @@ class EventRepositoryTest {
 
         val event1 = repository.storeEvent(
             topic1, "event1", mapOf("id" to "1"),
-            EventId.create(topic1, 1L), timestamp
+            EventId.create(topic1, 1L, "default", "default"), timestamp
         )
         val event2 = repository.storeEvent(
             topic2, "event2", mapOf("id" to "2"),
-            EventId.create(topic2, 1L), timestamp
+            EventId.create(topic2, 1L, "default", "default"), timestamp
         )
 
-        val events1 = repository.getEvents(topic1)
-        val events2 = repository.getEvents(topic2)
+        val events1 = repository.getEvents(topic1, tenantId = "default", namespaceId = "default")
+        val events2 = repository.getEvents(topic2, tenantId = "default", namespaceId = "default")
 
         assertEquals(1, events1.size)
         assertEquals(1, events2.size)
@@ -351,7 +351,7 @@ class EventRepositoryTest {
 
     private suspend fun testEventWithEmptyPayload(repository: EventRepository) {
         val topic = "empty-payload-topic"
-        val eventId = EventId.create(topic, 1L)
+        val eventId = EventId.create(topic, 1L, "default", "default")
         val timestamp = Instant.now()
 
         val event = repository.storeEvent(topic, "user.created", emptyMap(), eventId, timestamp)
@@ -364,7 +364,7 @@ class EventRepositoryTest {
 
     private suspend fun testEventWithComplexPayload(repository: EventRepository) {
         val topic = "complex-payload-topic"
-        val eventId = EventId.create(topic, 1L)
+        val eventId = EventId.create(topic, 1L, "default", "default")
         val timestamp = Instant.now()
         val payload = mapOf(
             "id" to "123",
@@ -390,11 +390,11 @@ class EventRepositoryTest {
         (1..5).forEach { i ->
             repository.storeEvent(
                 topic, "event$i", mapOf("id" to i.toString()),
-                EventId.create(topic, i.toLong()), timestamp
+                EventId.create(topic, i.toLong(), "default", "default"), timestamp
             )
         }
 
-        val retrieved = repository.getEvents(topic)
+        val retrieved = repository.getEvents(topic, tenantId = "default", namespaceId = "default")
 
         assertEquals(5, retrieved.size)
         // Events should be sorted by event ID (sequence)

@@ -12,10 +12,9 @@ import kotlin.test.assertTrue
  * Example integration test demonstrating how to use EventStoreTestHelper.
  */
 class ExampleIntegrationTest {
-    
     @TempDir
     lateinit var tempDir: Path
-    
+
     private lateinit var eventStoreHelper: EventStoreTestHelper
     private lateinit var dataDir: Path
     private lateinit var configDir: Path

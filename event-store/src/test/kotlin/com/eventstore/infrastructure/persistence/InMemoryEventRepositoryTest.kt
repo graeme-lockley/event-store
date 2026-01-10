@@ -27,12 +27,12 @@ class InMemoryEventRepositoryTest {
         val events = (1..10).map { i ->
             repository.storeEvent(
                 topic, "event$i", mapOf("id" to i.toString()),
-                EventId.create(topic, i.toLong()), timestamp
+                EventId.create(topic, i.toLong(), "default", "default"), timestamp
             )
         }
 
         assertEquals(10, events.size)
-        assertEquals(10, repository.getEvents(topic).size)
+        assertEquals(10, repository.getEvents(topic, tenantId = "default", namespaceId = "default").size)
     }
 
     @Test
@@ -41,13 +41,13 @@ class InMemoryEventRepositoryTest {
         val repo2 = InMemoryEventRepository()
         val timestamp = Instant.now()
 
-        repo1.storeEvent("topic-1", "event1", mapOf("id" to "1"), EventId.create("topic-1", 1L), timestamp)
-        repo2.storeEvent("topic-2", "event2", mapOf("id" to "2"), EventId.create("topic-2", 1L), timestamp)
+        repo1.storeEvent("topic-1", "event1", mapOf("id" to "1"), EventId.create("topic-1", 1L, "default", "default"), timestamp)
+        repo2.storeEvent("topic-2", "event2", mapOf("id" to "2"), EventId.create("topic-2", 1L, "default", "default"), timestamp)
 
-        assertEquals(1, repo1.getEvents("topic-1").size)
-        assertEquals(1, repo2.getEvents("topic-2").size)
-        assertEquals(0, repo1.getEvents("topic-2").size)
-        assertEquals(0, repo2.getEvents("topic-1").size)
+        assertEquals(1, repo1.getEvents("topic-1", tenantId = "default", namespaceId = "default").size)
+        assertEquals(1, repo2.getEvents("topic-2", tenantId = "default", namespaceId = "default").size)
+        assertEquals(0, repo1.getEvents("topic-2", tenantId = "default", namespaceId = "default").size)
+        assertEquals(0, repo2.getEvents("topic-1", tenantId = "default", namespaceId = "default").size)
     }
 
     @Test
@@ -58,11 +58,11 @@ class InMemoryEventRepositoryTest {
         repeat(100) { i ->
             repository.storeEvent(
                 topic, "event$i", mapOf("id" to i.toString()),
-                EventId.create(topic, (i + 1).toLong()), timestamp
+                EventId.create(topic, (i + 1).toLong(), "default", "default"), timestamp
             )
         }
 
-        val events = repository.getEvents(topic)
+        val events = repository.getEvents(topic, tenantId = "default", namespaceId = "default")
         assertEquals(100, events.size)
     }
 
@@ -72,7 +72,7 @@ class InMemoryEventRepositoryTest {
         val timestamp = Instant.now()
 
         // Store initial event
-        repository.storeEvent(topic, "initial", mapOf("id" to "0"), EventId.create(topic, 0L), timestamp)
+        repository.storeEvent(topic, "initial", mapOf("id" to "0"), EventId.create(topic, 0L, "default", "default"), timestamp)
 
         // Simulate concurrent operations
         coroutineScope {
@@ -81,11 +81,11 @@ class InMemoryEventRepositoryTest {
                     when (i % 3) {
                         0 -> repository.storeEvent(
                             topic, "event$i", mapOf("id" to i.toString()),
-                            EventId.create(topic, i.toLong()), timestamp
+                            EventId.create(topic, i.toLong(), "default", "default"), timestamp
                         )
 
-                        1 -> repository.getEvent(topic, EventId.create(topic, 0L))
-                        else -> repository.getEvents(topic)
+                        1 -> repository.getEvent(topic, EventId.create(topic, 0L, "default", "default"))
+                        else -> repository.getEvents(topic, tenantId = "default", namespaceId = "default")
                     }
                 }
             }
@@ -94,9 +94,9 @@ class InMemoryEventRepositoryTest {
         }
 
         // Verify final state is consistent
-        val events = repository.getEvents(topic)
+        val events = repository.getEvents(topic, tenantId = "default", namespaceId = "default")
         assertTrue(events.isNotEmpty())
-        assertNotNull(repository.getEvent(topic, EventId.create(topic, 0L)))
+        assertNotNull(repository.getEvent(topic, EventId.create(topic, 0L, "default", "default")))
     }
 
     @Test
@@ -108,11 +108,11 @@ class InMemoryEventRepositoryTest {
         repeat(eventCount) { i ->
             repository.storeEvent(
                 topic, "event$i", mapOf("id" to i.toString()),
-                EventId.create(topic, (i + 1).toLong()), timestamp
+                EventId.create(topic, (i + 1).toLong(), "default", "default"), timestamp
             )
         }
 
-        assertEquals(eventCount, repository.getEvents(topic).size)
+        assertEquals(eventCount, repository.getEvents(topic, tenantId = "default", namespaceId = "default").size)
     }
 
     @Test
@@ -122,16 +122,16 @@ class InMemoryEventRepositoryTest {
 
         val event1 = repository.storeEvent(
             topic, "user.created", mapOf("id" to "1", "name" to "Alice"),
-            EventId.create(topic, 1L), timestamp
+            EventId.create(topic, 1L, "default", "default"), timestamp
         )
         val event2 = repository.storeEvent(
             topic, "user.updated", mapOf("id" to "1", "name" to "Bob"),
-            EventId.create(topic, 2L), timestamp
+            EventId.create(topic, 2L, "default", "default"), timestamp
         )
 
         val retrieved1 = repository.getEvent(topic, event1.id)
         val retrieved2 = repository.getEvent(topic, event2.id)
-        val allEvents = repository.getEvents(topic)
+        val allEvents = repository.getEvents(topic, tenantId = "default", namespaceId = "default")
 
         assertNotNull(retrieved1)
         assertNotNull(retrieved2)
@@ -148,15 +148,15 @@ class InMemoryEventRepositoryTest {
 
         val event1 = repository.storeEvent(
             topic1, "event1", mapOf("id" to "1"),
-            EventId.create(topic1, 1L), timestamp
+            EventId.create(topic1, 1L, "default", "default"), timestamp
         )
         val event2 = repository.storeEvent(
             topic2, "event2", mapOf("id" to "2"),
-            EventId.create(topic2, 1L), timestamp
+            EventId.create(topic2, 1L, "default", "default"), timestamp
         )
 
-        val retrieved1 = repository.getEvent(topic1, EventId.create(topic1, 1L))
-        val retrieved2 = repository.getEvent(topic2, EventId.create(topic2, 1L))
+        val retrieved1 = repository.getEvent(topic1, EventId.create(topic1, 1L, "default", "default"))
+        val retrieved2 = repository.getEvent(topic2, EventId.create(topic2, 1L, "default", "default"))
 
         assertNotNull(retrieved1)
         assertNotNull(retrieved2)

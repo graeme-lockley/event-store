@@ -85,7 +85,7 @@ suspend fun populateEventStore(state: PopulateEventStoreState) {
             ?: throw TopicNotFoundException(request.topic)
 
         val nextSequence = topic.nextSequence()
-        val eventId = EventId.create(request.topic, nextSequence)
+        val eventId = EventId.create(request.topic, nextSequence, topic.tenantName, topic.namespaceName)
 
         state.eventRepository.storeEvent(
             topic = request.topic,

@@ -37,7 +37,7 @@ class FileSystemEventRepositoryTest {
     @Test
     fun `should persist events to file system`() = runTest {
         val topic = "persisted-topic"
-        val eventId = EventId.create(topic, 1L)
+        val eventId = EventId.create(topic, 1L, "default", "default")
         val timestamp = Instant.now()
 
         repository.storeEvent(topic, "user.created", mapOf("id" to "123"), eventId, timestamp)
@@ -46,11 +46,13 @@ class FileSystemEventRepositoryTest {
         val group1 = String.format("%03d", eventId.sequence / 1_000_000)
         val group2 = String.format("%02d", (eventId.sequence / 10_000) % 100)
         val group3 = String.format("%02d", (eventId.sequence / 100) % 100)
-        val eventFile = tempDir.resolve(topic)
+        val eventFile = tempDir.resolve("default")
+            .resolve("default")
+            .resolve(topic)
             .resolve(group1)
             .resolve(group2)
             .resolve(group3)
-            .resolve("${eventId.value}.json")
+            .resolve("${eventId.sequence}.json")
 
         assertTrue(Files.exists(eventFile))
         assertTrue(Files.isRegularFile(eventFile))
@@ -59,7 +61,7 @@ class FileSystemEventRepositoryTest {
     @Test
     fun `should read events from file system`() = runTest {
         val topic = "file-read-topic"
-        val eventId = EventId.create(topic, 1L)
+        val eventId = EventId.create(topic, 1L, "default", "default")
         val timestamp = Instant.now()
         val payload = mapOf("id" to "123", "name" to "Alice")
 
@@ -89,7 +91,7 @@ class FileSystemEventRepositoryTest {
     @Test
     fun `should create directory structure automatically`() = runTest {
         val topic = "auto-dir-topic"
-        val eventId = EventId.create(topic, 1L)
+        val eventId = EventId.create(topic, 1L, "default", "default")
         val timestamp = Instant.now()
 
         repository.storeEvent(topic, "user.created", mapOf("id" to "123"), eventId, timestamp)
@@ -98,7 +100,7 @@ class FileSystemEventRepositoryTest {
         val group1 = String.format("%03d", eventId.sequence / 1_000_000)
         val group2 = String.format("%02d", (eventId.sequence / 10_000) % 100)
         val group3 = String.format("%02d", (eventId.sequence / 100) % 100)
-        val topicDir = tempDir.resolve(topic)
+        val topicDir = tempDir.resolve("default").resolve("default").resolve(topic)
         val group1Dir = topicDir.resolve(group1)
         val group2Dir = group1Dir.resolve(group2)
         val group3Dir = group2Dir.resolve(group3)
@@ -119,19 +121,19 @@ class FileSystemEventRepositoryTest {
         val today = Instant.now()
         val yesterday = today.minusSeconds(86400) // 24 hours ago
 
-        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L), today)
-        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 2L), yesterday)
+        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L, "default", "default"), today)
+        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 2L, "default", "default"), yesterday)
 
         // Verify both events are stored in the same sequence-based directory structure
         // (events with sequences 1 and 2 will be in the same group3 directory)
         val group1 = String.format("%03d", 1L / 1_000_000)
         val group2 = String.format("%02d", (1L / 10_000) % 100)
         val group3 = String.format("%02d", (1L / 100) % 100)
-        val eventDir = tempDir.resolve(topic).resolve(group1).resolve(group2).resolve(group3)
+        val eventDir = tempDir.resolve("default").resolve("default").resolve(topic).resolve(group1).resolve(group2).resolve(group3)
 
         assertTrue(Files.exists(eventDir))
         // Both events should be in the same directory
-        val events = repository.getEvents(topic)
+        val events = repository.getEvents(topic, tenantId = "default", namespaceId = "default")
         assertEquals(2, events.size)
     }
 
@@ -144,22 +146,22 @@ class FileSystemEventRepositoryTest {
         // Sequence 1: group1=000, group2=00, group3=00
         // Sequence 100: group1=000, group2=00, group3=01
         // Sequence 10000: group1=000, group2=01, group3=00
-        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L), timestamp)
-        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 100L), timestamp)
-        repository.storeEvent(topic, "event3", mapOf("id" to "3"), EventId.create(topic, 10000L), timestamp)
+        repository.storeEvent(topic, "event1", mapOf("id" to "1"), EventId.create(topic, 1L, "default", "default"), timestamp)
+        repository.storeEvent(topic, "event2", mapOf("id" to "2"), EventId.create(topic, 100L, "default", "default"), timestamp)
+        repository.storeEvent(topic, "event3", mapOf("id" to "3"), EventId.create(topic, 10000L, "default", "default"), timestamp)
 
         // Verify directory structure - events should be in different group3 directories
         val group1_1 = String.format("%03d", 1L / 1_000_000)
         val group2_1 = String.format("%02d", (1L / 10_000) % 100)
         val group3_1 = String.format("%02d", (1L / 100) % 100)
-        val dir1 = tempDir.resolve(topic).resolve(group1_1).resolve(group2_1).resolve(group3_1)
+        val dir1 = tempDir.resolve("default").resolve("default").resolve(topic).resolve(group1_1).resolve(group2_1).resolve(group3_1)
 
         val group3_2 = String.format("%02d", (100L / 100) % 100)
-        val dir2 = tempDir.resolve(topic).resolve(group1_1).resolve(group2_1).resolve(group3_2)
+        val dir2 = tempDir.resolve("default").resolve("default").resolve(topic).resolve(group1_1).resolve(group2_1).resolve(group3_2)
 
         val group2_3 = String.format("%02d", (10000L / 10_000) % 100)
         val group3_3 = String.format("%02d", (10000L / 100) % 100)
-        val dir3 = tempDir.resolve(topic).resolve(group1_1).resolve(group2_3).resolve(group3_3)
+        val dir3 = tempDir.resolve("default").resolve("default").resolve(topic).resolve(group1_1).resolve(group2_3).resolve(group3_3)
 
         assertTrue(Files.exists(dir1))
         assertTrue(Files.exists(dir2))
@@ -174,26 +176,26 @@ class FileSystemEventRepositoryTest {
 
         val event1 = repository.storeEvent(
             topic1, "event1", mapOf("id" to "1"),
-            EventId.create(topic1, 1L), timestamp
+            EventId.create(topic1, 1L, "default", "default"), timestamp
         )
         val event2 = repository.storeEvent(
             topic2, "event2", mapOf("id" to "2"),
-            EventId.create(topic2, 1L), timestamp
+            EventId.create(topic2, 1L, "default", "default"), timestamp
         )
 
         val repo1 = FileSystemEventRepository(tempDir, objectMapper)
         val repo2 = FileSystemEventRepository(tempDir, objectMapper)
 
-        assertEquals(1, repo1.getEvents(topic1).size)
-        assertEquals(1, repo2.getEvents(topic2).size)
-        assertTrue(repo1.getEvents(topic1).contains(event1))
-        assertTrue(repo2.getEvents(topic2).contains(event2))
+        assertEquals(1, repo1.getEvents(topic1, tenantId = "default", namespaceId = "default").size)
+        assertEquals(1, repo2.getEvents(topic2, tenantId = "default", namespaceId = "default").size)
+        assertTrue(repo1.getEvents(topic1, tenantId = "default", namespaceId = "default").contains(event1))
+        assertTrue(repo2.getEvents(topic2, tenantId = "default", namespaceId = "default").contains(event2))
     }
 
     @Test
     fun `should handle file system operations atomically`() = runTest {
         val topic = "atomic-topic"
-        val eventId = EventId.create(topic, 1L)
+        val eventId = EventId.create(topic, 1L, "default", "default")
         val timestamp = Instant.now()
         val payload = mapOf("id" to "123", "name" to "Alice")
 
@@ -203,11 +205,13 @@ class FileSystemEventRepositoryTest {
         val group1 = String.format("%03d", eventId.sequence / 1_000_000)
         val group2 = String.format("%02d", (eventId.sequence / 10_000) % 100)
         val group3 = String.format("%02d", (eventId.sequence / 100) % 100)
-        val eventFile = tempDir.resolve(topic)
+        val eventFile = tempDir.resolve("default")
+            .resolve("default")
+            .resolve(topic)
             .resolve(group1)
             .resolve(group2)
             .resolve(group3)
-            .resolve("${eventId.value}.json")
+            .resolve("${eventId.sequence}.json")
 
         assertTrue(Files.exists(eventFile))
         val content = Files.readString(eventFile)
@@ -223,13 +227,13 @@ class FileSystemEventRepositoryTest {
         val events = (1..5).map { i ->
             repository.storeEvent(
                 topic, "event$i", mapOf("id" to i.toString()),
-                EventId.create(topic, i.toLong()), timestamp
+                EventId.create(topic, i.toLong(), "default", "default"), timestamp
             )
         }
 
         // Create a new repository instance
         val newRepository = FileSystemEventRepository(tempDir, objectMapper)
-        val allEvents = newRepository.getEvents(topic)
+        val allEvents = newRepository.getEvents(topic, tenantId = "default", namespaceId = "default")
 
         assertEquals(5, allEvents.size)
         events.forEach { event ->
@@ -245,7 +249,7 @@ class FileSystemEventRepositoryTest {
         val timestamp = Instant.now()
 
         // Store initial event
-        repository.storeEvent(topic, "initial", mapOf("id" to "0"), EventId.create(topic, 0L), timestamp)
+        repository.storeEvent(topic, "initial", mapOf("id" to "0"), EventId.create(topic, 0L, "default", "default"), timestamp)
 
         // Simulate concurrent storage
         coroutineScope {
@@ -253,7 +257,7 @@ class FileSystemEventRepositoryTest {
                 async {
                     repository.storeEvent(
                         topic, "event$i", mapOf("id" to i.toString()),
-                        EventId.create(topic, i.toLong()), timestamp
+                        EventId.create(topic, i.toLong(), "default", "default"), timestamp
                     )
                 }
             }
@@ -261,14 +265,14 @@ class FileSystemEventRepositoryTest {
         }
 
         // Verify final state
-        val events = repository.getEvents(topic)
+        val events = repository.getEvents(topic, tenantId = "default", namespaceId = "default")
         assertTrue(events.size >= 1 && events.size <= 51) // At least initial, at most all
     }
 
     @Test
     fun `should handle events with special characters in topic name`() = runTest {
         val topic = "topic-with-special-chars"
-        val eventId = EventId.create(topic, 1L)
+        val eventId = EventId.create(topic, 1L, "default", "default")
         val timestamp = Instant.now()
 
         repository.storeEvent(topic, "user.created", mapOf("id" to "123"), eventId, timestamp)
@@ -281,7 +285,7 @@ class FileSystemEventRepositoryTest {
     @Test
     fun `should handle large event payloads`() = runTest {
         val topic = "large-payload-topic"
-        val eventId = EventId.create(topic, 1L)
+        val eventId = EventId.create(topic, 1L, "default", "default")
         val timestamp = Instant.now()
         val largePayload = (1..1000).associate { "key$it" to "value$it".repeat(10) }
 

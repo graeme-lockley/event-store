@@ -40,7 +40,7 @@ class DeleteTenantServiceTest {
         assertEquals(numberOfEvents + 1, events.size)
         val deletedEvent = events.last { it.type == TenantEventType.DELETED }
         assertEquals(TenantEventType.DELETED, deletedEvent.type)
-        assertTrue(deletedEvent.id.isTenantScoped)
+        // All EventIds are now tenant-scoped
 
         // Verify tenant is no longer in projection after deletion
         val tenantAfterDeletion = application.tenantProjectionService.getTenantByName("acme")
@@ -131,7 +131,6 @@ class DeleteTenantServiceTest {
         val event = getEvents().last { it.type == TenantEventType.DELETED }
         assertEquals(SystemTopics.SYSTEM_TENANT_ID, event.id.tenantId)
         assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, event.id.namespaceId)
-        assertTrue(event.id.isTenantScoped)
     }
 
     @Test

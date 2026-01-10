@@ -37,7 +37,9 @@ class CreateNamespaceServiceTest {
         val events = getEvents()
         assertEquals(numberOfEvents + 1, events.size)
         assertEquals(NamespaceEventType.CREATED, events.last().type)
-        assertTrue(events.last().id.isTenantScoped)
+        // All EventIds are now tenant-scoped
+        assertEquals(SystemTopics.SYSTEM_TENANT_ID, events.last().id.tenantId)
+        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, events.last().id.namespaceId)
     }
 
     @Test
@@ -100,7 +102,6 @@ class CreateNamespaceServiceTest {
         val event = getEvents().last()
         assertEquals(SystemTopics.SYSTEM_TENANT_ID, event.id.tenantId)
         assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, event.id.namespaceId)
-        assertTrue(event.id.isTenantScoped)
     }
 
     @Test

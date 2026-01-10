@@ -41,7 +41,7 @@ class UpdateNamespaceServiceTest {
         assertEquals(numberOfEvents + 1, events.size)
         val updatedEvent = events.last { it.type == NamespaceEventType.UPDATED }
         assertEquals(NamespaceEventType.UPDATED, updatedEvent.type)
-        assertTrue(updatedEvent.id.isTenantScoped)
+        // All EventIds are now tenant-scoped
 
         // Verify namespace is updated in projection after update
         val namespaceAfterUpdate = application.namespaceProjectionService.getNamespaceByName("acme", "billing-v2")
@@ -249,7 +249,6 @@ class UpdateNamespaceServiceTest {
         val event = getEvents().last { it.type == NamespaceEventType.UPDATED }
         assertEquals(SystemTopics.SYSTEM_TENANT_ID, event.id.tenantId)
         assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, event.id.namespaceId)
-        assertTrue(event.id.isTenantScoped)
     }
 
     @Test

@@ -53,17 +53,12 @@ class PublishEventsService(
             // Atomically get and increment sequence to prevent race conditions
             val tenantId = request.tenantId ?: "default"
             val namespaceId = request.namespaceId ?: "default"
-            val useLegacy = tenantId == "default" && namespaceId == "default"
             val nextSequence = topicRepository.getAndIncrementSequence(
                 topicName = request.topic,
                 tenantName = tenantId,
                 namespaceName = namespaceId
             )
-            val eventId = if (useLegacy) {
-                EventId.create(request.topic, nextSequence)
-            } else {
-                EventId.create(request.topic, nextSequence, tenantId, namespaceId)
-            }
+            val eventId = EventId.create(request.topic, nextSequence, tenantId, namespaceId)
             val event = Event(eventId, timestamp, request.type, request.payload)
             events.add(event)
         }

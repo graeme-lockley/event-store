@@ -41,7 +41,7 @@ class UpdateTenantServiceTest {
         assertEquals(numberOfEvents + 1, events.size)
         val updatedEvent = events.last { it.type == TenantEventType.UPDATED }
         assertEquals(TenantEventType.UPDATED, updatedEvent.type)
-        assertTrue(updatedEvent.id.isTenantScoped)
+        // All EventIds are now tenant-scoped
 
         // Verify tenant is updated in projection after update
         val tenantAfterUpdate = application.tenantProjectionService.getTenantByName("acme-corp")
@@ -280,7 +280,6 @@ class UpdateTenantServiceTest {
         val event = getEvents().last { it.type == TenantEventType.UPDATED }
         assertEquals(SystemTopics.SYSTEM_TENANT_ID, event.id.tenantId)
         assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, event.id.namespaceId)
-        assertTrue(event.id.isTenantScoped)
     }
 
     @Test

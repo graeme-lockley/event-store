@@ -13,7 +13,7 @@ export interface EventStoreError extends Error {
 }
 
 export interface Event {
-  id: string; // Generated as <topic>-<sequence>
+  id: string; // Generated as <tenant>/<namespace>/<topic>-<sequence> (e.g., "default/default/users-42")
   timestamp: string; // ISO8601
   type: string; // e.g. "user.created"
   payload: Record<string, unknown>; // Valid JSON object payload

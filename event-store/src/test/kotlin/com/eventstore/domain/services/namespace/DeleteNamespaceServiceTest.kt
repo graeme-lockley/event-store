@@ -41,7 +41,7 @@ class DeleteNamespaceServiceTest {
         assertEquals(numberOfEvents + 1, events.size)
         val deletedEvent = events.last { it.type == NamespaceEventType.DELETED }
         assertEquals(NamespaceEventType.DELETED, deletedEvent.type)
-        assertTrue(deletedEvent.id.isTenantScoped)
+        // All EventIds are now tenant-scoped
 
         // Verify namespace is no longer in projection after deletion
         val namespaceAfterDeletion = application.namespaceProjectionService.getNamespaceByName("acme", "billing")
@@ -150,7 +150,6 @@ class DeleteNamespaceServiceTest {
         val event = getEvents().last { it.type == NamespaceEventType.DELETED }
         assertEquals(SystemTopics.SYSTEM_TENANT_ID, event.id.tenantId)
         assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, event.id.namespaceId)
-        assertTrue(event.id.isTenantScoped)
     }
 
     @Test
