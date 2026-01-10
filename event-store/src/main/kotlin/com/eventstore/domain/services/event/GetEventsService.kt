@@ -23,7 +23,7 @@ class GetEventsService(
             throw TopicNotFoundException(topic)
         }
 
-        val sinceId = sinceEventId?.let { EventId(it) }
+        val sinceId = sinceEventId?.let { EventId.fromString(it) }
         
         // Always pass tenant/namespace since legacy format is no longer supported
         return eventRepository.getEvents(

@@ -92,7 +92,7 @@ class TopicDispatcher(
                 // ConsumerRegistrationRequestMapper already normalizes empty strings to null,
                 // so lastEventIdStr will be either null or a valid EventId string.
                 // If EventId construction fails, it indicates data corruption and should not be silently ignored.
-                val lastEventId = lastEventIdStr?.let { EventId(it) }
+                val lastEventId = lastEventIdStr?.let { EventId.fromString(it) }
                 val events = eventRepository.getEvents(
                     topic = simpleTopicName,
                     sinceEventId = lastEventId,

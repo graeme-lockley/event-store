@@ -198,7 +198,7 @@ class FileSystemEventRepository(
                 val json = Files.readString(filePath)
                 val eventFile: EventFile = objectMapper.readValue(json)
                 Event(
-                    id = EventId(eventFile.id),
+                    id = EventId.fromString(eventFile.id),
                     timestamp = Instant.parse(eventFile.timestamp),
                     type = eventFile.type,
                     payload = eventFile.payload
@@ -292,7 +292,7 @@ class FileSystemEventRepository(
                                                             try {
                                                                 val json = Files.readString(path)
                                                                 val eventFile: EventFile = objectMapper.readValue(json)
-                                                                val parsedEventId = EventId(eventFile.id)
+                                                                val parsedEventId = EventId.fromString(eventFile.id)
                                                                 
                                                                 // Verify the EventId matches the expected topic and tenant/namespace
                                                                 // This ensures we only return events that belong to the queried topic

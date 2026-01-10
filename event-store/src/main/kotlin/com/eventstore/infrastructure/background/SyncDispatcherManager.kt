@@ -81,7 +81,7 @@ class SyncDispatcherManager(
             if (topicName != topic) continue
 
             try {
-                val lastEventId = lastEventIdStr?.let { EventId(it) }
+                val lastEventId = lastEventIdStr?.let { EventId.fromString(it) }
                 val events = eventRepository.getEvents(
                     topic = simpleTopicName,
                     sinceEventId = lastEventId,

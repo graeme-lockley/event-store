@@ -231,9 +231,9 @@ class PublishEventsServiceTest {
         val result2 = application.publishEvents(requests2)
         val result3 = application.publishEvents(requests3)
 
-        val event1 = EventId(result1[0])
-        val event2 = EventId(result2[0])
-        val event3 = EventId(result3[0])
+        val event1 = EventId.fromString(result1[0])
+        val event2 = EventId.fromString(result2[0])
+        val event3 = EventId.fromString(result3[0])
 
         assertEquals(event1.sequence + 1, event2.sequence)
         assertEquals(event2.sequence + 1, event3.sequence)
