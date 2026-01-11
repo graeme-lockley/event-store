@@ -22,18 +22,13 @@ class BootstrapServiceImpl(
 ) : BootstrapService {
     private val logger = LoggerFactory.getLogger(BootstrapServiceImpl::class.java)
 
-    private val systemTenantId = SystemTopics.SYSTEM_TENANT_NAME
-    private val managementNamespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
-
-    private val tenantTopicName = SystemTopics.TENANTS_TOPIC_NAME
-    private val namespaceTopicName = SystemTopics.NAMESPACES_TOPIC_NAME
     private val usersTopicName = SystemTopics.USERS_TOPIC_NAME
     private val systemTopics = listOf(
-        tenantTopicName,
-        namespaceTopicName,
-        SystemTopics.USERS_TOPIC_NAME,
-        SystemTopics.PERMISSIONS_TOPIC_NAME,
-        SystemTopics.API_KEYS_TOPIC_NAME
+        Pair(SystemTopics.TENANTS_TOPIC_NAME, SystemTopics.TENANTS_TOPIC_ID),
+        Pair(SystemTopics.NAMESPACES_TOPIC_NAME, SystemTopics.NAMESPACES_TOPIC_ID),
+        Pair(SystemTopics.USERS_TOPIC_NAME, SystemTopics.USERS_TOPIC_ID),
+        Pair(SystemTopics.PERMISSIONS_TOPIC_NAME, SystemTopics.PERMISSIONS_TOPIC_ID),
+        Pair(SystemTopics.API_KEYS_TOPIC_NAME, SystemTopics.API_KEYS_TOPIC_ID)
     )
 
     override suspend fun run() {
@@ -42,10 +37,10 @@ class BootstrapServiceImpl(
         ensureSystemTopics()
 
         val systemTenantExists = eventRepository.getEvents(
-            topic = tenantTopicName,
+            topic = SystemTopics.TENANTS_TOPIC_NAME,
             limit = 1,
-            tenantId = systemTenantId,
-            namespaceId = managementNamespaceId
+            tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
         ).isNotEmpty()
         if (systemTenantExists) {
             logger.info("Bootstrap skipped: system tenant already initialized")
@@ -59,26 +54,27 @@ class BootstrapServiceImpl(
 
     private suspend fun ensureSystemTopics() {
         for (topic in systemTopics) {
-            if (!topicRepository.topicExists(topic, systemTenantId, managementNamespaceId)) {
+            if (!topicRepository.topicExists(topic.first, SystemTopics.SYSTEM_TENANT_NAME,
+                    SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                )) {
                 logger.info("Creating system topic: $topic")
                 // Generate resourceIds for system topics (they're in system tenant/namespace)
                 // Note: These are temporary UUIDs - the actual resourceIds will be set when tenant/namespace are created
-                val topicResourceId = UUID.randomUUID()
                 val systemTenantResourceId = UUID.randomUUID() // Temporary - will be replaced when tenant is created
                 val managementNamespaceResourceId =
                     UUID.randomUUID() // Temporary - will be replaced when namespace is created
-                val schemas = getSchemasForTopic(topic)
+                val schemas = getSchemasForTopic(topic.first)
                 topicRepository.createTopic(
-                    resourceId = topicResourceId,
+                    resourceId = topic.second,
                     tenantResourceId = systemTenantResourceId,
                     namespaceResourceId = managementNamespaceResourceId,
-                    name = topic,
+                    name = topic.first,
                     schemas = schemas,
-                    tenantName = systemTenantId,
-                    namespaceName = managementNamespaceId
+                    tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                    namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
                 )
                 // Register schemas with validator
-                schemaValidator.registerSchemas(topic, schemas)
+                schemaValidator.registerSchemas(topic.first, schemas)
                 logger.info("Registered ${schemas.size} schemas for topic: $topic")
             }
         }
@@ -86,8 +82,8 @@ class BootstrapServiceImpl(
 
     private fun getSchemasForTopic(topic: String): List<Schema> {
         val resourcePath = when (topic) {
-            tenantTopicName -> "/schemas/system/tenants.json"
-            namespaceTopicName -> "/schemas/system/namespaces.json"
+            SystemTopics.TENANTS_TOPIC_NAME -> "/schemas/system/tenants.json"
+            SystemTopics.NAMESPACES_TOPIC_NAME -> "/schemas/system/namespaces.json"
             usersTopicName -> "/schemas/system/users.json"
             SystemTopics.PERMISSIONS_TOPIC_NAME -> "/schemas/system/permissions.json"
             SystemTopics.API_KEYS_TOPIC_NAME -> "/schemas/system/api-keys.json"
@@ -112,22 +108,20 @@ class BootstrapServiceImpl(
 
     private suspend fun bootstrapSystemTenant() {
         val timestamp = Instant.now()
-        val systemTenantResourceId = UUID.randomUUID()
-        val managementNamespaceResourceId = UUID.randomUUID()
 
         val tenantCreatedEvent = TenantCreatedEvent(
-            resourceId = systemTenantResourceId,
-            name = systemTenantId,
+            resourceId = SystemTopics.SYSTEM_TENANT_ID,
+            name = SystemTopics.SYSTEM_TENANT_NAME,
             createdBy = "bootstrap",
             createdAt = timestamp,
             metadata = emptyMap()
         )
 
         val namespaceCreatedEvent = NamespaceCreatedEvent(
-            resourceId = managementNamespaceResourceId,
-            tenantResourceId = systemTenantResourceId,
-            tenantName = systemTenantId,
-            name = managementNamespaceId,
+            resourceId = SystemTopics.MANAGEMENT_NAMESPACE_ID,
+            tenantResourceId = SystemTopics.SYSTEM_TENANT_ID,
+            tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+            name = SystemTopics.MANAGEMENT_NAMESPACE_NAME,
             description = "System management namespace",
             createdBy = "bootstrap",
             createdAt = timestamp,
@@ -137,14 +131,14 @@ class BootstrapServiceImpl(
         val events = mutableListOf(
             Event(
                 id = EventId.create(
-                    topic = tenantTopicName,
+                    topic = SystemTopics.TENANTS_TOPIC_NAME,
                     sequence = topicRepository.getAndIncrementSequence(
-                        topicName = tenantTopicName,
-                        tenantName = systemTenantId,
-                        namespaceName = managementNamespaceId
+                        topicName = SystemTopics.TENANTS_TOPIC_NAME,
+                        tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                        namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
                     ),
-                    tenantId = systemTenantId,
-                    namespaceId = managementNamespaceId
+                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
                 ),
                 timestamp = timestamp,
                 type = TenantEventType.CREATED,
@@ -152,14 +146,14 @@ class BootstrapServiceImpl(
             ),
             Event(
                 id = EventId.create(
-                    topic = namespaceTopicName,
+                    topic = SystemTopics.NAMESPACES_TOPIC_NAME,
                     sequence = topicRepository.getAndIncrementSequence(
-                        topicName = namespaceTopicName,
-                        tenantName = systemTenantId,
-                        namespaceName = managementNamespaceId
+                        topicName = SystemTopics.NAMESPACES_TOPIC_NAME,
+                        tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                        namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
                     ),
-                    tenantId = systemTenantId,
-                    namespaceId = managementNamespaceId
+                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
                 ),
                 timestamp = timestamp,
                 type = NamespaceEventType.CREATED,
@@ -186,11 +180,11 @@ class BootstrapServiceImpl(
                     topic = usersTopicName,
                     sequence = topicRepository.getAndIncrementSequence(
                         topicName = usersTopicName,
-                        tenantName = systemTenantId,
-                        namespaceName = managementNamespaceId
+                        tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                        namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
                     ),
-                    tenantId = systemTenantId,
-                    namespaceId = managementNamespaceId
+                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
                 ),
                 timestamp = timestamp,
                 type = UserEventType.CREATED,
@@ -203,17 +197,17 @@ class BootstrapServiceImpl(
                     topic = usersTopicName,
                     sequence = topicRepository.getAndIncrementSequence(
                         topicName = usersTopicName,
-                        tenantName = systemTenantId,
-                        namespaceName = managementNamespaceId
+                        tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                        namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
                     ),
-                    tenantId = systemTenantId,
-                    namespaceId = managementNamespaceId
+                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
                 ),
                 timestamp = timestamp,
                 type = UserEventType.TENANT_ASSIGNED,
                 payload = UserTenantAssignedEvent(
                     userId = adminId,
-                    tenantId = systemTenantId,
+                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
                     role = "admin",
                     assignedBy = "bootstrap",
                     assignedAt = timestamp,
@@ -236,7 +230,7 @@ class BootstrapServiceImpl(
             principalType = PrincipalType.USER,
             resourceType = ResourceType.TENANT,
             resourceId = null,  // null = all tenants (global admin)
-            tenantResourceId = systemTenantResourceId.toString(),
+            tenantResourceId = SystemTopics.SYSTEM_TENANT_ID.toString(),
             namespaceResourceId = null,
             topicResourceId = null,
             permissions = allPermissions,
@@ -251,11 +245,11 @@ class BootstrapServiceImpl(
                     topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
                     sequence = topicRepository.getAndIncrementSequence(
                         SystemTopics.PERMISSIONS_TOPIC_NAME,
-                        systemTenantId,
-                        managementNamespaceId
+                        SystemTopics.SYSTEM_TENANT_NAME,
+                        SystemTopics.MANAGEMENT_NAMESPACE_NAME
                     ),
-                    tenantId = systemTenantId,
-                    namespaceId = managementNamespaceId
+                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
                 ),
                 timestamp = timestamp,
                 type = PermissionEventType.GRANTED,
