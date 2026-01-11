@@ -10,8 +10,6 @@ import com.eventstore.domain.ports.outbound.ResourceResolver
 import com.eventstore.domain.services.BaseSystemService
 import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
-import com.eventstore.infrastructure.projections.NamespaceProjectionService
-import com.eventstore.infrastructure.projections.TenantProjectionService
 import java.time.Instant
 import java.util.*
 
@@ -30,8 +28,6 @@ data class GrantPermissionRequest(
 
 class GrantPermissionService(
     private val resourceResolver: ResourceResolver,
-    private val tenantProjectionService: TenantProjectionService,
-    private val namespaceProjectionService: NamespaceProjectionService,
     config: Config,
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
