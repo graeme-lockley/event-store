@@ -404,10 +404,10 @@ class TopicRepositoryTest {
             "default"
         )
 
-        assertEquals(emptyList<Schema>(), topic.schemas)
+        assertEquals(emptyList(), topic.schemas)
         val retrieved = repository.getTopic(name)
         assertNotNull(retrieved)
-        assertEquals(emptyList<Schema>(), retrieved.schemas)
+        assertEquals(emptyList(), retrieved.schemas)
     }
 
     private suspend fun testTopicWithMultipleSchemas(repository: TopicRepository) {
