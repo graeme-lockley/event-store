@@ -31,12 +31,10 @@ jobs:
 
       - name: Unit Test Event Store
         run: |
-          cd event-store
           chmod +x gradlew
           ./gradlew :event-store:test
 
       - name: Integration Test Event Store
         run: |
-          cd event-store
           chmod +x gradlew
           ./gradlew :event-store-integration:test
