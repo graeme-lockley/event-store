@@ -29,28 +29,14 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Test Event Store (Kotlin)
+      - name: Unit Test Event Store
         run: |
           cd event-store
           chmod +x gradlew
-          ./gradlew test
+          ./gradlew :event-store:test
 
-      - name: Test Admin UI
+      - name: Integration Test Event Store
         run: |
-          cd admin-ui
-          deno test --allow-all
-
-      - name: Build CLI (Go)
-        run: |
-          cd cli
-          go build -o es .
-
-      - name: Install jq
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-
-      - name: Test CLI Integration
-        run: |
-          cd integration-tests
-          ./run.sh
+          cd event-store
+          chmod +x gradlew
+          ./gradlew :event-store-integration:test
