@@ -158,8 +158,6 @@ class Application(
     private val grantPermissionService: GrantPermissionService =
         GrantPermissionService(
             resourceResolver,
-            tenantProjectionService,
-            namespaceProjectionService,
             config,
             systemEventPublisher
         )
