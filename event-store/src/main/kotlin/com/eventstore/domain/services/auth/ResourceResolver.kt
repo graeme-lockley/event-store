@@ -25,7 +25,7 @@ class ResourceResolverImpl(
     }
 
     override suspend fun resolveNamespaceResourceId(tenantResourceId: UUID, namespaceName: String): UUID {
-        val tenant = tenantProjectionService.getTenantByResourceId(tenantResourceId)
+        val tenant = tenantProjectionService.getTenantById(tenantResourceId)
             ?: throw TenantNotFoundException("ResourceId: $tenantResourceId")
         val namespace = namespaceProjectionService.getNamespaceByName(tenant.name, namespaceName)
             ?: throw NamespaceNotFoundException(namespaceName)
@@ -37,7 +37,7 @@ class ResourceResolverImpl(
         namespaceResourceId: UUID,
         topicName: String
     ): UUID {
-        val tenant = tenantProjectionService.getTenantByResourceId(tenantResourceId)
+        val tenant = tenantProjectionService.getTenantById(tenantResourceId)
             ?: throw TenantNotFoundException("ResourceId: $tenantResourceId")
         val namespace = namespaceProjectionService.getNamespaceByResourceId(tenantResourceId, namespaceResourceId)
             ?: throw NamespaceNotFoundException("ResourceId: $namespaceResourceId")

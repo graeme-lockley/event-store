@@ -39,7 +39,7 @@ class TenantProjectionService(
         return tenantRepository.findByName(name)?.takeIf { it.isActive }
     }
 
-    suspend fun getTenantByResourceId(resourceId: UUID): Tenant? {
+    suspend fun getTenantById(resourceId: UUID): Tenant? {
         return tenantRepository.findByResourceId(resourceId)?.takeIf { it.isActive }
     }
 
