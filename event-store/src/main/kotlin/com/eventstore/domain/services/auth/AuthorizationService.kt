@@ -36,13 +36,13 @@ class AuthorizationService(
         topicName: String? = null
     ): Boolean {
         // Resolve human-readable names to resource UUIDs
-        val tenantResourceId = resourceResolver.resolveTenantResourceId(tenantName)
+        val tenantResourceId = resourceResolver.resolveTenantName(tenantName)
         val namespaceResourceId = namespaceName?.let {
-            resourceResolver.resolveNamespaceResourceId(tenantResourceId, it)
+            resourceResolver.resolveNamespaceName(tenantResourceId, it)
         }
         val topicResourceId = topicName?.let {
             requireNotNull(namespaceResourceId) { "Namespace required for topic" }
-            resourceResolver.resolveTopicResourceId(
+            resourceResolver.resolveTopicName(
                 tenantResourceId,
                 namespaceResourceId,
                 it

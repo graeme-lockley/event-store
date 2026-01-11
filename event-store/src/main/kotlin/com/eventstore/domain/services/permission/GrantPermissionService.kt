@@ -33,17 +33,17 @@ class GrantPermissionService(
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: GrantPermissionRequest): PermissionGrantedEvent {
         // Resolve tenant resourceId
-        val tenantResourceId = resourceResolver.resolveTenantResourceId(request.tenantName)
+        val tenantResourceId = resourceResolver.resolveTenantName(request.tenantName)
 
         // Resolve namespace resourceId if provided
         val namespaceResourceId = request.namespaceName?.let {
-            resourceResolver.resolveNamespaceResourceId(tenantResourceId, it)
+            resourceResolver.resolveNamespaceName(tenantResourceId, it)
         }
 
         // Resolve topic resourceId if provided
         val topicResourceId = request.topicName?.let {
             requireNotNull(namespaceResourceId) { "Namespace required when granting topic permissions" }
-            resourceResolver.resolveTopicResourceId(tenantResourceId, namespaceResourceId, it)
+            resourceResolver.resolveTopicName(tenantResourceId, namespaceResourceId, it)
         }
 
         // Resolve target resourceId based on resourceType

@@ -18,29 +18,29 @@ class ResourceResolverImpl(
     private val topicRepository: TopicRepository
 ) : ResourceResolver {
 
-    override suspend fun resolveTenantResourceId(tenantName: String): UUID {
+    override suspend fun resolveTenantName(tenantName: String): UUID {
         val tenant = tenantProjectionService.getTenantByName(tenantName)
             ?: throw TenantNotFoundException(tenantName)
         return tenant.tenantId
     }
 
-    override suspend fun resolveNamespaceResourceId(tenantResourceId: UUID, namespaceName: String): UUID {
-        val tenant = tenantProjectionService.getTenantById(tenantResourceId)
-            ?: throw TenantNotFoundException("ResourceId: $tenantResourceId")
+    override suspend fun resolveNamespaceName(tenantId: UUID, namespaceName: String): UUID {
+        val tenant = tenantProjectionService.getTenantById(tenantId)
+            ?: throw TenantNotFoundException("tenantId: $tenantId")
         val namespace = namespaceProjectionService.getNamespaceByName(tenant.name, namespaceName)
             ?: throw NamespaceNotFoundException(namespaceName)
         return namespace.resourceId
     }
 
-    override suspend fun resolveTopicResourceId(
-        tenantResourceId: UUID,
-        namespaceResourceId: UUID,
+    override suspend fun resolveTopicName(
+        tenantId: UUID,
+        namespaceId: UUID,
         topicName: String
     ): UUID {
-        val tenant = tenantProjectionService.getTenantById(tenantResourceId)
-            ?: throw TenantNotFoundException("ResourceId: $tenantResourceId")
-        val namespace = namespaceProjectionService.getNamespaceByResourceId(tenantResourceId, namespaceResourceId)
-            ?: throw NamespaceNotFoundException("ResourceId: $namespaceResourceId")
+        val tenant = tenantProjectionService.getTenantById(tenantId)
+            ?: throw TenantNotFoundException("tenantId: $tenantId")
+        val namespace = namespaceProjectionService.getNamespaceByResourceId(tenantId, namespaceId)
+            ?: throw NamespaceNotFoundException("namespaceId: $namespaceId")
         val topic = topicRepository.getTopic(topicName, tenant.name, namespace.name)
             ?: throw TopicNotFoundException(topicName)
         return topic.resourceId

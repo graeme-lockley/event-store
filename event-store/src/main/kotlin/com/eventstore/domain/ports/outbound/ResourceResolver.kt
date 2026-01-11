@@ -7,15 +7,11 @@ import java.util.*
  * Used by authorization service to convert URL parameters to resource identifiers.
  */
 interface ResourceResolver {
-    suspend fun resolveTenantResourceId(tenantName: String): UUID
+    suspend fun resolveTenantName(tenantName: String): UUID
 
-    suspend fun resolveNamespaceResourceId(tenantResourceId: UUID, namespaceName: String): UUID
+    suspend fun resolveNamespaceName(tenantId: UUID, namespaceName: String): UUID
 
-    suspend fun resolveTopicResourceId(
-        tenantResourceId: UUID,
-        namespaceResourceId: UUID,
-        topicName: String
-    ): UUID
+    suspend fun resolveTopicName(tenantId: UUID, namespaceId: UUID, topicName: String): UUID
 }
 
 
