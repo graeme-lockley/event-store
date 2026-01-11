@@ -39,9 +39,15 @@ class GetEventsServiceTest {
         // Publish some initial events
         application.publishEvents(
             listOf(
-                EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Alice")),
-                EventRequest(topicName, "user.created", mapOf("id" to "2", "name" to "Bob")),
-                EventRequest(topicName, "user.created", mapOf("id" to "3", "name" to "Charlie"))
+                EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Alice"), "default", "default"),
+                EventRequest(topicName, "user.created", mapOf("id" to "2", "name" to "Bob"), "default", "default"),
+                EventRequest(
+                    topicName,
+                    "user.created",
+                    mapOf("id" to "3", "name" to "Charlie"),
+                    "default",
+                    "default"
+                )
             )
         )
     }
@@ -144,11 +150,11 @@ class GetEventsServiceTest {
 
     @Test
     fun `should combine sinceEventId and limit parameters`() = runTest {
-        val allEvents = application.getEvents(topicName)
+        val allEvents = application.getEvents(topicName, tenantName = "default", namespaceName = "default")
         assertTrue(allEvents.size >= 3)
 
         val firstEventId = allEvents[0].id.value
-        val limitedEvents = application.getEvents(topicName, sinceEventId = firstEventId, limit = 1)
+        val limitedEvents = application.getEvents(topicName, sinceEventId = firstEventId, limit = 1, tenantName = "default", namespaceName = "default")
 
         assertEquals(1, limitedEvents.size)
         assertEquals(allEvents[1].id.value, limitedEvents[0].id.value)

@@ -68,7 +68,9 @@ class GetHealthStatusServiceTest {
                 com.eventstore.domain.services.event.EventRequest(
                     topic = topicName,
                     type = "user.created",
-                    payload = mapOf("id" to "1", "name" to "Alice")
+                    payload = mapOf("id" to "1", "name" to "Alice"),
+                    "default",
+                    "default"
                 )
             )
         )

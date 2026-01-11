@@ -15,8 +15,8 @@ class GetEventsService(
         sinceEventId: String? = null,
         date: String? = null,
         limit: Int? = null,
-        tenantName: String = "default",
-        namespaceName: String = "default"
+        tenantName: String,
+        namespaceName: String
     ): List<Event> {
         // Validate topic exists
         if (!topicRepository.topicExists(topic, tenantName, namespaceName)) {

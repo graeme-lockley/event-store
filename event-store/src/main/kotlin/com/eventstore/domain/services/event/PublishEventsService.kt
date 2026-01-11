@@ -14,8 +14,8 @@ data class EventRequest(
     val topic: String,
     val type: String,
     val payload: Map<String, Any>,
-    val tenantId: String? = null,
-    val namespaceId: String? = null
+    val tenantId: String,
+    val namespaceId: String
 )
 
 class PublishEventsService(
@@ -30,14 +30,14 @@ class PublishEventsService(
         // Validate all events first
         for (request in requests) {
             // Validate topic exists
-            val tenantId = request.tenantId ?: "default"
-            val namespaceId = request.namespaceId ?: "default"
+            val tenantId = request.tenantId
+            val namespaceId = request.namespaceId
             if (!topicRepository.topicExists(request.topic, tenantId, namespaceId)) {
                 throw TopicNotFoundException(request.topic)
             }
 
             // Validate payload is a JSON object (Map)
-            if (request.payload.isEmpty() && request.payload !is Map<*, *>) {
+            if (request.payload.isEmpty()) {
                 throw InvalidEventPayloadException("Event payload must be a JSON object")
             }
 
@@ -51,8 +51,8 @@ class PublishEventsService(
 
         for (request in requests) {
             // Atomically get and increment sequence to prevent race conditions
-            val tenantId = request.tenantId ?: "default"
-            val namespaceId = request.namespaceId ?: "default"
+            val tenantId = request.tenantId
+            val namespaceId = request.namespaceId
             val nextSequence = topicRepository.getAndIncrementSequence(
                 topicName = request.topic,
                 tenantName = tenantId,

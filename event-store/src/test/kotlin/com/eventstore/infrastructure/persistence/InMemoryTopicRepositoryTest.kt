@@ -27,7 +27,9 @@ class InMemoryTopicRepositoryTest {
                 tenantResourceId,
                 namespaceResourceId,
                 "concurrent-topic-$i",
-                listOf(Schema(eventType = "event$i"))
+                listOf(Schema(eventType = "event$i")),
+                "default",
+                "default"
             )
         }
 
@@ -47,14 +49,18 @@ class InMemoryTopicRepositoryTest {
             tenantResourceId,
             namespaceResourceId,
             "topic-1",
-            listOf(Schema(eventType = "event1"))
+            listOf(Schema(eventType = "event1")),
+            "default",
+            "default"
         )
         repo2.createTopic(
             UUID.randomUUID(),
             tenantResourceId,
             namespaceResourceId,
             "topic-2",
-            listOf(Schema(eventType = "event2"))
+            listOf(Schema(eventType = "event2")),
+            "default",
+            "default"
         )
 
         assertEquals(1, repo1.getAllTopics().size)
@@ -68,7 +74,15 @@ class InMemoryTopicRepositoryTest {
         val name = "rapid-updates-topic"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, schemas)
+        repository.createTopic(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            name,
+            schemas,
+            "default",
+            "default"
+        )
 
         // Rapid sequence updates
         repeat(100) { i ->
@@ -88,7 +102,9 @@ class InMemoryTopicRepositoryTest {
             UUID.randomUUID(),
             UUID.randomUUID(),
             name,
-            listOf(Schema(eventType = "initial"))
+            listOf(Schema(eventType = "initial")),
+            "default",
+            "default"
         )
 
         // Rapid schema updates
@@ -110,7 +126,9 @@ class InMemoryTopicRepositoryTest {
             UUID.randomUUID(),
             UUID.randomUUID(),
             name,
-            listOf(Schema(eventType = "user.created"))
+            listOf(Schema(eventType = "user.created")),
+            "default",
+            "default"
         )
 
         // Simulate concurrent operations
@@ -144,7 +162,9 @@ class InMemoryTopicRepositoryTest {
                 tenantResourceId,
                 namespaceResourceId,
                 "topic-$i",
-                listOf(Schema(eventType = "event$i"))
+                listOf(Schema(eventType = "event$i")),
+                "default",
+                "default"
             )
         }
 
@@ -158,7 +178,15 @@ class InMemoryTopicRepositoryTest {
             Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string")))
         )
 
-        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, initialSchemas)
+        repository.createTopic(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            name,
+            initialSchemas,
+            "default",
+            "default"
+        )
         repository.updateSequence(name, 5L)
         repository.updateSchemas(
             name, listOf(

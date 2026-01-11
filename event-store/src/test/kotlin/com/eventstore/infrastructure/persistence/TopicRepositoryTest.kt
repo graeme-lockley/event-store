@@ -184,7 +184,9 @@ class TopicRepositoryTest {
             tenantResourceId = UUID.randomUUID(),
             namespaceResourceId = UUID.randomUUID(),
             name = name,
-            schemas = schemas
+            schemas = schemas,
+            "default",
+            "default"
         )
 
         assertEquals(name, topic.name)
@@ -200,11 +202,19 @@ class TopicRepositoryTest {
         val tenantResourceId = UUID.randomUUID()
         val namespaceResourceId = UUID.randomUUID()
 
-        repository.createTopic(resourceId, tenantResourceId, namespaceResourceId, name, schemas)
+        repository.createTopic(resourceId, tenantResourceId, namespaceResourceId, name, schemas, "default", "default")
 
         org.junit.jupiter.api.assertThrows<TopicAlreadyExistsException> {
             runTest {
-                repository.createTopic(UUID.randomUUID(), tenantResourceId, namespaceResourceId, name, schemas)
+                repository.createTopic(
+                    UUID.randomUUID(),
+                    tenantResourceId,
+                    namespaceResourceId,
+                    name,
+                    schemas,
+                    "default",
+                    "default"
+                )
             }
         }
     }
@@ -220,7 +230,9 @@ class TopicRepositoryTest {
             tenantResourceId = UUID.randomUUID(),
             namespaceResourceId = UUID.randomUUID(),
             name = name,
-            schemas = schemas
+            schemas = schemas,
+            "default",
+            "default"
         )
         val retrieved = repository.getTopic(name)
 
@@ -243,7 +255,9 @@ class TopicRepositoryTest {
             tenantResourceId = UUID.randomUUID(),
             namespaceResourceId = UUID.randomUUID(),
             name = name,
-            schemas = schemas
+            schemas = schemas,
+            "default",
+            "default"
         )
         assertTrue(repository.topicExists(name))
     }
@@ -257,7 +271,9 @@ class TopicRepositoryTest {
             tenantResourceId = UUID.randomUUID(),
             namespaceResourceId = UUID.randomUUID(),
             name = name,
-            schemas = schemas
+            schemas = schemas,
+            "default",
+            "default"
         )
         repository.updateSequence(name, 42L)
 
@@ -266,7 +282,7 @@ class TopicRepositoryTest {
         assertEquals(42L, topic.sequence)
     }
 
-    private suspend fun testUpdateSequenceNotFound(repository: TopicRepository) {
+    private fun testUpdateSequenceNotFound(repository: TopicRepository) {
         org.junit.jupiter.api.assertThrows<TopicNotFoundException> {
             runTest {
                 repository.updateSequence("non-existent-topic", 1L)
@@ -287,7 +303,9 @@ class TopicRepositoryTest {
             tenantResourceId = UUID.randomUUID(),
             namespaceResourceId = UUID.randomUUID(),
             name = name,
-            schemas = initialSchemas
+            schemas = initialSchemas,
+            "default",
+            "default"
         )
         val updated = repository.updateSchemas(name, updatedSchemas)
 
@@ -297,7 +315,7 @@ class TopicRepositoryTest {
         assertEquals(updatedSchemas, topic.schemas)
     }
 
-    private suspend fun testUpdateSchemasNotFound(repository: TopicRepository) {
+    private fun testUpdateSchemasNotFound(repository: TopicRepository) {
         org.junit.jupiter.api.assertThrows<TopicNotFoundException> {
             runTest {
                 repository.updateSchemas("non-existent-topic", listOf(Schema(eventType = "user.created")))
@@ -313,21 +331,27 @@ class TopicRepositoryTest {
             tenantResourceId,
             namespaceResourceId,
             "topic-1",
-            listOf(Schema(eventType = "event1"))
+            listOf(Schema(eventType = "event1")),
+            "default",
+            "default"
         )
         val topic2 = repository.createTopic(
             UUID.randomUUID(),
             tenantResourceId,
             namespaceResourceId,
             "topic-2",
-            listOf(Schema(eventType = "event2"))
+            listOf(Schema(eventType = "event2")),
+            "default",
+            "default"
         )
         val topic3 = repository.createTopic(
             UUID.randomUUID(),
             tenantResourceId,
             namespaceResourceId,
             "topic-3",
-            listOf(Schema(eventType = "event3"))
+            listOf(Schema(eventType = "event3")),
+            "default",
+            "default"
         )
 
         val allTopics = repository.getAllTopics()
@@ -352,7 +376,9 @@ class TopicRepositoryTest {
                 tenantResourceId,
                 namespaceResourceId,
                 "topic-$i",
-                listOf(Schema(eventType = "event$i"))
+                listOf(Schema(eventType = "event$i")),
+                "default",
+                "default"
             )
         }
 
@@ -373,7 +399,9 @@ class TopicRepositoryTest {
             tenantResourceId = UUID.randomUUID(),
             namespaceResourceId = UUID.randomUUID(),
             name = name,
-            schemas = emptyList()
+            schemas = emptyList(),
+            "default",
+            "default"
         )
 
         assertEquals(emptyList<Schema>(), topic.schemas)
@@ -395,7 +423,9 @@ class TopicRepositoryTest {
             tenantResourceId = UUID.randomUUID(),
             namespaceResourceId = UUID.randomUUID(),
             name = name,
-            schemas = schemas
+            schemas = schemas,
+            "default",
+            "default"
         )
         assertEquals(3, topic.schemas.size)
         assertEquals(schemas, topic.schemas)
@@ -414,7 +444,9 @@ class TopicRepositoryTest {
             tenantResourceId = UUID.randomUUID(),
             namespaceResourceId = UUID.randomUUID(),
             name = name,
-            schemas = schemas
+            schemas = schemas,
+            "default",
+            "default"
         )
 
         // Update sequence multiple times
@@ -443,7 +475,9 @@ class TopicRepositoryTest {
             tenantResourceId = UUID.randomUUID(),
             namespaceResourceId = UUID.randomUUID(),
             name = name,
-            schemas = initialSchemas
+            schemas = initialSchemas,
+            "default",
+            "default"
         )
 
         // Update schemas multiple times
@@ -473,7 +507,7 @@ class TopicRepositoryTest {
                     .sorted(Comparator.reverseOrder())
                     .forEach { Files.deleteIfExists(it) }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Ignore cleanup errors - the temp directory will be cleaned up by the OS eventually
             // or by JUnit's @TempDir mechanism
         }

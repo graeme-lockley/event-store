@@ -60,7 +60,9 @@ suspend fun populateEventStore(state: PopulateEventStoreState) {
         tenantResourceId,
         namespaceResourceId,
         state.topicName,
-        topicSchemas
+        topicSchemas,
+        "default",
+        "default"
     )
     state.schemaValidator.registerSchemas(state.topicName, topicSchemas)
 
@@ -69,14 +71,16 @@ suspend fun populateEventStore(state: PopulateEventStoreState) {
         tenantResourceId,
         namespaceResourceId,
         "other-user-events",
-        topicSchemas
+        topicSchemas,
+        "default",
+        "default"
     )
     state.schemaValidator.registerSchemas("other-user-events", topicSchemas)
 
     val requests = listOf(
-        EventRequest(state.topicName, "user.created", mapOf("id" to "1", "name" to "Alice")),
-        EventRequest(state.topicName, "user.created", mapOf("id" to "2", "name" to "Bob")),
-        EventRequest(state.topicName, "user.updated", mapOf("id" to "1", "name" to "Alice Smith")),
+        EventRequest(state.topicName, "user.created", mapOf("id" to "1", "name" to "Alice"), "tenant1", "namespaceA"),
+        EventRequest(state.topicName, "user.created", mapOf("id" to "2", "name" to "Bob"), "tenant1", "namespaceA"),
+        EventRequest(state.topicName, "user.updated", mapOf("id" to "1", "name" to "Alice Smith"), "tenant1", "namespaceA"),
     )
 
     val timestamp = Instant.now()

@@ -14,8 +14,8 @@ interface TopicRepository {
         namespaceResourceId: UUID,
         name: String,
         schemas: List<Schema>,
-        tenantName: String = "default",
-        namespaceName: String = "default"
+        tenantName: String,
+        namespaceName: String
     ): Topic
 
     suspend fun getTopic(

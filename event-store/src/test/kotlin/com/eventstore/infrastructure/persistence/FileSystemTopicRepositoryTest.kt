@@ -39,7 +39,15 @@ class FileSystemTopicRepositoryTest {
         val name = "persisted-topic"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, schemas)
+        repository.createTopic(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            name,
+            schemas,
+            "default",
+            "default"
+        )
 
         val configPath = tempDir.resolve("default").resolve("default").resolve("$name.json")
         assertTrue(Files.exists(configPath))
@@ -53,7 +61,15 @@ class FileSystemTopicRepositoryTest {
             Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string")))
         )
 
-        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, schemas)
+        repository.createTopic(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            name,
+            schemas,
+            "default",
+            "default"
+        )
 
         // Create a new repository instance to verify it reads from disk
         val newRepository = FileSystemTopicRepository(tempDir, objectMapper)
@@ -70,7 +86,15 @@ class FileSystemTopicRepositoryTest {
         val name = "sequence-persist-topic"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, schemas)
+        repository.createTopic(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            name,
+            schemas,
+            "default",
+            "default"
+        )
         repository.updateSequence(name, 42L)
 
         // Create a new repository instance to verify persistence
@@ -90,7 +114,15 @@ class FileSystemTopicRepositoryTest {
             Schema(eventType = "user.updated")
         )
 
-        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, initialSchemas)
+        repository.createTopic(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            name,
+            initialSchemas,
+            "default",
+            "default"
+        )
         repository.updateSchemas(name, updatedSchemas)
 
         // Create a new repository instance to verify persistence
@@ -122,7 +154,9 @@ class FileSystemTopicRepositoryTest {
             UUID.randomUUID(),
             UUID.randomUUID(),
             "valid-topic",
-            listOf(Schema(eventType = "user.created"))
+            listOf(Schema(eventType = "user.created")),
+            "default",
+            "default"
         )
 
         val topics = repository.getAllTopics()
@@ -142,7 +176,9 @@ class FileSystemTopicRepositoryTest {
             UUID.randomUUID(),
             UUID.randomUUID(),
             "valid-topic",
-            listOf(Schema(eventType = "user.created"))
+            listOf(Schema(eventType = "user.created")),
+            "default",
+            "default"
         )
 
         val topics = repository.getAllTopics()
@@ -158,7 +194,7 @@ class FileSystemTopicRepositoryTest {
             UUID.randomUUID(),
             UUID.randomUUID(),
             "valid-topic",
-            listOf(Schema(eventType = "user.created"))
+            listOf(Schema(eventType = "user.created")), "default", "default"
         )
 
         // Corrupt the file
@@ -181,7 +217,7 @@ class FileSystemTopicRepositoryTest {
             UUID.randomUUID(),
             UUID.randomUUID(),
             "test-topic",
-            listOf(Schema(eventType = "user.created"))
+            listOf(Schema(eventType = "user.created")), "default", "default"
         )
 
         assertTrue(Files.exists(newDir))
@@ -193,7 +229,15 @@ class FileSystemTopicRepositoryTest {
         val name = "atomic-topic"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, schemas)
+        repository.createTopic(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            name,
+            schemas,
+            "default",
+            "default"
+        )
 
         // Verify file exists and is readable
         val configPath = tempDir.resolve("default").resolve("default").resolve("$name.json")
@@ -216,14 +260,18 @@ class FileSystemTopicRepositoryTest {
             tenantResourceId,
             namespaceResourceId,
             "topic-1",
-            listOf(Schema(eventType = "event1"))
+            listOf(Schema(eventType = "event1")),
+            "default",
+            "default"
         )
         repo2.createTopic(
             UUID.randomUUID(),
             tenantResourceId,
             namespaceResourceId,
             "topic-2",
-            listOf(Schema(eventType = "event2"))
+            listOf(Schema(eventType = "event2")),
+            "default",
+            "default"
         )
 
         assertEquals(1, repo1.getAllTopics().size)
@@ -238,7 +286,15 @@ class FileSystemTopicRepositoryTest {
         val name = "topic-with-special-chars"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), name, schemas)
+        repository.createTopic(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            name,
+            schemas,
+            "default",
+            "default"
+        )
 
         val configPath = tempDir.resolve("default").resolve("default").resolve("$name.json")
         assertTrue(Files.exists(configPath))
@@ -254,7 +310,9 @@ class FileSystemTopicRepositoryTest {
                 tenantResourceId,
                 namespaceResourceId,
                 "topic-$i",
-                listOf(Schema(eventType = "event$i"))
+                listOf(Schema(eventType = "event$i")),
+                "default",
+                "default"
             )
         }
 
@@ -278,7 +336,9 @@ class FileSystemTopicRepositoryTest {
             UUID.randomUUID(),
             UUID.randomUUID(),
             name,
-            listOf(Schema(eventType = "user.created"))
+            listOf(Schema(eventType = "user.created")),
+            "default",
+            "default"
         )
 
         // Simulate concurrent updates

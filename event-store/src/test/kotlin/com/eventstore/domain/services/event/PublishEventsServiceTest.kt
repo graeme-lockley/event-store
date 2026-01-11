@@ -3,6 +3,7 @@ package com.eventstore.domain.services.event
 import com.eventstore.domain.Application
 import com.eventstore.domain.EventId
 import com.eventstore.domain.Schema
+import com.eventstore.domain.exceptions.InvalidEventPayloadException
 import com.eventstore.domain.exceptions.SchemaNotFoundException
 import com.eventstore.domain.exceptions.SchemaValidationException
 import com.eventstore.domain.exceptions.TopicNotFoundException
@@ -50,7 +51,7 @@ class PublishEventsServiceTest {
     fun `should publish single event successfully`() = runTest {
         val numberOfEvents = application.getEvents(topicName).size
         val requests = listOf(
-            EventRequest(topicName, "user.created", mapOf("id" to "123", "name" to "Alice"))
+            EventRequest(topicName, "user.created", mapOf("id" to "123", "name" to "Alice"), "default", "default")
         )
 
         val result = application.publishEvents(requests)
@@ -70,8 +71,8 @@ class PublishEventsServiceTest {
     fun `should publish multiple events successfully`() = runTest {
         val numberOfEvents = application.getEvents(topicName).size
         val requests = listOf(
-            EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Alice")),
-            EventRequest(topicName, "user.created", mapOf("id" to "2", "name" to "Bob"))
+            EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Alice"), "default", "default"),
+            EventRequest(topicName, "user.created", mapOf("id" to "2", "name" to "Bob"), "default", "default")
         )
 
         val result = application.publishEvents(requests)
@@ -98,7 +99,7 @@ class PublishEventsServiceTest {
 
     @Test
     fun `should throw exception when topic does not exist`() = runTest {
-        val request = EventRequest("unknown-topic", "user.created", mapOf("id" to "123", "name" to "Alice"))
+        val request = EventRequest("unknown-topic", "user.created", mapOf("id" to "123", "name" to "Alice"), "default", "default")
 
         assertThrows<TopicNotFoundException> {
             application.publishEvents(listOf(request))
@@ -108,7 +109,7 @@ class PublishEventsServiceTest {
     @Test
     fun `should throw an exception when schema is unknown`() = runTest {
         val requests = listOf(
-            EventRequest(topicName, "user.removed", mapOf("id" to "123", "name" to "Alice"))
+            EventRequest(topicName, "user.removed", mapOf("id" to "123", "name" to "Alice"), "default", "default")
         )
 
         assertThrows<SchemaNotFoundException> {
@@ -122,7 +123,7 @@ class PublishEventsServiceTest {
         assertThrows<SchemaValidationException> {
             application.publishEvents(
                 listOf(
-                    EventRequest(topicName, "user.created", mapOf("id" to "123", "name" to "Fred", "age" to "27"))
+                    EventRequest(topicName, "user.created", mapOf("id" to "123", "name" to "Fred", "age" to "27"), "default", "default")
                 )
             )
         }
@@ -131,7 +132,7 @@ class PublishEventsServiceTest {
         assertThrows<SchemaValidationException> {
             application.publishEvents(
                 listOf(
-                    EventRequest(topicName, "user.created", mapOf("id" to "123"))
+                    EventRequest(topicName, "user.created", mapOf("id" to "123"), "default", "default")
                 )
             )
         }
@@ -142,8 +143,8 @@ class PublishEventsServiceTest {
         val numberOfEvents = application.getEvents(topicName).size
 
         val requests = listOf(
-            EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Alice")),
-            EventRequest("unknown-topic", "user.created", mapOf("id" to "2", "name" to "Bob"))
+            EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Alice"), "default", "default"),
+            EventRequest("unknown-topic", "user.created", mapOf("id" to "2", "name" to "Bob"), "default", "default")
         )
 
         assertThrows<TopicNotFoundException> {
@@ -156,10 +157,10 @@ class PublishEventsServiceTest {
 
     @Test
     fun `should throw exception for invalid payload`() = runTest {
-        val request = EventRequest(topicName, "user.created", emptyMap())
+        val request = EventRequest(topicName, "user.created", emptyMap(), "default", "default")
 
         // Should throw SchemaValidationException for missing required field
-        assertThrows<SchemaValidationException> {
+        assertThrows<InvalidEventPayloadException> {
             application.publishEvents(listOf(request))
         }
     }
@@ -218,13 +219,13 @@ class PublishEventsServiceTest {
     @Test
     fun `should increment event sequence correctly`() = runTest {
         val requests1 = listOf(
-            EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Alice"))
+            EventRequest(topicName, "user.created", mapOf("id" to "1", "name" to "Alice"), "default", "default")
         )
         val requests2 = listOf(
-            EventRequest(topicName, "user.created", mapOf("id" to "2", "name" to "Bob"))
+            EventRequest(topicName, "user.created", mapOf("id" to "2", "name" to "Bob"), "default", "default")
         )
         val requests3 = listOf(
-            EventRequest(topicName, "user.created", mapOf("id" to "3", "name" to "Charlie"))
+            EventRequest(topicName, "user.created", mapOf("id" to "3", "name" to "Charlie"), "default", "default")
         )
 
         val result1 = application.publishEvents(requests1)
