@@ -186,7 +186,7 @@ class GetTenantServiceTest {
             maxUsers = 3,
             maxEventSizeBytes = 512
         )
-        application.createTenant("update-test", quota = originalQuota, metadata = mapOf("plan" to "basic"))
+        val tenant = application.createTenant("update-test", quota = originalQuota, metadata = mapOf("plan" to "basic"))
 
         val newQuota = Quota(
             maxTopics = 20,
@@ -197,7 +197,7 @@ class GetTenantServiceTest {
             maxEventSizeBytes = 1024
         )
         val newMetadata = mapOf("plan" to "pro", "tier" to "premium")
-        application.updateTenant("update-test", name = "updated-test", quota = newQuota, metadata = newMetadata)
+        application.updateTenant(tenant.tenantId, name = "updated-test", quota = newQuota, metadata = newMetadata)
 
         val retrievedTenant = application.getTenant("updated-test")
 
@@ -237,13 +237,13 @@ class GetTenantServiceTest {
     @Test
     fun `gets tenant preserves resourceId after update`() = runTest {
         val createdTenant = application.createTenant("resource-id-test")
-        val originalResourceId = createdTenant.tenantId
+        val originalTenantId = createdTenant.tenantId
 
-        application.updateTenant("resource-id-test", name = "renamed-test")
+        application.updateTenant(originalTenantId, name = "renamed-test")
         val retrievedTenant = application.getTenant("renamed-test")
 
         assertNotNull(retrievedTenant)
-        assertEquals(originalResourceId, retrievedTenant.tenantId, "ResourceId should remain unchanged after rename")
+        assertEquals(originalTenantId, retrievedTenant.tenantId, "TenantId should remain unchanged after rename")
     }
 
     @Test
@@ -278,9 +278,9 @@ class GetTenantServiceTest {
 
     @Test
     fun `gets tenant returns correct updatedAt timestamp after update`() = runTest {
-        application.createTenant("updated-at-test")
+        val tenant= application.createTenant("updated-at-test")
         val beforeUpdate = java.time.Instant.now()
-        application.updateTenant("updated-at-test", name = "updated-name")
+        application.updateTenant(tenant.tenantId, name = "updated-name")
         val afterUpdate = java.time.Instant.now()
 
         val retrievedTenant = application.getTenant("updated-name")
@@ -293,8 +293,8 @@ class GetTenantServiceTest {
 
     @Test
     fun `gets tenant returns null for updated name when original name is used`() = runTest {
-        application.createTenant("original-name")
-        application.updateTenant("original-name", name = "new-name")
+        val tenant = application.createTenant("original-name")
+        application.updateTenant(tenant.tenantId, name = "new-name")
 
         val retrievedByOldName = application.getTenant("original-name")
         val retrievedByNewName = application.getTenant("new-name")

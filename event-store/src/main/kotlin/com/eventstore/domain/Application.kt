@@ -255,7 +255,7 @@ class Application(
         )
 
     suspend fun updateTenant(
-        tenantName: String,
+        tenantId: UUID,
         name: String? = null,
         quota: Quota? = null,
         metadata: Map<String, Any>? = null,
@@ -263,7 +263,7 @@ class Application(
     ): Tenant =
         updateTenantService.execute(
             UpdateTenantRequest(
-                tenantName = tenantName,
+                tenantId = tenantId,
                 name = name,
                 quota = quota,
                 metadata = metadata,

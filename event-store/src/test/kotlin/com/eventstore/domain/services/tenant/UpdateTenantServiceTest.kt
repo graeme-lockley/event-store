@@ -4,12 +4,15 @@ import com.eventstore.domain.Application
 import com.eventstore.domain.Quota
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.events.TenantUpdatedEvent
+import com.eventstore.domain.exceptions.TenantAlreadyExistsException
 import com.eventstore.domain.exceptions.TenantNameNotFoundException
+import com.eventstore.domain.exceptions.TenantNotFoundException
 import com.eventstore.domain.services.createApplication
 import com.eventstore.domain.tenants.SystemTopics
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.*
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.test.*
 
@@ -25,7 +28,7 @@ class UpdateTenantServiceTest {
     @Test
     fun `updates tenant and emits event`() = runTest {
         // Create a tenant first
-        application.createTenant("acme")
+        val tenant = application.createTenant("acme")
         val numberOfEvents = numberOfEvents()
 
         // Verify tenant exists in projection before update
@@ -34,7 +37,7 @@ class UpdateTenantServiceTest {
         assertEquals("acme", tenantBeforeUpdate.name)
 
         // Update the tenant
-        val updatedTenant = application.updateTenant("acme", name = "acme-corp", updatedBy = "admin")
+        val updatedTenant = application.updateTenant(tenant.tenantId, name = "acme-corp", updatedBy = "admin")
 
         assertEquals("acme-corp", updatedTenant.name)
         val events = getEvents()
@@ -52,17 +55,17 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `throws when tenant does not exist`() = runTest {
-        assertFailsWith<TenantNameNotFoundException> {
-            application.updateTenant("non-existent")
+        assertFailsWith<TenantNotFoundException> {
+            application.updateTenant(UUID.randomUUID())
         }
     }
 
     @Test
     fun `updates tenant name only`() = runTest {
-        application.createTenant("original-name")
+        val tenant = application.createTenant("original-name")
         val originalTenant = application.tenantProjectionService.getTenantByName("original-name")!!
 
-        val updatedTenant = application.updateTenant("original-name", name = "new-name")
+        val updatedTenant = application.updateTenant(tenant.tenantId, name = "new-name")
 
         assertEquals("new-name", updatedTenant.name)
         assertEquals(originalTenant.tenantId, updatedTenant.tenantId)
@@ -77,6 +80,16 @@ class UpdateTenantServiceTest {
     }
 
     @Test
+    fun `tenant name must be unique`() = runTest {
+        application.createTenant("tenant1-name")
+        val tenant2 = application.createTenant("tenant2-name")
+
+        assertFailsWith<TenantAlreadyExistsException> {
+            application.updateTenant(tenant2.tenantId, name = "tenant1-name")
+        }
+    }
+
+    @Test
     fun `updates tenant quota only`() = runTest {
         val originalQuota = Quota(
             maxTopics = 10,
@@ -86,8 +99,7 @@ class UpdateTenantServiceTest {
             maxUsers = 3,
             maxEventSizeBytes = 512
         )
-        application.createTenant("quota-test", quota = originalQuota)
-        val originalTenant = application.tenantProjectionService.getTenantByName("quota-test")!!
+        val tenant = application.createTenant("quota-test", quota = originalQuota)
 
         val newQuota = Quota(
             maxTopics = 20,
@@ -97,11 +109,11 @@ class UpdateTenantServiceTest {
             maxUsers = 10,
             maxEventSizeBytes = 1024
         )
-        val updatedTenant = application.updateTenant("quota-test", quota = newQuota)
+        val updatedTenant = application.updateTenant(tenant.tenantId, quota = newQuota)
 
         assertEquals(newQuota, updatedTenant.quota)
-        assertEquals(originalTenant.name, updatedTenant.name)
-        assertEquals(originalTenant.tenantId, updatedTenant.tenantId)
+        assertEquals(tenant.name, updatedTenant.name)
+        assertEquals(tenant.tenantId, updatedTenant.tenantId)
 
         // Verify projection
         val projectionTenant = application.tenantProjectionService.getTenantByName("quota-test")
@@ -112,15 +124,14 @@ class UpdateTenantServiceTest {
     @Test
     fun `updates tenant metadata only`() = runTest {
         val originalMetadata = mapOf("plan" to "basic")
-        application.createTenant("metadata-test", metadata = originalMetadata)
-        val originalTenant = application.tenantProjectionService.getTenantByName("metadata-test")!!
+        val tenant = application.createTenant("metadata-test", metadata = originalMetadata)
 
         val newMetadata = mapOf("plan" to "pro", "region" to "us-east")
-        val updatedTenant = application.updateTenant("metadata-test", metadata = newMetadata)
+        val updatedTenant = application.updateTenant(tenant.tenantId, metadata = newMetadata)
 
         assertEquals(newMetadata, updatedTenant.metadata)
-        assertEquals(originalTenant.name, updatedTenant.name)
-        assertEquals(originalTenant.tenantId, updatedTenant.tenantId)
+        assertEquals(tenant.name, updatedTenant.name)
+        assertEquals(tenant.tenantId, updatedTenant.tenantId)
 
         // Verify projection
         val projectionTenant = application.tenantProjectionService.getTenantByName("metadata-test")
@@ -130,8 +141,7 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `updates all fields together`() = runTest {
-        application.createTenant("multi-update-test")
-        val originalTenant = application.tenantProjectionService.getTenantByName("multi-update-test")!!
+        val tenant = application.createTenant("multi-update-test")
 
         val newQuota = Quota(
             maxTopics = 30,
@@ -143,7 +153,7 @@ class UpdateTenantServiceTest {
         )
         val newMetadata = mapOf("plan" to "enterprise", "tier" to "premium")
         val updatedTenant = application.updateTenant(
-            "multi-update-test",
+            tenant.tenantId,
             name = "updated-multi-test",
             quota = newQuota,
             metadata = newMetadata,
@@ -153,7 +163,7 @@ class UpdateTenantServiceTest {
         assertEquals("updated-multi-test", updatedTenant.name)
         assertEquals(newQuota, updatedTenant.quota)
         assertEquals(newMetadata, updatedTenant.metadata)
-        assertEquals(originalTenant.tenantId, updatedTenant.tenantId)
+        assertEquals(tenant.tenantId, updatedTenant.tenantId)
 
         // Verify projection
         val projectionTenant = application.tenantProjectionService.getTenantByName("updated-multi-test")
@@ -173,11 +183,11 @@ class UpdateTenantServiceTest {
             maxEventSizeBytes = 512
         )
         val originalMetadata = mapOf("plan" to "basic")
-        application.createTenant("preserve-test", quota = originalQuota, metadata = originalMetadata)
+        val tenant = application.createTenant("preserve-test", quota = originalQuota, metadata = originalMetadata)
         application.tenantProjectionService.getTenantByName("preserve-test")!!
 
         // Update only name, leaving quota and metadata as null
-        val updatedTenant = application.updateTenant("preserve-test", name = "preserved-name")
+        val updatedTenant = application.updateTenant(tenant.tenantId, name = "preserved-name")
 
         assertEquals("preserved-name", updatedTenant.name)
         assertEquals(originalQuota, updatedTenant.quota, "Quota should be preserved")
@@ -192,8 +202,8 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `uses default updatedBy when not specified`() = runTest {
-        application.createTenant("default-updated-by")
-        application.updateTenant("default-updated-by", name = "updated-name")
+        val tenant = application.createTenant("default-updated-by")
+        application.updateTenant(tenant.tenantId, name = "updated-name")
 
         val payload = getEvents().last { it.type == TenantEventType.UPDATED }.payload
         assertEquals("system", payload["updatedBy"])
@@ -201,8 +211,8 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `uses custom updatedBy when specified`() = runTest {
-        application.createTenant("custom-updated-by")
-        application.updateTenant("custom-updated-by", name = "updated-name", updatedBy = "admin@example.com")
+        val tenant = application.createTenant("custom-updated-by")
+        application.updateTenant(tenant.tenantId, name = "updated-name", updatedBy = "admin@example.com")
 
         val payload = getEvents().last { it.type == TenantEventType.UPDATED }.payload
         assertEquals("admin@example.com", payload["updatedBy"])
@@ -221,7 +231,7 @@ class UpdateTenantServiceTest {
         )
         val newMetadata = mapOf("plan" to "pro")
         application.updateTenant(
-            "payload-test",
+            tenant.tenantId,
             name = "updated-payload",
             quota = newQuota,
             metadata = newMetadata,
@@ -259,8 +269,8 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `event payload omits optional fields when null`() = runTest {
-        application.createTenant("optional-fields-test")
-        application.updateTenant("optional-fields-test", name = "updated-optional")
+        val tenant = application.createTenant("optional-fields-test")
+        application.updateTenant(tenant.tenantId, name = "updated-optional")
 
         val payload = getEvents().last { it.type == TenantEventType.UPDATED }.payload
 
@@ -274,8 +284,8 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `event is stored with correct tenant and namespace context`() = runTest {
-        application.createTenant("context-test")
-        application.updateTenant("context-test", name = "updated-context")
+        val tenant = application.createTenant("context-test")
+        application.updateTenant(tenant.tenantId, name = "updated-context")
 
         val event = getEvents().last { it.type == TenantEventType.UPDATED }
         assertEquals(SystemTopics.SYSTEM_TENANT_NAME, event.id.tenantId)
@@ -285,15 +295,15 @@ class UpdateTenantServiceTest {
     @Test
     fun `event sequence is correctly incremented`() = runTest {
         // Create and update first tenant
-        application.createTenant("sequence-test-1")
-        application.updateTenant("sequence-test-1", name = "updated-1")
+        val tenant1 = application.createTenant("sequence-test-1")
+        application.updateTenant(tenant1.tenantId, name = "updated-1")
         val allEvents1 = getEvents()
         val updatedEvent1 = allEvents1.last { it.type == TenantEventType.UPDATED }
         val sequence1 = updatedEvent1.id.sequence
 
         // Create and update second tenant
-        application.createTenant("sequence-test-2")
-        application.updateTenant("sequence-test-2", name = "updated-2")
+        val tenant2 = application.createTenant("sequence-test-2")
+        application.updateTenant(tenant2.tenantId, name = "updated-2")
         val allEvents2 = getEvents()
         val updatedEvent2 = allEvents2.last { it.type == TenantEventType.UPDATED }
         val sequence2 = updatedEvent2.id.sequence
@@ -304,9 +314,9 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `event timestamp is set correctly`() = runTest {
-        application.createTenant("timestamp-test")
+        val tenant = application.createTenant("timestamp-test")
         val beforeUpdate = java.time.Instant.now()
-        val updatedTenant = application.updateTenant("timestamp-test", name = "updated-timestamp")
+        val updatedTenant = application.updateTenant(tenant.tenantId, name = "updated-timestamp")
         val afterUpdate = java.time.Instant.now()
 
         val event = getEvents().last { it.type == TenantEventType.UPDATED }
@@ -327,7 +337,7 @@ class UpdateTenantServiceTest {
             maxUsers = 8,
             maxEventSizeBytes = 768
         )
-        application.updateTenant("structure-test", name = "updated-structure", quota = newQuota, updatedBy = "user")
+        application.updateTenant(tenant.tenantId, name = "updated-structure", quota = newQuota, updatedBy = "user")
 
         val payload = getEvents().last { it.type == TenantEventType.UPDATED }.payload
 
@@ -341,9 +351,9 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `updates tenant with unicode characters in name`() = runTest {
-        application.createTenant("unicode-test")
+        val tenant = application.createTenant("unicode-test")
         val unicodeName = "tenant-测试-🚀"
-        val updatedTenant = application.updateTenant("unicode-test", name = unicodeName)
+        val updatedTenant = application.updateTenant(tenant.tenantId, name = unicodeName)
 
         assertEquals(unicodeName, updatedTenant.name)
         val event = getEvents().last { it.type == TenantEventType.UPDATED }
@@ -357,15 +367,15 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `can update tenant multiple times sequentially`() = runTest {
-        application.createTenant("multi-update")
+        val tenant = application.createTenant("multi-update")
 
-        val update1 = application.updateTenant("multi-update", name = "multi-update-1")
+        val update1 = application.updateTenant(tenant.tenantId, name = "multi-update-1")
         assertEquals("multi-update-1", update1.name)
 
-        val update2 = application.updateTenant("multi-update-1", name = "multi-update-2")
+        val update2 = application.updateTenant(tenant.tenantId, name = "multi-update-2")
         assertEquals("multi-update-2", update2.name)
 
-        val update3 = application.updateTenant("multi-update-2", name = "multi-update-3")
+        val update3 = application.updateTenant(tenant.tenantId, name = "multi-update-3")
         assertEquals("multi-update-3", update3.name)
 
         val events = getEvents()
@@ -383,7 +393,7 @@ class UpdateTenantServiceTest {
         val tenant = application.createTenant("tenant-id-test")
         val originalTenantId = tenant.tenantId
 
-        application.updateTenant("tenant-id-test", name = "updated-tenant-id")
+        application.updateTenant(tenant.tenantId, name = "updated-tenant-id")
 
         val event = getEvents().last { it.type == TenantEventType.UPDATED }
         val payload = event.payload
@@ -397,9 +407,9 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `updatedAt is set in returned tenant and projection`() = runTest {
-        application.createTenant("updated-at-test")
+        val tenant = application.createTenant("updated-at-test")
         val beforeUpdate = java.time.Instant.now()
-        val updatedTenant = application.updateTenant("updated-at-test", name = "updated-name")
+        val updatedTenant = application.updateTenant(tenant.tenantId, name = "updated-name")
         val afterUpdate = java.time.Instant.now()
 
         assertNotNull(updatedTenant.updatedAt)
@@ -415,7 +425,7 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `updates metadata with various types`() = runTest {
-        application.createTenant("metadata-types-test")
+        val tenant = application.createTenant("metadata-types-test")
         val complexMetadata = mapOf(
             "string" to "value",
             "number" to 42,
@@ -423,7 +433,7 @@ class UpdateTenantServiceTest {
             "nested" to mapOf("key" to "value"),
             "list" to listOf(1, 2, 3)
         )
-        val updatedTenant = application.updateTenant("metadata-types-test", metadata = complexMetadata)
+        val updatedTenant = application.updateTenant(tenant.tenantId, metadata = complexMetadata)
 
         assertEquals(complexMetadata, updatedTenant.metadata)
 

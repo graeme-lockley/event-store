@@ -5,15 +5,18 @@ import com.eventstore.domain.Quota
 import com.eventstore.domain.Tenant
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.events.TenantUpdatedEvent
+import com.eventstore.domain.exceptions.TenantAlreadyExistsException
 import com.eventstore.domain.exceptions.TenantNameNotFoundException
+import com.eventstore.domain.exceptions.TenantNotFoundException
 import com.eventstore.domain.services.BaseSystemService
 import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import java.time.Instant
+import java.util.UUID
 
 data class UpdateTenantRequest(
-    val tenantName: String,
+    val tenantId: UUID,
     val name: String? = null,
     val quota: Quota? = null,
     val metadata: Map<String, Any>? = null,
@@ -26,8 +29,15 @@ class UpdateTenantService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: UpdateTenantRequest): Tenant {
-        val existing = tenantProjectionService.getTenantByName(request.tenantName)
-            ?: throw TenantNameNotFoundException(request.tenantName)
+        val existing = tenantProjectionService.getTenantById(request.tenantId)
+            ?: throw TenantNotFoundException(request.tenantId)
+
+        if (request.name != null && request.name != existing.name) {
+            val tenantWithSameName = tenantProjectionService.getTenantByName(request.name)
+            if (tenantWithSameName != null) {
+                throw TenantAlreadyExistsException(request.name)
+            }
+        }
 
         val now = Instant.now()
         val eventPayload = TenantUpdatedEvent(

@@ -86,14 +86,14 @@ fun Route.tenantRoutes(
             }
         }
 
-        put("{tenantName}") {
+        put("{tenantId}") {
             try {
-                val tenantName =
-                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val tenantId =
+                    call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
                 val body = call.receive<TenantUpdateRequest>()
 
                 val updated = application.updateTenant(
-                    tenantName = tenantName,
+                    tenantId = UUID.fromString(tenantId),
                     name = body.name,
                     quota = body.quota?.toDomain(),
                     metadata = body.metadata
