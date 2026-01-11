@@ -122,7 +122,7 @@ class CreateUserServiceTest {
 
     @Test
     fun `throws exception when primary tenant does not exist`() = runTest {
-        assertThrows<com.eventstore.domain.exceptions.TenantNotFoundException> {
+        assertThrows<com.eventstore.domain.exceptions.TenantNameNotFoundException> {
             application.createUser(
                 email = "alice@example.com",
                 name = "Alice",

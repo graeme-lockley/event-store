@@ -109,7 +109,7 @@ class CreateTopicServiceTest {
 
     @Test
     fun `should throw exception when tenant does not exist`() = runTest {
-        assertThrows<com.eventstore.domain.exceptions.TenantNotFoundException> {
+        assertThrows<com.eventstore.domain.exceptions.TenantNameNotFoundException> {
             application.createTopic("test-topic", emptyList(), "nonexistent-tenant", "default")
         }
     }

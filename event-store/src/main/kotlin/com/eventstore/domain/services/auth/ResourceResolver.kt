@@ -1,7 +1,7 @@
 package com.eventstore.domain.services.auth
 
 import com.eventstore.domain.exceptions.NamespaceNotFoundException
-import com.eventstore.domain.exceptions.TenantNotFoundException
+import com.eventstore.domain.exceptions.TenantNameNotFoundException
 import com.eventstore.domain.exceptions.TopicNotFoundException
 import com.eventstore.domain.ports.outbound.ResourceResolver
 import com.eventstore.domain.ports.outbound.TopicRepository
@@ -20,13 +20,13 @@ class ResourceResolverImpl(
 
     override suspend fun resolveTenantName(tenantName: String): UUID {
         val tenant = tenantProjectionService.getTenantByName(tenantName)
-            ?: throw TenantNotFoundException(tenantName)
+            ?: throw TenantNameNotFoundException(tenantName)
         return tenant.tenantId
     }
 
     override suspend fun resolveNamespaceName(tenantId: UUID, namespaceName: String): UUID {
         val tenant = tenantProjectionService.getTenantById(tenantId)
-            ?: throw TenantNotFoundException("tenantId: $tenantId")
+            ?: throw TenantNameNotFoundException("tenantId: $tenantId")
         val namespace = namespaceProjectionService.getNamespaceByName(tenant.name, namespaceName)
             ?: throw NamespaceNotFoundException(namespaceName)
         return namespace.resourceId
@@ -38,7 +38,7 @@ class ResourceResolverImpl(
         topicName: String
     ): UUID {
         val tenant = tenantProjectionService.getTenantById(tenantId)
-            ?: throw TenantNotFoundException("tenantId: $tenantId")
+            ?: throw TenantNameNotFoundException("tenantId: $tenantId")
         val namespace = namespaceProjectionService.getNamespaceByResourceId(tenantId, namespaceId)
             ?: throw NamespaceNotFoundException("namespaceId: $namespaceId")
         val topic = topicRepository.getTopic(topicName, tenant.name, namespace.name)

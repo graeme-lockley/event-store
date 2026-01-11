@@ -3,7 +3,7 @@ package com.eventstore.domain.services.namespace
 import com.eventstore.domain.Application
 import com.eventstore.domain.events.NamespaceEventType
 import com.eventstore.domain.exceptions.NamespaceAlreadyExistsException
-import com.eventstore.domain.exceptions.TenantNotFoundException
+import com.eventstore.domain.exceptions.TenantNameNotFoundException
 import com.eventstore.domain.services.createApplication
 import com.eventstore.domain.tenants.SystemTopics
 import kotlinx.coroutines.test.runTest
@@ -44,7 +44,7 @@ class CreateNamespaceServiceTest {
 
     @Test
     fun `fails when tenant missing`() = runTest {
-        assertFailsWith<TenantNotFoundException> {
+        assertFailsWith<TenantNameNotFoundException> {
             application.createNamespace("unknown", "billing")
         }
     }

@@ -5,7 +5,7 @@ import com.eventstore.domain.Namespace
 import com.eventstore.domain.events.NamespaceCreatedEvent
 import com.eventstore.domain.events.NamespaceEventType
 import com.eventstore.domain.exceptions.NamespaceAlreadyExistsException
-import com.eventstore.domain.exceptions.TenantNotFoundException
+import com.eventstore.domain.exceptions.TenantNameNotFoundException
 import com.eventstore.domain.services.BaseSystemService
 import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
@@ -30,7 +30,7 @@ class CreateNamespaceService(
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateNamespaceRequest): Namespace {
         val tenant = tenantProjectionService.getTenantByName(request.tenantName)
-            ?: throw TenantNotFoundException(request.tenantName)
+            ?: throw TenantNameNotFoundException(request.tenantName)
 
         if (namespaceProjectionService.namespaceExistsByName(request.tenantName, request.name)) {
             throw NamespaceAlreadyExistsException(request.name)

@@ -4,13 +4,14 @@ import com.eventstore.domain.Application
 import com.eventstore.domain.Quota
 import com.eventstore.domain.Tenant
 import com.eventstore.domain.exceptions.TenantAlreadyExistsException
-import com.eventstore.domain.exceptions.TenantNotFoundException
+import com.eventstore.domain.exceptions.TenantNameNotFoundException
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.util.UUID
 
 private data class TenantDeleteRequestDto(val reason: String? = null)
 
@@ -70,9 +71,9 @@ fun Route.tenantRoutes(
             try {
                 val tenantName =
                     call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val tenant = application.getTenant(tenantName) ?: throw TenantNotFoundException(tenantName)
+                val tenant = application.getTenant(tenantName) ?: throw TenantNameNotFoundException(tenantName)
                 call.respond(HttpStatusCode.OK, tenant.toResponse())
-            } catch (e: TenantNotFoundException) {
+            } catch (e: TenantNameNotFoundException) {
                 call.respond(
                     HttpStatusCode.NotFound,
                     ErrorResponse(e.message ?: "Tenant not found", "TENANT_NOT_FOUND")
@@ -99,7 +100,7 @@ fun Route.tenantRoutes(
                 )
 
                 call.respond(HttpStatusCode.OK, updated.toResponse())
-            } catch (e: TenantNotFoundException) {
+            } catch (e: TenantNameNotFoundException) {
                 call.respond(
                     HttpStatusCode.NotFound,
                     ErrorResponse(e.message ?: "Tenant not found", "TENANT_NOT_FOUND")
@@ -117,19 +118,19 @@ fun Route.tenantRoutes(
             }
         }
 
-        delete("{tenantName}") {
+        delete("{tenantId}") {
             try {
-                val tenantName =
-                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
+                val tenantId =
+                    call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
                 val body = runCatching { call.receive<TenantDeleteRequestDto>() }.getOrNull()
 
                 application.deleteTenant(
-                    tenantName = tenantName,
+                    tenantId = UUID.fromString(tenantId),
                     reason = body?.reason
                 )
 
-                call.respond(HttpStatusCode.OK, mapOf("message" to "Tenant '$tenantName' deleted"))
-            } catch (e: TenantNotFoundException) {
+                call.respond(HttpStatusCode.OK, mapOf("message" to "Tenant '$tenantId' deleted"))
+            } catch (e: TenantNameNotFoundException) {
                 call.respond(
                     HttpStatusCode.NotFound,
                     ErrorResponse(e.message ?: "Tenant not found", "TENANT_NOT_FOUND")

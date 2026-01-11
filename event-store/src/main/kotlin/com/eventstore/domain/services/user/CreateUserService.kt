@@ -5,7 +5,7 @@ import com.eventstore.domain.User
 import com.eventstore.domain.UserStatus
 import com.eventstore.domain.events.UserCreatedEvent
 import com.eventstore.domain.events.UserEventType
-import com.eventstore.domain.exceptions.TenantNotFoundException
+import com.eventstore.domain.exceptions.TenantNameNotFoundException
 import com.eventstore.domain.exceptions.UserAlreadyExistsException
 import com.eventstore.domain.services.BaseSystemService
 import com.eventstore.domain.services.SystemEventPublisher
@@ -39,7 +39,7 @@ class CreateUserService(
 
         request.primaryTenantId?.let {
             if (!tenantProjectionService.tenantExistsByName(it)) {
-                throw TenantNotFoundException(it)
+                throw TenantNameNotFoundException(it)
             }
         }
 

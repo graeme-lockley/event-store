@@ -9,9 +9,10 @@ import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.TenantProjectionService
 import java.time.Instant
+import java.util.UUID
 
 data class DeleteTenantRequest(
-    val tenantName: String,
+    val tenantId: UUID,
     val deletedBy: String = "system",
     val reason: String? = null
 )
@@ -22,8 +23,8 @@ class DeleteTenantService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: DeleteTenantRequest): Boolean {
-        val existing = tenantProjectionService.getTenantByName(request.tenantName)
-            ?: throw TenantNotFoundException(request.tenantName)
+        val existing = tenantProjectionService.getTenantById(request.tenantId)
+            ?: throw TenantNotFoundException(request.tenantId)
 
         if (!existing.isActive) {
             return false

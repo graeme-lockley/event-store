@@ -35,7 +35,7 @@ class CreateTopicService(
 
         // Resolve tenant and namespace to get resourceIds
         val tenant = tenantProjectionService.getTenantByName(tenantName)
-            ?: throw com.eventstore.domain.exceptions.TenantNotFoundException(tenantName)
+            ?: throw com.eventstore.domain.exceptions.TenantNameNotFoundException(tenantName)
         val namespace = namespaceProjectionService.getNamespaceByName(tenantName, namespaceName)
             ?: throw com.eventstore.domain.exceptions.NamespaceNotFoundException(namespaceName)
 

@@ -50,8 +50,8 @@ class GetTenantServiceTest {
 
     @Test
     fun `returns null when tenant is deleted`() = runTest {
-        application.createTenant("deleted-tenant")
-        application.deleteTenant("deleted-tenant")
+        val tenant = application.createTenant("deleted-tenant")
+        application.deleteTenant(tenant.tenantId)
 
         val retrievedTenant = application.getTenant("deleted-tenant")
 
@@ -112,8 +112,8 @@ class GetTenantServiceTest {
         val initialCount = getInitialTenantCount()
         application.createTenant("active-1")
         application.createTenant("active-2")
-        application.createTenant("to-delete")
-        application.deleteTenant("to-delete")
+        val tenant3 = application.createTenant("to-delete")
+        application.deleteTenant(tenant3.tenantId)
 
         val tenants = application.listTenants()
 
@@ -308,13 +308,13 @@ class GetTenantServiceTest {
     fun `list tenants excludes multiple deleted tenants`() = runTest {
         val initialCount = getInitialTenantCount()
         application.createTenant("keep-1")
-        application.createTenant("delete-1")
+        val tenant2 = application.createTenant("delete-1")
         application.createTenant("keep-2")
-        application.createTenant("delete-2")
+        val tenant4 = application.createTenant("delete-2")
         application.createTenant("keep-3")
 
-        application.deleteTenant("delete-1")
-        application.deleteTenant("delete-2")
+        application.deleteTenant(tenant2.tenantId)
+        application.deleteTenant(tenant4.tenantId)
 
         val tenants = application.listTenants()
 

@@ -4,7 +4,7 @@ import com.eventstore.domain.Application
 import com.eventstore.domain.Quota
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.events.TenantUpdatedEvent
-import com.eventstore.domain.exceptions.TenantNotFoundException
+import com.eventstore.domain.exceptions.TenantNameNotFoundException
 import com.eventstore.domain.services.createApplication
 import com.eventstore.domain.tenants.SystemTopics
 import kotlinx.coroutines.test.runTest
@@ -52,7 +52,7 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `throws when tenant does not exist`() = runTest {
-        assertFailsWith<TenantNotFoundException> {
+        assertFailsWith<TenantNameNotFoundException> {
             application.updateTenant("non-existent")
         }
     }

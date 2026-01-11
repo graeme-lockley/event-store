@@ -37,6 +37,7 @@ import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
 import com.eventstore.infrastructure.projections.*
 import kotlinx.coroutines.runBlocking
 import java.time.Instant
+import java.util.UUID
 
 class Application(
     val bootstrap: Boolean = false,
@@ -241,13 +242,13 @@ class Application(
         )
 
     suspend fun deleteTenant(
-        tenantName: String,
+        tenantId: UUID,
         deletedBy: String = "system",
         reason: String? = null
     ): Boolean =
         deleteTenantService.execute(
             DeleteTenantRequest(
-                tenantName = tenantName,
+                tenantId = tenantId,
                 deletedBy = deletedBy,
                 reason = reason
             )

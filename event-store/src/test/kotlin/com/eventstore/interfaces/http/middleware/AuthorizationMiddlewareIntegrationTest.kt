@@ -109,7 +109,7 @@ class AuthorizationMiddlewareIntegrationTest {
                 }
             }
             install(StatusPages) {
-                exception<com.eventstore.domain.exceptions.TenantNotFoundException> { call, cause ->
+                exception<com.eventstore.domain.exceptions.TenantNameNotFoundException> { call, cause ->
                     call.respond(HttpStatusCode.NotFound, mapOf("error" to (cause.message ?: "Tenant not found")))
                 }
                 exception<com.eventstore.domain.exceptions.NamespaceNotFoundException> { call, cause ->

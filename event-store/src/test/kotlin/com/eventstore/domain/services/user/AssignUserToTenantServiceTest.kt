@@ -109,7 +109,7 @@ class AssignUserToTenantServiceTest {
             password = "secret"
         )
 
-        assertThrows<com.eventstore.domain.exceptions.TenantNotFoundException> {
+        assertThrows<com.eventstore.domain.exceptions.TenantNameNotFoundException> {
             application.assignUserToTenant(
                 userId = user.id,
                 tenantId = "nonexistent-tenant"

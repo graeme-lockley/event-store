@@ -4,7 +4,7 @@ import com.eventstore.domain.Application
 import com.eventstore.domain.Namespace
 import com.eventstore.domain.exceptions.NamespaceAlreadyExistsException
 import com.eventstore.domain.exceptions.NamespaceNotFoundException
-import com.eventstore.domain.exceptions.TenantNotFoundException
+import com.eventstore.domain.exceptions.TenantNameNotFoundException
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -38,7 +38,7 @@ fun Route.namespaceRoutes(
                     metadata = body.metadata
                 )
                 call.respond(HttpStatusCode.Created, created.toResponse())
-            } catch (e: TenantNotFoundException) {
+            } catch (e: TenantNameNotFoundException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
                     ErrorResponse(e.message ?: "Tenant not found", "TENANT_NOT_FOUND")
@@ -120,7 +120,7 @@ fun Route.namespaceRoutes(
                     HttpStatusCode.NotFound,
                     ErrorResponse(e.message ?: "Namespace not found", "NAMESPACE_NOT_FOUND")
                 )
-            } catch (e: TenantNotFoundException) {
+            } catch (e: TenantNameNotFoundException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
                     ErrorResponse(e.message ?: "Tenant not found", "TENANT_NOT_FOUND")
@@ -157,7 +157,7 @@ fun Route.namespaceRoutes(
                     HttpStatusCode.NotFound,
                     ErrorResponse(e.message ?: "Namespace not found", "NAMESPACE_NOT_FOUND")
                 )
-            } catch (e: TenantNotFoundException) {
+            } catch (e: TenantNameNotFoundException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
                     ErrorResponse(e.message ?: "Tenant not found", "TENANT_NOT_FOUND")

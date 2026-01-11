@@ -3,7 +3,7 @@ package com.eventstore.domain.services.user
 import com.eventstore.Config
 import com.eventstore.domain.events.UserEventType
 import com.eventstore.domain.events.UserTenantAssignedEvent
-import com.eventstore.domain.exceptions.TenantNotFoundException
+import com.eventstore.domain.exceptions.TenantNameNotFoundException
 import com.eventstore.domain.exceptions.UserNotFoundException
 import com.eventstore.domain.services.BaseSystemService
 import com.eventstore.domain.services.SystemEventPublisher
@@ -28,7 +28,7 @@ class AssignUserToTenantService(
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: AssignUserRequest): Boolean {
         if (!tenantProjectionService.tenantExistsByName(request.tenantId)) {
-            throw TenantNotFoundException(request.tenantId)
+            throw TenantNameNotFoundException(request.tenantId)
         }
 
         userProjectionService.getUser(request.userId) ?: throw UserNotFoundException(request.userId)

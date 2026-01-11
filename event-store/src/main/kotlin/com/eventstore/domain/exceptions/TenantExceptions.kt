@@ -1,10 +1,15 @@
 package com.eventstore.domain.exceptions
 
-class TenantAlreadyExistsException(tenantId: String) :
-    RuntimeException("Tenant with id '$tenantId' already exists")
+import java.util.UUID
 
-class TenantNotFoundException(tenantId: String) :
-    RuntimeException("Tenant with id '$tenantId' not found")
+class TenantAlreadyExistsException(tenantName: String) :
+    RuntimeException("Tenant '$tenantName' already exists")
+
+class TenantNameNotFoundException(tenantName: String) :
+    RuntimeException("Tenant '$tenantName' not found")
+
+class TenantNotFoundException(tenantId: UUID) :
+    RuntimeException("Tenant '$tenantId' not found")
 
 
 
