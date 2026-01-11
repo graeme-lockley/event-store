@@ -38,9 +38,9 @@ class DeleteUserServiceTest {
         assertNotNull(deleted.updatedAt)
 
         val storedEvents = application.getEvents(
-            topic = SystemTopics.USERS_TOPIC,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            topic = SystemTopics.USERS_TOPIC_NAME,
+            tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
         )
         val statusChangedEvents = storedEvents.filter { it.type == UserEventType.STATUS_CHANGED }
         assertTrue(statusChangedEvents.isNotEmpty())

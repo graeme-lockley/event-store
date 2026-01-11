@@ -81,7 +81,7 @@ class GrantPermissionService(
         val eventPayload = event.toPayload()
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.PERMISSIONS_TOPIC,
+            topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
             eventType = PermissionEventType.GRANTED,
             payload = eventPayload,
             timestamp = now

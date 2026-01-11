@@ -55,9 +55,9 @@ class GrantPermissionServiceTest {
 
         // Verify event was stored
         val storedEvents = application.getEvents(
-            topic = SystemTopics.PERMISSIONS_TOPIC,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
+            tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
         )
         val permissionEvents = storedEvents.filter { it.type == PermissionEventType.GRANTED }
         assertTrue(permissionEvents.isNotEmpty())

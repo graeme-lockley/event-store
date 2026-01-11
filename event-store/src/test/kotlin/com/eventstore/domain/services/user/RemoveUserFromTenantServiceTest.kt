@@ -42,9 +42,9 @@ class RemoveUserFromTenantServiceTest {
         assertEquals(true, result)
 
         val storedEvents = application.getEvents(
-            topic = SystemTopics.USERS_TOPIC,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            topic = SystemTopics.USERS_TOPIC_NAME,
+            tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
         )
         val removedEvents = storedEvents.filter { it.type == UserEventType.TENANT_REMOVED }
         assertTrue(removedEvents.isNotEmpty())

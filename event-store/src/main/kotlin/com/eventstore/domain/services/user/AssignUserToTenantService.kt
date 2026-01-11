@@ -44,7 +44,7 @@ class AssignUserToTenantService(
         )
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.USERS_TOPIC,
+            topic = SystemTopics.USERS_TOPIC_NAME,
             eventType = UserEventType.TENANT_ASSIGNED,
             payload = payload.toPayload(),
             timestamp = now

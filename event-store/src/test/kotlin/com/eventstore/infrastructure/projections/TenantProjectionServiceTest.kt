@@ -33,10 +33,10 @@ class TenantProjectionServiceTest {
         val createdAt = Instant.now()
         val createdEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC,
+                topic = SystemTopics.TENANTS_TOPIC_NAME,
                 sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = createdAt,
             type = TenantEventType.CREATED,
@@ -51,10 +51,10 @@ class TenantProjectionServiceTest {
         val updatedAt = createdAt.plusSeconds(60)
         val updatedEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC,
+                topic = SystemTopics.TENANTS_TOPIC_NAME,
                 sequence = 2,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = updatedAt,
             type = TenantEventType.UPDATED,
@@ -69,12 +69,12 @@ class TenantProjectionServiceTest {
         service.handleEvents(listOf(createdEvent, updatedEvent))
 
         // After update, look up by the new name
-        val tenant = service.getTenant("Acme Corp")
+        val tenant = service.getTenantByName("Acme Corp")
         assertNotNull(tenant)
         assertEquals("Acme Corp", tenant.name)
         assertEquals(updatedAt, tenant.updatedAt)
         // Verify old name no longer works
-        assertNull(service.getTenant("acme"))
+        assertNull(service.getTenantByName("acme"))
     }
 
     @Test
@@ -83,10 +83,10 @@ class TenantProjectionServiceTest {
         val createdAt = Instant.now()
         val createdEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC,
+                topic = SystemTopics.TENANTS_TOPIC_NAME,
                 sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = createdAt,
             type = TenantEventType.CREATED,
@@ -101,10 +101,10 @@ class TenantProjectionServiceTest {
         val deletedAt = createdAt.plusSeconds(30)
         val deletedEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC,
+                topic = SystemTopics.TENANTS_TOPIC_NAME,
                 sequence = 2,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = deletedAt,
             type = TenantEventType.DELETED,
@@ -117,7 +117,7 @@ class TenantProjectionServiceTest {
 
         service.handleEvents(listOf(createdEvent, deletedEvent))
 
-        assertNull(service.getTenant("acme"))
+        assertNull(service.getTenantByName("acme"))
     }
 }
 

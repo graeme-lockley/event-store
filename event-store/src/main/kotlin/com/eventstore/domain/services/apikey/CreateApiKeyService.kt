@@ -65,7 +65,7 @@ class CreateApiKeyService(
         )
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.API_KEYS_TOPIC,
+            topic = SystemTopics.API_KEYS_TOPIC_NAME,
             eventType = ApiKeyEventType.CREATED,
             payload = payload.toPayload(),
             timestamp = now

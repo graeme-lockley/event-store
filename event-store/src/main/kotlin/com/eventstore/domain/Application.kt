@@ -11,7 +11,6 @@ import com.eventstore.domain.services.consumer.ConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.InMemoryConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.RegisterConsumerService
 import com.eventstore.domain.services.consumer.UnregisterConsumerService
-import com.eventstore.domain.Consumer
 import com.eventstore.domain.services.event.EventRequest
 import com.eventstore.domain.services.event.GetEventsService
 import com.eventstore.domain.services.event.PublishEventsService
@@ -188,42 +187,42 @@ class Application(
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> tenantProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.TENANTS_TOPIC to null)
+                    topics = mapOf(SystemTopics.TENANTS_TOPIC_NAME to null)
                 ),
-                tenantName = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> namespaceProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.NAMESPACES_TOPIC to null)
+                    topics = mapOf(SystemTopics.NAMESPACES_TOPIC_NAME to null)
                 ),
-                tenantName = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> userProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.USERS_TOPIC to null)
+                    topics = mapOf(SystemTopics.USERS_TOPIC_NAME to null)
                 ),
-                tenantName = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> permissionProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.PERMISSIONS_TOPIC to null)
+                    topics = mapOf(SystemTopics.PERMISSIONS_TOPIC_NAME to null)
                 ),
-                tenantName = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> apiKeyProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.API_KEYS_TOPIC to null)
+                    topics = mapOf(SystemTopics.API_KEYS_TOPIC_NAME to null)
                 ),
-                tenantName = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             )
         }
     }

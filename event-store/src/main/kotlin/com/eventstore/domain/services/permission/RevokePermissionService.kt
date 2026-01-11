@@ -72,7 +72,7 @@ class RevokePermissionService(
         val eventPayload = event.toPayload()
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.PERMISSIONS_TOPIC,
+            topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
             eventType = PermissionEventType.REVOKED,
             payload = eventPayload,
             timestamp = now

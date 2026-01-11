@@ -41,8 +41,8 @@ class CreateTenantServiceTest {
         assertEquals(numberOfEvents + 1, events.size)
         assertEquals(TenantEventType.CREATED, events.last().type)
         // All EventIds are now tenant-scoped
-        assertEquals(SystemTopics.SYSTEM_TENANT_ID, events.last().id.tenantId)
-        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, events.last().id.namespaceId)
+        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, events.last().id.tenantId)
+        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_NAME, events.last().id.namespaceId)
     }
 
     @Test
@@ -220,8 +220,8 @@ class CreateTenantServiceTest {
         assertEquals("context-test", tenant.name)
 
         val event = getEvents().last()
-        assertEquals(SystemTopics.SYSTEM_TENANT_ID, event.id.tenantId)
-        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, event.id.namespaceId)
+        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, event.id.tenantId)
+        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_NAME, event.id.namespaceId)
     }
 
     @Test
@@ -276,8 +276,8 @@ class CreateTenantServiceTest {
 
     private suspend fun getEvents(): List<com.eventstore.domain.Event> =
         application.eventRepository.getEvents(
-            SystemTopics.TENANTS_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            SystemTopics.TENANTS_TOPIC_NAME,
+            tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
         )
 }

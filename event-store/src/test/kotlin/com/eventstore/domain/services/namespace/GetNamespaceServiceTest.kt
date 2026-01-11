@@ -79,22 +79,22 @@ class GetNamespaceServiceTest {
 
     @Test
     fun `lists bootstrap namespace in system tenant`() = runTest {
-        val namespaces = application.listNamespaces(SystemTopics.SYSTEM_TENANT_ID)
+        val namespaces = application.listNamespaces(SystemTopics.SYSTEM_TENANT_NAME)
 
         // Bootstrap creates the $management namespace, so we should have at least 1 namespace
         assertTrue(namespaces.isNotEmpty(), "Should include bootstrap \$management namespace")
-        val managementNamespace = namespaces.find { it.name == SystemTopics.MANAGEMENT_NAMESPACE_ID }
+        val managementNamespace = namespaces.find { it.name == SystemTopics.MANAGEMENT_NAMESPACE_NAME }
         assertNotNull(managementNamespace, "Bootstrap should create \$management namespace")
     }
 
     @Test
     fun `gets bootstrap management namespace`() = runTest {
         val managementNamespace =
-            application.getNamespace(SystemTopics.SYSTEM_TENANT_ID, SystemTopics.MANAGEMENT_NAMESPACE_ID)
+            application.getNamespace(SystemTopics.SYSTEM_TENANT_NAME, SystemTopics.MANAGEMENT_NAMESPACE_NAME)
 
         assertNotNull(managementNamespace, "Should be able to retrieve bootstrap \$management namespace")
-        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, managementNamespace.name)
-        assertEquals(SystemTopics.SYSTEM_TENANT_ID, managementNamespace.tenantName)
+        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_NAME, managementNamespace.name)
+        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, managementNamespace.tenantName)
         assertTrue(managementNamespace.isActive)
     }
 
@@ -112,9 +112,9 @@ class GetNamespaceServiceTest {
     @Test
     fun `lists multiple namespaces`() = runTest {
         application.createTenant("acme")
-        val ns1 = application.createNamespace("acme", "namespace-1")
-        val ns2 = application.createNamespace("acme", "namespace-2")
-        val ns3 = application.createNamespace("acme", "namespace-3")
+        application.createNamespace("acme", "namespace-1")
+        application.createNamespace("acme", "namespace-2")
+        application.createNamespace("acme", "namespace-3")
 
         val namespaces = application.listNamespaces("acme")
 
@@ -145,7 +145,7 @@ class GetNamespaceServiceTest {
     @Test
     fun `gets namespace with description`() = runTest {
         application.createTenant("acme")
-        val createdNamespace = application.createNamespace(
+        application.createNamespace(
             tenantName = "acme",
             namespaceName = "billing",
             description = "Billing namespace"
@@ -160,7 +160,7 @@ class GetNamespaceServiceTest {
     fun `gets namespace with metadata`() = runTest {
         application.createTenant("acme")
         val metadata = mapOf("plan" to "pro", "region" to "us-east")
-        val createdNamespace = application.createNamespace(
+        application.createNamespace(
             tenantName = "acme",
             namespaceName = "billing",
             metadata = metadata

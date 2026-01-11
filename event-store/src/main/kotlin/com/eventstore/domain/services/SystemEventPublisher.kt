@@ -31,8 +31,8 @@ class SystemEventPublisher(
         // Get sequence for the event
         val sequence = topicRepository.getAndIncrementSequence(
             topicName = topic,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
         )
 
         // Create event
@@ -40,8 +40,8 @@ class SystemEventPublisher(
             id = EventId.create(
                 topic = topic,
                 sequence = sequence,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = timestamp,
             type = eventType,

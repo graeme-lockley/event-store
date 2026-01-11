@@ -39,7 +39,7 @@ class RevokeApiKeyService(
         )
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.API_KEYS_TOPIC,
+            topic = SystemTopics.API_KEYS_TOPIC_NAME,
             eventType = ApiKeyEventType.REVOKED,
             payload = payload.toPayload(),
             timestamp = now

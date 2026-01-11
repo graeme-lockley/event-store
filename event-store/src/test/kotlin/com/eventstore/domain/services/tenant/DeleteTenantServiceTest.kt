@@ -129,8 +129,8 @@ class DeleteTenantServiceTest {
         application.deleteTenant("context-test")
 
         val event = getEvents().last { it.type == TenantEventType.DELETED }
-        assertEquals(SystemTopics.SYSTEM_TENANT_ID, event.id.tenantId)
-        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, event.id.namespaceId)
+        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, event.id.tenantId)
+        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_NAME, event.id.namespaceId)
     }
 
     @Test
@@ -228,9 +228,9 @@ class DeleteTenantServiceTest {
 
     private suspend fun getEvents(): List<com.eventstore.domain.Event> =
         application.eventRepository.getEvents(
-            SystemTopics.TENANTS_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            SystemTopics.TENANTS_TOPIC_NAME,
+            tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
         )
 }
 

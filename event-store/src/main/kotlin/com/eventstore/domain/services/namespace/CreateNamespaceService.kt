@@ -52,7 +52,7 @@ class CreateNamespaceService(
         val eventPayload = payload.toPayload()
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.NAMESPACES_TOPIC,
+            topic = SystemTopics.NAMESPACES_TOPIC_NAME,
             eventType = NamespaceEventType.CREATED,
             payload = eventPayload,
             timestamp = now

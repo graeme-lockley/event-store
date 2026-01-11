@@ -169,7 +169,7 @@ class UpdateNamespaceServiceTest {
             description = "Original description",
             metadata = originalMetadata
         )
-        val originalNamespace = application.namespaceProjectionService.getNamespaceByName("acme", "billing")!!
+        application.namespaceProjectionService.getNamespaceByName("acme", "billing")!!
 
         // Update only name, leaving description and metadata as null
         val updatedNamespace = application.updateNamespace("acme", "billing", name = "renamed-billing")
@@ -247,8 +247,8 @@ class UpdateNamespaceServiceTest {
         application.updateNamespace("acme", "billing", name = "updated-billing")
 
         val event = getEvents().last { it.type == NamespaceEventType.UPDATED }
-        assertEquals(SystemTopics.SYSTEM_TENANT_ID, event.id.tenantId)
-        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, event.id.namespaceId)
+        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, event.id.tenantId)
+        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_NAME, event.id.namespaceId)
     }
 
     @Test
@@ -416,9 +416,9 @@ class UpdateNamespaceServiceTest {
 
     private suspend fun getEvents(): List<com.eventstore.domain.Event> =
         application.eventRepository.getEvents(
-            SystemTopics.NAMESPACES_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            SystemTopics.NAMESPACES_TOPIC_NAME,
+            tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
         )
 }
 

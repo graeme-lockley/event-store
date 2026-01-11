@@ -33,10 +33,10 @@ class NamespaceProjectionServiceTest {
         val createdAt = Instant.now()
         val created = Event(
             id = EventId.create(
-                SystemTopics.NAMESPACES_TOPIC,
+                SystemTopics.NAMESPACES_TOPIC_NAME,
                 1,
-                SystemTopics.SYSTEM_TENANT_ID,
-                SystemTopics.MANAGEMENT_NAMESPACE_ID
+                SystemTopics.SYSTEM_TENANT_NAME,
+                SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = createdAt,
             type = NamespaceEventType.CREATED,
@@ -51,10 +51,10 @@ class NamespaceProjectionServiceTest {
         val updatedAt = createdAt.plusSeconds(10)
         val updated = Event(
             id = EventId.create(
-                SystemTopics.NAMESPACES_TOPIC,
+                SystemTopics.NAMESPACES_TOPIC_NAME,
                 2,
-                SystemTopics.SYSTEM_TENANT_ID,
-                SystemTopics.MANAGEMENT_NAMESPACE_ID
+                SystemTopics.SYSTEM_TENANT_NAME,
+                SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = updatedAt,
             type = NamespaceEventType.UPDATED,
@@ -70,12 +70,12 @@ class NamespaceProjectionServiceTest {
         service.handleEvents(listOf(created, updated))
 
         // After update, look up by the new name
-        val ns = service.getNamespace("acme", "Billing App")
+        val ns = service.getNamespaceByName("acme", "Billing App")
         assertNotNull(ns)
         assertEquals("Billing App", ns.name)
         assertEquals("desc", ns.description)
         // Verify old name no longer works
-        assertNull(service.getNamespace("acme", "billing"))
+        assertNull(service.getNamespaceByName("acme", "billing"))
     }
 
     @Test
@@ -85,10 +85,10 @@ class NamespaceProjectionServiceTest {
         val createdAt = Instant.now()
         val created = Event(
             id = EventId.create(
-                SystemTopics.NAMESPACES_TOPIC,
+                SystemTopics.NAMESPACES_TOPIC_NAME,
                 1,
-                SystemTopics.SYSTEM_TENANT_ID,
-                SystemTopics.MANAGEMENT_NAMESPACE_ID
+                SystemTopics.SYSTEM_TENANT_NAME,
+                SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = createdAt,
             type = NamespaceEventType.CREATED,
@@ -103,10 +103,10 @@ class NamespaceProjectionServiceTest {
         val deletedAt = createdAt.plusSeconds(5)
         val deleted = Event(
             id = EventId.create(
-                SystemTopics.NAMESPACES_TOPIC,
+                SystemTopics.NAMESPACES_TOPIC_NAME,
                 2,
-                SystemTopics.SYSTEM_TENANT_ID,
-                SystemTopics.MANAGEMENT_NAMESPACE_ID
+                SystemTopics.SYSTEM_TENANT_NAME,
+                SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = deletedAt,
             type = NamespaceEventType.DELETED,
@@ -119,7 +119,7 @@ class NamespaceProjectionServiceTest {
 
         service.handleEvents(listOf(created, deleted))
 
-        assertNull(service.getNamespace("acme", "billing"))
+        assertNull(service.getNamespaceByName("acme", "billing"))
     }
 }
 

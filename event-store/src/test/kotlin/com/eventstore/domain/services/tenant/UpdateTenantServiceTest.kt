@@ -174,7 +174,7 @@ class UpdateTenantServiceTest {
         )
         val originalMetadata = mapOf("plan" to "basic")
         application.createTenant("preserve-test", quota = originalQuota, metadata = originalMetadata)
-        val originalTenant = application.tenantProjectionService.getTenantByName("preserve-test")!!
+        application.tenantProjectionService.getTenantByName("preserve-test")!!
 
         // Update only name, leaving quota and metadata as null
         val updatedTenant = application.updateTenant("preserve-test", name = "preserved-name")
@@ -278,8 +278,8 @@ class UpdateTenantServiceTest {
         application.updateTenant("context-test", name = "updated-context")
 
         val event = getEvents().last { it.type == TenantEventType.UPDATED }
-        assertEquals(SystemTopics.SYSTEM_TENANT_ID, event.id.tenantId)
-        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_ID, event.id.namespaceId)
+        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, event.id.tenantId)
+        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_NAME, event.id.namespaceId)
     }
 
     @Test
@@ -438,9 +438,9 @@ class UpdateTenantServiceTest {
 
     private suspend fun getEvents(): List<com.eventstore.domain.Event> =
         application.eventRepository.getEvents(
-            SystemTopics.TENANTS_TOPIC,
-            tenantId = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            SystemTopics.TENANTS_TOPIC_NAME,
+            tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
         )
 }
 

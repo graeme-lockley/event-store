@@ -22,18 +22,18 @@ class BootstrapServiceImpl(
 ) : BootstrapService {
     private val logger = LoggerFactory.getLogger(BootstrapServiceImpl::class.java)
 
-    private val systemTenantId = SystemTopics.SYSTEM_TENANT_ID
-    private val managementNamespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+    private val systemTenantId = SystemTopics.SYSTEM_TENANT_NAME
+    private val managementNamespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
 
-    private val tenantTopicName = SystemTopics.TENANTS_TOPIC
-    private val namespaceTopicName = SystemTopics.NAMESPACES_TOPIC
-    private val usersTopicName = SystemTopics.USERS_TOPIC
+    private val tenantTopicName = SystemTopics.TENANTS_TOPIC_NAME
+    private val namespaceTopicName = SystemTopics.NAMESPACES_TOPIC_NAME
+    private val usersTopicName = SystemTopics.USERS_TOPIC_NAME
     private val systemTopics = listOf(
         tenantTopicName,
         namespaceTopicName,
-        SystemTopics.USERS_TOPIC,
-        SystemTopics.PERMISSIONS_TOPIC,
-        SystemTopics.API_KEYS_TOPIC
+        SystemTopics.USERS_TOPIC_NAME,
+        SystemTopics.PERMISSIONS_TOPIC_NAME,
+        SystemTopics.API_KEYS_TOPIC_NAME
     )
 
     override suspend fun run() {
@@ -89,8 +89,8 @@ class BootstrapServiceImpl(
             tenantTopicName -> "/schemas/system/tenants.json"
             namespaceTopicName -> "/schemas/system/namespaces.json"
             usersTopicName -> "/schemas/system/users.json"
-            SystemTopics.PERMISSIONS_TOPIC -> "/schemas/system/permissions.json"
-            SystemTopics.API_KEYS_TOPIC -> "/schemas/system/api-keys.json"
+            SystemTopics.PERMISSIONS_TOPIC_NAME -> "/schemas/system/permissions.json"
+            SystemTopics.API_KEYS_TOPIC_NAME -> "/schemas/system/api-keys.json"
             else -> null
         }
 
@@ -248,9 +248,9 @@ class BootstrapServiceImpl(
         events.add(
             Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC,
+                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
                     sequence = topicRepository.getAndIncrementSequence(
-                        SystemTopics.PERMISSIONS_TOPIC,
+                        SystemTopics.PERMISSIONS_TOPIC_NAME,
                         systemTenantId,
                         managementNamespaceId
                     ),

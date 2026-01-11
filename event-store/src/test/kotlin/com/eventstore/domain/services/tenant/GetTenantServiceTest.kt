@@ -64,16 +64,16 @@ class GetTenantServiceTest {
 
         // Bootstrap creates the $system tenant, so we should have at least 1 tenant
         assertTrue(tenants.isNotEmpty(), "Should include bootstrap \$system tenant")
-        val systemTenant = tenants.find { it.name == SystemTopics.SYSTEM_TENANT_ID }
+        val systemTenant = tenants.find { it.name == SystemTopics.SYSTEM_TENANT_NAME }
         assertNotNull(systemTenant, "Bootstrap should create \$system tenant")
     }
 
     @Test
     fun `gets bootstrap system tenant`() = runTest {
-        val systemTenant = application.getTenant(SystemTopics.SYSTEM_TENANT_ID)
+        val systemTenant = application.getTenant(SystemTopics.SYSTEM_TENANT_NAME)
 
         assertNotNull(systemTenant, "Should be able to retrieve bootstrap \$system tenant")
-        assertEquals(SystemTopics.SYSTEM_TENANT_ID, systemTenant.name)
+        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, systemTenant.name)
         assertTrue(systemTenant.isActive)
     }
 

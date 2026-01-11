@@ -26,10 +26,10 @@ class AuthenticationServiceTest {
         val now = Instant.now()
         val event = Event(
             id = EventId.create(
-                topic = SystemTopics.USERS_TOPIC,
+                topic = SystemTopics.USERS_TOPIC_NAME,
                 sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = now,
             type = UserEventType.CREATED,

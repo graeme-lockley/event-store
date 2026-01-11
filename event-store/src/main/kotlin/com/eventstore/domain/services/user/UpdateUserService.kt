@@ -39,7 +39,7 @@ class UpdateUserService(
         )
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.USERS_TOPIC,
+            topic = SystemTopics.USERS_TOPIC_NAME,
             eventType = UserEventType.UPDATED,
             payload = payload.toPayload(),
             timestamp = now

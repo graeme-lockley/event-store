@@ -42,9 +42,9 @@ class CreateUserServiceTest {
         assertEquals(tenantName, created.primaryTenantId)
 
         val storedEvents = application.getEvents(
-            topic = SystemTopics.USERS_TOPIC,
-            tenantName = SystemTopics.SYSTEM_TENANT_ID,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+            topic = SystemTopics.USERS_TOPIC_NAME,
+            tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
         )
         val userCreatedEvents = storedEvents.filter { it.type == UserEventType.CREATED }
         assertTrue(userCreatedEvents.isNotEmpty())

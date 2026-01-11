@@ -52,19 +52,19 @@ class AuthorizationServiceTest {
                 resourceId = UUID.randomUUID(),
                 tenantResourceId = UUID.randomUUID(),
                 namespaceResourceId = UUID.randomUUID(),
-                name = SystemTopics.PERMISSIONS_TOPIC,
+                name = SystemTopics.PERMISSIONS_TOPIC_NAME,
                 schemas = emptyList(),
-                tenantName = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             )
             topicRepository.createTopic(
                 resourceId = UUID.randomUUID(),
                 tenantResourceId = UUID.randomUUID(),
                 namespaceResourceId = UUID.randomUUID(),
-                name = SystemTopics.TENANTS_TOPIC,
+                name = SystemTopics.TENANTS_TOPIC_NAME,
                 schemas = emptyList(),
-                tenantName = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             )
 
             // Create a test tenant
@@ -74,10 +74,10 @@ class AuthorizationServiceTest {
 
             val tenantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.TENANTS_TOPIC,
+                    topic = SystemTopics.TENANTS_TOPIC_NAME,
                     sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
                 ),
                 timestamp = Instant.now(),
                 type = TenantEventType.CREATED,
@@ -96,10 +96,10 @@ class AuthorizationServiceTest {
         // Grant permission
         val grantEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC,
+                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
                 sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = Instant.now(),
             type = PermissionEventType.GRANTED,
@@ -145,10 +145,10 @@ class AuthorizationServiceTest {
         // Grant ADMIN permission
         val grantEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC,
+                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
                 sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = Instant.now(),
             type = PermissionEventType.GRANTED,
@@ -191,10 +191,10 @@ class AuthorizationServiceTest {
         // Grant permission for all tenants (resourceId = null)
         val grantEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC,
+                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
                 sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_ID,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID
+                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
+                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
             ),
             timestamp = Instant.now(),
             type = PermissionEventType.GRANTED,
