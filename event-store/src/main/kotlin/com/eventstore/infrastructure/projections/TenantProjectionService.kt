@@ -62,7 +62,7 @@ class TenantProjectionService(
             TenantEventType.CREATED -> {
                 val payload = TenantCreatedEvent.fromPayload(event.payload)
                 val tenant = Tenant(
-                    resourceId = payload.resourceId,
+                    tenantId = payload.tenantId,
                     name = payload.name,
                     createdAt = payload.createdAt,
                     updatedAt = null,
@@ -75,9 +75,9 @@ class TenantProjectionService(
 
             TenantEventType.UPDATED -> {
                 val payload = TenantUpdatedEvent.fromPayload(event.payload)
-                val existing = tenantRepository.findByResourceId(payload.resourceId)
+                val existing = tenantRepository.findByResourceId(payload.tenantId)
                 if (existing == null) {
-                    logger.warn("Received tenant.updated for unknown tenant resourceId ${payload.resourceId}")
+                    logger.warn("Received tenant.updated for unknown tenant resourceId ${payload.tenantId}")
                     return
                 }
 
@@ -92,9 +92,9 @@ class TenantProjectionService(
 
             TenantEventType.DELETED -> {
                 val payload = TenantDeletedEvent.fromPayload(event.payload)
-                val existing = tenantRepository.findByResourceId(payload.resourceId)
+                val existing = tenantRepository.findByResourceId(payload.tenantId)
                 if (existing == null) {
-                    logger.warn("Received tenant.deleted for unknown tenant resourceId ${payload.resourceId}")
+                    logger.warn("Received tenant.deleted for unknown tenant resourceId ${payload.tenantId}")
                     return
                 }
 

@@ -33,7 +33,7 @@ class CreateTenantService(
         val now = Instant.now()
         val resourceId = UUID.randomUUID()
         val tenantCreated = TenantCreatedEvent(
-            resourceId = resourceId,
+            tenantId = resourceId,
             name = request.name,
             quota = request.quota,
             createdBy = request.createdBy,
@@ -51,7 +51,7 @@ class CreateTenantService(
         )
 
         return Tenant(
-            resourceId = resourceId,
+            tenantId = resourceId,
             name = request.name,
             createdAt = now,
             updatedAt = null,

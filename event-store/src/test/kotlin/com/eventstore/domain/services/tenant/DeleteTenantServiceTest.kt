@@ -112,13 +112,13 @@ class DeleteTenantServiceTest {
         val payload = event.payload
 
         // Verify all required fields are present
-        assertTrue(payload.containsKey("resourceId"))
+        assertTrue(payload.containsKey("tenantId"))
         assertTrue(payload.containsKey("deletedBy"))
         assertTrue(payload.containsKey("deletedAt"))
         assertTrue(payload.containsKey("reason"))
 
         // Verify field values
-        assertEquals(tenant.resourceId.toString(), payload["resourceId"])
+        assertEquals(tenant.tenantId.toString(), payload["tenantId"])
         assertEquals("test-user", payload["deletedBy"])
         assertEquals("test reason", payload["reason"])
     }
@@ -175,7 +175,7 @@ class DeleteTenantServiceTest {
 
         // Verify payload can be parsed back to TenantDeletedEvent
         val parsed = TenantDeletedEvent.fromPayload(payload)
-        assertEquals(tenant.resourceId, parsed.resourceId)
+        assertEquals(tenant.tenantId, parsed.tenantId)
         assertEquals("user", parsed.deletedBy)
         assertEquals("test", parsed.reason)
     }
@@ -213,14 +213,14 @@ class DeleteTenantServiceTest {
 
     @Test
     fun `event resourceId matches original tenant resourceId`() = runTest {
-        val tenant = application.createTenant("resource-id-test")
-        val originalResourceId = tenant.resourceId
+        val tenant = application.createTenant("tenant-id-test")
+        val originalTenantId = tenant.tenantId
 
-        application.deleteTenant("resource-id-test")
+        application.deleteTenant("tenant-id-test")
 
         val event = getEvents().last { it.type == TenantEventType.DELETED }
         val payload = event.payload
-        assertEquals(originalResourceId.toString(), payload["resourceId"])
+        assertEquals(originalTenantId.toString(), payload["tenantId"])
     }
 
     private suspend fun numberOfEvents(): Int =

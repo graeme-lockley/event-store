@@ -31,7 +31,7 @@ class UpdateTenantService(
 
         val now = Instant.now()
         val eventPayload = TenantUpdatedEvent(
-            resourceId = existing.resourceId,
+            tenantId = existing.tenantId,
             name = request.name,
             quota = request.quota,
             updatedBy = request.updatedBy,

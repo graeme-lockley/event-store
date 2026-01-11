@@ -92,7 +92,7 @@ class AuthorizationMiddlewareIntegrationTest {
                 timestamp = Instant.now(),
                 type = TenantEventType.CREATED,
                 payload = TenantCreatedEvent(
-                    resourceId = testTenantResourceId,
+                    tenantId = testTenantResourceId,
                     name = testTenantName,
                     createdAt = Instant.now()
                 ).toPayload()
@@ -1150,7 +1150,7 @@ class AuthorizationMiddlewareIntegrationTest {
                 timestamp = Instant.now(),
                 type = TenantEventType.CREATED,
                 payload = TenantCreatedEvent(
-                    resourceId = otherTenantResourceId,
+                    tenantId = otherTenantResourceId,
                     name = otherTenantName,
                     createdAt = Instant.now()
                 ).toPayload()
@@ -1274,7 +1274,7 @@ class AuthorizationMiddlewareIntegrationTest {
                 timestamp = Instant.now(),
                 type = TenantEventType.CREATED,
                 payload = TenantCreatedEvent(
-                    resourceId = tenantResourceId,
+                    tenantId = tenantResourceId,
                     name = tenantNameWithSpecialChars,
                     createdAt = Instant.now()
                 ).toPayload()

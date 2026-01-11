@@ -136,7 +136,7 @@ class DeleteNamespaceServiceTest {
 
         // Verify field values
         assertEquals(namespace.resourceId.toString(), payload["resourceId"])
-        assertEquals(tenant.resourceId.toString(), payload["tenantResourceId"])
+        assertEquals(tenant.tenantId.toString(), payload["tenantResourceId"])
         assertEquals("test-user", payload["deletedBy"])
         assertEquals("test reason", payload["reason"])
     }
@@ -197,7 +197,7 @@ class DeleteNamespaceServiceTest {
         // Verify payload can be parsed back to NamespaceDeletedEvent
         val parsed = NamespaceDeletedEvent.fromPayload(payload)
         assertEquals(namespace.resourceId, parsed.resourceId)
-        assertEquals(tenant.resourceId, parsed.tenantResourceId)
+        assertEquals(tenant.tenantId, parsed.tenantResourceId)
         assertEquals("user", parsed.deletedBy)
         assertEquals("test", parsed.reason)
     }
@@ -246,7 +246,7 @@ class DeleteNamespaceServiceTest {
         val event = getEvents().last { it.type == NamespaceEventType.DELETED }
         val payload = event.payload
         assertEquals(originalResourceId.toString(), payload["resourceId"])
-        assertEquals(tenant.resourceId.toString(), payload["tenantResourceId"])
+        assertEquals(tenant.tenantId.toString(), payload["tenantResourceId"])
     }
 
     @Test

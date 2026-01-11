@@ -41,7 +41,7 @@ class TenantProjectionServiceTest {
             timestamp = createdAt,
             type = TenantEventType.CREATED,
             payload = TenantCreatedEvent(
-                resourceId = resourceId,
+                tenantId = resourceId,
                 name = "acme",
                 createdBy = "system",
                 createdAt = createdAt
@@ -59,7 +59,7 @@ class TenantProjectionServiceTest {
             timestamp = updatedAt,
             type = TenantEventType.UPDATED,
             payload = TenantUpdatedEvent(
-                resourceId = resourceId,
+                tenantId = resourceId,
                 name = "Acme Corp",
                 updatedBy = "system",
                 updatedAt = updatedAt
@@ -91,7 +91,7 @@ class TenantProjectionServiceTest {
             timestamp = createdAt,
             type = TenantEventType.CREATED,
             payload = TenantCreatedEvent(
-                resourceId = resourceId,
+                tenantId = resourceId,
                 name = "acme",
                 createdBy = "system",
                 createdAt = createdAt
@@ -109,7 +109,7 @@ class TenantProjectionServiceTest {
             timestamp = deletedAt,
             type = TenantEventType.DELETED,
             payload = TenantDeletedEvent(
-                resourceId = resourceId,
+                tenantId = resourceId,
                 deletedBy = "system",
                 deletedAt = deletedAt
             ).toPayload()

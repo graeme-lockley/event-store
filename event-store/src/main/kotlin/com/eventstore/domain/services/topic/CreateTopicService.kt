@@ -50,7 +50,7 @@ class CreateTopicService(
         // Create topic
         val topic = topicRepository.createTopic(
             resourceId = resourceId,
-            tenantResourceId = tenant.resourceId,
+            tenantResourceId = tenant.tenantId,
             namespaceResourceId = namespace.resourceId,
             name = name,
             schemas = schemas,

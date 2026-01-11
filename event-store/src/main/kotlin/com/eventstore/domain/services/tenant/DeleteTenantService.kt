@@ -31,7 +31,7 @@ class DeleteTenantService(
 
         val now = Instant.now()
         val payload = TenantDeletedEvent(
-            resourceId = existing.resourceId,
+            tenantId = existing.tenantId,
             deletedBy = request.deletedBy,
             deletedAt = now,
             reason = request.reason

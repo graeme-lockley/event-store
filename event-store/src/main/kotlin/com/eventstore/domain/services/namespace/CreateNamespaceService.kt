@@ -40,7 +40,7 @@ class CreateNamespaceService(
         val resourceId = UUID.randomUUID()
         val payload = NamespaceCreatedEvent(
             resourceId = resourceId,
-            tenantResourceId = tenant.resourceId,
+            tenantResourceId = tenant.tenantId,
             tenantName = request.tenantName,
             name = request.name,
             description = request.description,
@@ -60,7 +60,7 @@ class CreateNamespaceService(
 
         return Namespace(
             resourceId = resourceId,
-            tenantResourceId = tenant.resourceId,
+            tenantResourceId = tenant.tenantId,
             tenantName = request.tenantName,
             name = request.name,
             description = request.description,

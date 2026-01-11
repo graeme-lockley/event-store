@@ -233,7 +233,7 @@ class UpdateNamespaceServiceTest {
 
         // Verify field values
         assertEquals(namespace.resourceId.toString(), payload["resourceId"])
-        assertEquals(tenant.resourceId.toString(), payload["tenantResourceId"])
+        assertEquals(tenant.tenantId.toString(), payload["tenantResourceId"])
         assertEquals("updated-billing", payload["name"])
         assertEquals("Updated", payload["description"])
         assertEquals("test-user", payload["updatedBy"])
@@ -305,7 +305,7 @@ class UpdateNamespaceServiceTest {
         // Verify payload can be parsed back to NamespaceUpdatedEvent
         val parsed = NamespaceUpdatedEvent.fromPayload(payload)
         assertEquals(namespace.resourceId, parsed.resourceId)
-        assertEquals(tenant.resourceId, parsed.tenantResourceId)
+        assertEquals(tenant.tenantId, parsed.tenantResourceId)
         assertEquals("updated-billing", parsed.name)
         assertEquals("Updated", parsed.description)
         assertEquals("user", parsed.updatedBy)
@@ -363,7 +363,7 @@ class UpdateNamespaceServiceTest {
         val event = getEvents().last { it.type == NamespaceEventType.UPDATED }
         val payload = event.payload
         assertEquals(originalResourceId.toString(), payload["resourceId"])
-        assertEquals(tenant.resourceId.toString(), payload["tenantResourceId"])
+        assertEquals(tenant.tenantId.toString(), payload["tenantResourceId"])
 
         // Verify projection still has same resourceId
         val projectionNamespace = application.namespaceProjectionService.getNamespaceByName("acme", "updated-billing")

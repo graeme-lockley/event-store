@@ -19,7 +19,7 @@ sealed interface TenantEventPayload {
 }
 
 data class TenantCreatedEvent(
-    val resourceId: UUID,        // Stable GUID, never changes (used in permissions)
+    val tenantId: UUID,        // Stable GUID, never changes (used in permissions)
     val name: String,            // Human-readable identifier (used in URLs and for display)
     val quota: Quota? = null,
     val createdBy: String = "system",
@@ -34,7 +34,7 @@ data class TenantCreatedEvent(
 
     override fun toPayload(): Map<String, Any> {
         val payload = mutableMapOf<String, Any>(
-            "resourceId" to resourceId.toString(),
+            "tenantId" to tenantId.toString(),
             "name" to name,
             "createdBy" to createdBy,
             "createdAt" to createdAt.toString(),
@@ -46,8 +46,8 @@ data class TenantCreatedEvent(
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): TenantCreatedEvent {
-            // Support both old format (without resourceId) and new format (with resourceId)
-            val resourceId = (payload["resourceId"] as? String)?.let { UUID.fromString(it) }
+            // Support both old format (without tenantId) and new format (with tenantId)
+            val tenantId = (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
                 ?: UUID.randomUUID() // Generate UUID for backward compatibility
             // Support old format with tenantId field for backward compatibility
             val name = (payload["name"] as? String) ?: (payload["tenantId"] as? String)
@@ -58,7 +58,7 @@ data class TenantCreatedEvent(
             val quota = (payload["quota"] as? Map<*, *>)?.let { mapToQuota(it) }
 
             return TenantCreatedEvent(
-                resourceId = resourceId,
+                tenantId = tenantId,
                 name = name,
                 quota = quota,
                 createdBy = createdBy,
@@ -70,7 +70,7 @@ data class TenantCreatedEvent(
 }
 
 data class TenantUpdatedEvent(
-    val resourceId: UUID,        // Stable GUID reference (used to identify tenant)
+    val tenantId: UUID,        // Stable GUID reference (used to identify tenant)
     val name: String?,           // Human-readable identifier (may change on rename)
     val quota: Quota? = null,
     val updatedBy: String = "system",
@@ -81,7 +81,7 @@ data class TenantUpdatedEvent(
 
     override fun toPayload(): Map<String, Any> {
         val payload = mutableMapOf<String, Any>(
-            "resourceId" to resourceId.toString(),
+            "tenantId" to tenantId.toString(),
             "updatedBy" to updatedBy,
             "updatedAt" to updatedAt.toString()
         )
@@ -93,9 +93,9 @@ data class TenantUpdatedEvent(
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): TenantUpdatedEvent {
-            // Support both old format (without resourceId) and new format (with resourceId)
-            val resourceId = (payload["resourceId"] as? String)?.let { UUID.fromString(it) }
-                ?: error("resourceId missing - cannot update tenant without stable identifier")
+            // Support both old format (without tenantId) and new format (with tenantId)
+            val tenantId = (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
+                ?: error("tenantId missing - cannot update tenant without stable identifier")
             val name = payload["name"] as? String
             val updatedBy = payload["updatedBy"] as? String ?: "system"
             val updatedAt = parseInstant(payload["updatedAt"])
@@ -103,7 +103,7 @@ data class TenantUpdatedEvent(
             val quota = (payload["quota"] as? Map<*, *>)?.let { mapToQuota(it) }
 
             return TenantUpdatedEvent(
-                resourceId = resourceId,
+                tenantId = tenantId,
                 name = name,
                 quota = quota,
                 updatedBy = updatedBy,
@@ -115,7 +115,7 @@ data class TenantUpdatedEvent(
 }
 
 data class TenantDeletedEvent(
-    val resourceId: UUID,        // Stable GUID reference (used to identify tenant)
+    val tenantId: UUID,        // Stable GUID reference (used to identify tenant)
     val deletedBy: String = "system",
     val deletedAt: Instant,
     val reason: String? = null
@@ -124,7 +124,7 @@ data class TenantDeletedEvent(
 
     override fun toPayload(): Map<String, Any> {
         val payload = mutableMapOf<String, Any>(
-            "resourceId" to resourceId.toString(),
+            "tenantId" to tenantId.toString(),
             "deletedBy" to deletedBy,
             "deletedAt" to deletedAt.toString()
         )
@@ -134,15 +134,15 @@ data class TenantDeletedEvent(
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): TenantDeletedEvent {
-            // Support both old format (without resourceId) and new format (with resourceId)
-            val resourceId = (payload["resourceId"] as? String)?.let { UUID.fromString(it) }
-                ?: error("resourceId missing - cannot delete tenant without stable identifier")
+            // Support both old format (without tenantId) and new format (with tenantId)
+            val tenantId = (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
+                ?: error("tenantId missing - cannot delete tenant without stable identifier")
             val deletedBy = payload["deletedBy"] as? String ?: "system"
             val deletedAt = parseInstant(payload["deletedAt"])
             val reason = payload["reason"] as? String
 
             return TenantDeletedEvent(
-                resourceId = resourceId,
+                tenantId = tenantId,
                 deletedBy = deletedBy,
                 deletedAt = deletedAt,
                 reason = reason

@@ -47,7 +47,7 @@ class UpdateTenantServiceTest {
         val tenantAfterUpdate = application.tenantProjectionService.getTenantByName("acme-corp")
         assertNotNull(tenantAfterUpdate, "Tenant should exist in projection after update with new name")
         assertEquals("acme-corp", tenantAfterUpdate.name)
-        assertEquals(tenantBeforeUpdate.resourceId, tenantAfterUpdate.resourceId, "ResourceId should remain unchanged")
+        assertEquals(tenantBeforeUpdate.tenantId, tenantAfterUpdate.tenantId, "ResourceId should remain unchanged")
     }
 
     @Test
@@ -65,7 +65,7 @@ class UpdateTenantServiceTest {
         val updatedTenant = application.updateTenant("original-name", name = "new-name")
 
         assertEquals("new-name", updatedTenant.name)
-        assertEquals(originalTenant.resourceId, updatedTenant.resourceId)
+        assertEquals(originalTenant.tenantId, updatedTenant.tenantId)
         assertEquals(originalTenant.quota, updatedTenant.quota)
         assertEquals(originalTenant.metadata, updatedTenant.metadata)
 
@@ -101,7 +101,7 @@ class UpdateTenantServiceTest {
 
         assertEquals(newQuota, updatedTenant.quota)
         assertEquals(originalTenant.name, updatedTenant.name)
-        assertEquals(originalTenant.resourceId, updatedTenant.resourceId)
+        assertEquals(originalTenant.tenantId, updatedTenant.tenantId)
 
         // Verify projection
         val projectionTenant = application.tenantProjectionService.getTenantByName("quota-test")
@@ -120,7 +120,7 @@ class UpdateTenantServiceTest {
 
         assertEquals(newMetadata, updatedTenant.metadata)
         assertEquals(originalTenant.name, updatedTenant.name)
-        assertEquals(originalTenant.resourceId, updatedTenant.resourceId)
+        assertEquals(originalTenant.tenantId, updatedTenant.tenantId)
 
         // Verify projection
         val projectionTenant = application.tenantProjectionService.getTenantByName("metadata-test")
@@ -153,7 +153,7 @@ class UpdateTenantServiceTest {
         assertEquals("updated-multi-test", updatedTenant.name)
         assertEquals(newQuota, updatedTenant.quota)
         assertEquals(newMetadata, updatedTenant.metadata)
-        assertEquals(originalTenant.resourceId, updatedTenant.resourceId)
+        assertEquals(originalTenant.tenantId, updatedTenant.tenantId)
 
         // Verify projection
         val projectionTenant = application.tenantProjectionService.getTenantByName("updated-multi-test")
@@ -232,7 +232,7 @@ class UpdateTenantServiceTest {
         val payload = event.payload
 
         // Verify all required fields are present
-        assertTrue(payload.containsKey("resourceId"))
+        assertTrue(payload.containsKey("tenantId"))
         assertTrue(payload.containsKey("updatedBy"))
         assertTrue(payload.containsKey("updatedAt"))
         assertTrue(payload.containsKey("name"))
@@ -240,7 +240,7 @@ class UpdateTenantServiceTest {
         assertTrue(payload.containsKey("metadata"))
 
         // Verify field values
-        assertEquals(tenant.resourceId.toString(), payload["resourceId"])
+        assertEquals(tenant.tenantId.toString(), payload["tenantId"])
         assertEquals("updated-payload", payload["name"])
         assertEquals("test-user", payload["updatedBy"])
         assertEquals(newMetadata, payload["metadata"])
@@ -333,7 +333,7 @@ class UpdateTenantServiceTest {
 
         // Verify payload can be parsed back to TenantUpdatedEvent
         val parsed = TenantUpdatedEvent.fromPayload(payload)
-        assertEquals(tenant.resourceId, parsed.resourceId)
+        assertEquals(tenant.tenantId, parsed.tenantId)
         assertEquals("updated-structure", parsed.name)
         assertEquals("user", parsed.updatedBy)
         assertEquals(newQuota, parsed.quota)
@@ -380,19 +380,19 @@ class UpdateTenantServiceTest {
 
     @Test
     fun `event resourceId matches original tenant resourceId`() = runTest {
-        val tenant = application.createTenant("resource-id-test")
-        val originalResourceId = tenant.resourceId
+        val tenant = application.createTenant("tenant-id-test")
+        val originalTenantId = tenant.tenantId
 
-        application.updateTenant("resource-id-test", name = "updated-resource-id")
+        application.updateTenant("tenant-id-test", name = "updated-tenant-id")
 
         val event = getEvents().last { it.type == TenantEventType.UPDATED }
         val payload = event.payload
-        assertEquals(originalResourceId.toString(), payload["resourceId"])
+        assertEquals(originalTenantId.toString(), payload["tenantId"])
 
         // Verify projection still has same resourceId
-        val projectionTenant = application.tenantProjectionService.getTenantByName("updated-resource-id")
+        val projectionTenant = application.tenantProjectionService.getTenantByName("updated-tenant-id")
         assertNotNull(projectionTenant)
-        assertEquals(originalResourceId, projectionTenant.resourceId)
+        assertEquals(originalTenantId, projectionTenant.tenantId)
     }
 
     @Test

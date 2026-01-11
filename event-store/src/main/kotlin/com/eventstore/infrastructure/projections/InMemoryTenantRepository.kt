@@ -14,12 +14,12 @@ class InMemoryTenantRepository : TenantRepository {
     override suspend fun save(tenant: Tenant) {
         mutex.withLock {
             // If updating an existing tenant and name changed, remove old name entry
-            val existing = tenantsByResourceId[tenant.resourceId]
+            val existing = tenantsByResourceId[tenant.tenantId]
             if (existing != null && existing.name != tenant.name) {
                 tenantsByName.remove(existing.name)
             }
             tenantsByName[tenant.name] = tenant
-            tenantsByResourceId[tenant.resourceId] = tenant
+            tenantsByResourceId[tenant.tenantId] = tenant
         }
     }
 

@@ -21,7 +21,7 @@ class ResourceResolverImpl(
     override suspend fun resolveTenantResourceId(tenantName: String): UUID {
         val tenant = tenantProjectionService.getTenantByName(tenantName)
             ?: throw TenantNotFoundException(tenantName)
-        return tenant.resourceId
+        return tenant.tenantId
     }
 
     override suspend fun resolveNamespaceResourceId(tenantResourceId: UUID, namespaceName: String): UUID {

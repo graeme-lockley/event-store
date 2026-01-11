@@ -10,8 +10,8 @@ import java.util.*
  * - name: Human-readable identifier used in URLs and for display (can be renamed with migration)
  */
 data class Tenant(
-    val resourceId: UUID,        // Stable GUID, never changes (used in permissions)
-    val name: String,            // Human-readable identifier (used in URLs and for display)
+    val tenantId: UUID,          // Stable GUID, never changes (used in permissions and URLs)
+    val name: String,            // Human-readable identifier (used for display)
     val createdAt: Instant,
     val updatedAt: Instant? = null,
     val deletedAt: Instant? = null,

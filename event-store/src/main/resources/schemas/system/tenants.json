@@ -4,7 +4,7 @@
     "type": "object",
     "schema": "https://json-schema.org/draft/2020-12/schema",
     "properties": {
-      "resourceId": {
+      "tenantId": {
         "type": "string",
         "format": "uuid"
       },
@@ -46,7 +46,7 @@
       }
     },
     "required": [
-      "resourceId",
+      "tenantId",
       "name",
       "createdBy",
       "createdAt",
@@ -58,7 +58,7 @@
     "type": "object",
     "schema": "https://json-schema.org/draft/2020-12/schema",
     "properties": {
-      "resourceId": {
+      "tenantId": {
         "type": "string",
         "format": "uuid"
       },
@@ -100,7 +100,7 @@
       }
     },
     "required": [
-      "resourceId",
+      "tenantId",
       "updatedBy",
       "updatedAt"
     ]
@@ -110,7 +110,7 @@
     "type": "object",
     "schema": "https://json-schema.org/draft/2020-12/schema",
     "properties": {
-      "resourceId": {
+      "tenantId": {
         "type": "string",
         "format": "uuid"
       },
@@ -126,7 +126,7 @@
       }
     },
     "required": [
-      "resourceId",
+      "tenantId",
       "deletedBy",
       "deletedAt"
     ]

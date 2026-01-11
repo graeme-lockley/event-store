@@ -82,7 +82,7 @@ class AuthorizationServiceTest {
                 timestamp = Instant.now(),
                 type = TenantEventType.CREATED,
                 payload = TenantCreatedEvent(
-                    resourceId = tenantResourceId,
+                    tenantId = tenantResourceId,
                     name = tenantName,
                     createdAt = Instant.now()
                 ).toPayload()

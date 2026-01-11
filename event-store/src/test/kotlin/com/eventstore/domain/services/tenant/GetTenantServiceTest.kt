@@ -35,7 +35,7 @@ class GetTenantServiceTest {
 
         assertNotNull(retrievedTenant, "Tenant should be retrieved")
         assertEquals(createdTenant.name, retrievedTenant.name)
-        assertEquals(createdTenant.resourceId, retrievedTenant.resourceId)
+        assertEquals(createdTenant.tenantId, retrievedTenant.tenantId)
         assertEquals(createdTenant.quota, retrievedTenant.quota)
         assertEquals(createdTenant.metadata, retrievedTenant.metadata)
         assertEquals(createdTenant.createdAt, retrievedTenant.createdAt)
@@ -87,7 +87,7 @@ class GetTenantServiceTest {
         val foundTenant = tenants.find { it.name == "single-tenant" }
         assertNotNull(foundTenant, "Should find the created tenant")
         assertEquals(createdTenant.name, foundTenant.name)
-        assertEquals(createdTenant.resourceId, foundTenant.resourceId)
+        assertEquals(createdTenant.tenantId, foundTenant.tenantId)
     }
 
     @Test
@@ -216,7 +216,7 @@ class GetTenantServiceTest {
 
         assertNotNull(retrievedTenant)
         assertEquals(unicodeName, retrievedTenant.name)
-        assertEquals(createdTenant.resourceId, retrievedTenant.resourceId)
+        assertEquals(createdTenant.tenantId, retrievedTenant.tenantId)
     }
 
     @Test
@@ -237,13 +237,13 @@ class GetTenantServiceTest {
     @Test
     fun `gets tenant preserves resourceId after update`() = runTest {
         val createdTenant = application.createTenant("resource-id-test")
-        val originalResourceId = createdTenant.resourceId
+        val originalResourceId = createdTenant.tenantId
 
         application.updateTenant("resource-id-test", name = "renamed-test")
         val retrievedTenant = application.getTenant("renamed-test")
 
         assertNotNull(retrievedTenant)
-        assertEquals(originalResourceId, retrievedTenant.resourceId, "ResourceId should remain unchanged after rename")
+        assertEquals(originalResourceId, retrievedTenant.tenantId, "ResourceId should remain unchanged after rename")
     }
 
     @Test
@@ -362,7 +362,7 @@ class GetTenantServiceTest {
         val tenant = tenants.find { it.name == "complete-tenant" }
 
         assertNotNull(tenant)
-        assertEquals(createdTenant.resourceId, tenant.resourceId)
+        assertEquals(createdTenant.tenantId, tenant.tenantId)
         assertEquals(createdTenant.name, tenant.name)
         assertEquals(createdTenant.quota, tenant.quota)
         assertEquals(createdTenant.metadata, tenant.metadata)

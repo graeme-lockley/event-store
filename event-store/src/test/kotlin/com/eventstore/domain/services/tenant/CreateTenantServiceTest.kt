@@ -155,7 +155,7 @@ class CreateTenantServiceTest {
         val payload = event.payload
 
         // Verify all required fields are present
-        assertTrue(payload.containsKey("resourceId"))
+        assertTrue(payload.containsKey("tenantId"))
         assertTrue(payload.containsKey("name"))
         assertTrue(payload.containsKey("createdBy"))
         assertTrue(payload.containsKey("createdAt"))
@@ -163,7 +163,7 @@ class CreateTenantServiceTest {
         assertTrue(payload.containsKey("quota"))
 
         // Verify field values
-        assertEquals(tenant.resourceId.toString(), payload["resourceId"])
+        assertEquals(tenant.tenantId.toString(), payload["tenantId"])
         assertEquals("payload-test", payload["name"])
         assertEquals("test-user", payload["createdBy"])
         assertEquals(metadata, payload["metadata"])
@@ -203,7 +203,7 @@ class CreateTenantServiceTest {
         val afterCreation = java.time.Instant.now()
 
         // Verify all fields
-        assertNotNull(tenant.resourceId)
+        assertNotNull(tenant.tenantId)
         assertEquals("complete-tenant", tenant.name)
         assertTrue(tenant.createdAt.isAfter(beforeCreation) || tenant.createdAt == beforeCreation)
         assertTrue(tenant.createdAt.isBefore(afterCreation) || tenant.createdAt == afterCreation)
@@ -258,7 +258,7 @@ class CreateTenantServiceTest {
         val tenant2 = application.createTenant("unique-2")
         val tenant3 = application.createTenant("unique-3")
 
-        val resourceIds = setOf(tenant1.resourceId, tenant2.resourceId, tenant3.resourceId)
+        val resourceIds = setOf(tenant1.tenantId, tenant2.tenantId, tenant3.tenantId)
         assertEquals(3, resourceIds.size, "Each tenant should have a unique resource ID")
     }
 

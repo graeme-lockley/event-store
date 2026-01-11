@@ -110,7 +110,7 @@ class BootstrapServiceImpl(
         val timestamp = Instant.now()
 
         val tenantCreatedEvent = TenantCreatedEvent(
-            resourceId = SystemTopics.SYSTEM_TENANT_ID,
+            tenantId = SystemTopics.SYSTEM_TENANT_ID,
             name = SystemTopics.SYSTEM_TENANT_NAME,
             createdBy = "bootstrap",
             createdAt = timestamp,
