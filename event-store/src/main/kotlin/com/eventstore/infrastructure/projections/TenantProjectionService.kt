@@ -43,6 +43,10 @@ class TenantProjectionService(
         return tenantRepository.findByResourceId(resourceId)?.takeIf { it.isActive }
     }
 
+    suspend fun getTenantByIdIncludingDeleted(resourceId: UUID): Tenant? {
+        return tenantRepository.findByResourceId(resourceId)
+    }
+
     suspend fun getAllTenants(): List<Tenant> {
         return tenantRepository.findAll().filter { it.isActive }
     }

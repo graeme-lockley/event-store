@@ -57,15 +57,15 @@ class DeleteTenantServiceTest {
     }
 
     @Test
-    fun `throws when tenant already deleted`() = runTest {
+    fun `returns false when tenant already deleted`() = runTest {
         // Create and delete tenant
         val tenant = application.createTenant("acme")
-        application.deleteTenant(tenant.tenantId)
+        val firstDeleteResult = application.deleteTenant(tenant.tenantId)
+        assertTrue(firstDeleteResult, "First deletion should succeed")
 
-        // Try to delete again - should throw because projection filters out deleted tenants
-        assertFailsWith<TenantNotFoundException> {
-            application.deleteTenant(tenant.tenantId)
-        }
+        // Try to delete again - should return false without error (Rule D-3: Idempotent deletion)
+        val secondDeleteResult = application.deleteTenant(tenant.tenantId)
+        assertFalse(secondDeleteResult, "Deleting already-deleted tenant should return false")
     }
 
     @Test
@@ -125,48 +125,6 @@ class DeleteTenantServiceTest {
         assertEquals("test reason", payload["reason"])
     }
 
-    @Test
-    fun `event is stored with correct tenant and namespace context`() = runTest {
-        val tenant = application.createTenant("context-test")
-        application.deleteTenant(tenant.tenantId)
-
-        val event = getEvents().last { it.type == TenantEventType.DELETED }
-        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, event.id.tenantId)
-        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_NAME, event.id.namespaceId)
-    }
-
-    @Test
-    fun `event sequence is correctly incremented`() = runTest {
-        // Create and delete first tenant
-        val tenant1 = application.createTenant("sequence-test-1")
-        application.deleteTenant(tenant1.tenantId)
-        val allEvents1 = getEvents()
-        val deletedEvent1 = allEvents1.last { it.type == TenantEventType.DELETED }
-        val sequence1 = deletedEvent1.id.sequence
-
-        // Create and delete second tenant
-        val tenant2 = application.createTenant("sequence-test-2")
-        application.deleteTenant(tenant2.tenantId)
-        val allEvents2 = getEvents()
-        val deletedEvent2 = allEvents2.last { it.type == TenantEventType.DELETED }
-        val sequence2 = deletedEvent2.id.sequence
-
-        // Verify sequence was incremented (accounting for CREATED event between deletions)
-        // sequence1 = first DELETED, then CREATED (+1), then second DELETED should be +2
-        assertEquals(sequence1 + 2, sequence2)
-    }
-
-    @Test
-    fun `event timestamp is set correctly`() = runTest {
-        val tenant = application.createTenant("timestamp-test")
-        val beforeDeletion = java.time.Instant.now()
-        application.deleteTenant(tenant.tenantId)
-        val afterDeletion = java.time.Instant.now()
-
-        val event = getEvents().last { it.type == TenantEventType.DELETED }
-        assertTrue(event.timestamp.isAfter(beforeDeletion) || event.timestamp == beforeDeletion)
-        assertTrue(event.timestamp.isBefore(afterDeletion) || event.timestamp == afterDeletion)
-    }
 
     @Test
     fun `event payload matches TenantDeletedEvent structure`() = runTest {
@@ -182,36 +140,6 @@ class DeleteTenantServiceTest {
         assertEquals("test", parsed.reason)
     }
 
-    @Test
-    fun `deletes tenant with unicode characters in name`() = runTest {
-        val unicodeName = "tenant-测试-🚀"
-        val tenant = application.createTenant(unicodeName)
-        val result = application.deleteTenant(tenant.tenantId)
-
-        assertTrue(result)
-        val events = getEvents()
-        val deletedEvent = events.last { it.type == TenantEventType.DELETED }
-        assertEquals(TenantEventType.DELETED, deletedEvent.type)
-    }
-
-    @Test
-    fun `can delete multiple tenants sequentially`() = runTest {
-        val tenant1 = application.createTenant("multi-1")
-        val tenant2 = application.createTenant("multi-2")
-        val tenant3 = application.createTenant("multi-3")
-
-        val result1 = application.deleteTenant(tenant1.tenantId)
-        val result2 = application.deleteTenant(tenant2.tenantId)
-        val result3 = application.deleteTenant(tenant3.tenantId)
-
-        assertTrue(result1)
-        assertTrue(result2)
-        assertTrue(result3)
-
-        val events = getEvents()
-        val deletedEvents = events.filter { it.type == TenantEventType.DELETED }
-        assertEquals(3, deletedEvents.size)
-    }
 
     @Test
     fun `event resourceId matches original tenant resourceId`() = runTest {

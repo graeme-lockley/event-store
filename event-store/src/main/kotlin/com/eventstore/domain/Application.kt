@@ -78,8 +78,11 @@ class Application(
     private val deleteTenantService: DeleteTenantService =
         DeleteTenantService(tenantProjectionService, config, systemEventPublisher)
 
+    private val tenantUsageService: TenantUsageService =
+        TenantUsageService(topicRepository, namespaceProjectionService, consumerRepository, userProjectionService)
+
     private val updateTenantService: UpdateTenantService =
-        UpdateTenantService(tenantProjectionService, config, systemEventPublisher)
+        UpdateTenantService(tenantProjectionService, tenantUsageService, config, systemEventPublisher)
 
     val getTenantService: GetTenantService =
         GetTenantService(tenantProjectionService)
@@ -272,7 +275,7 @@ class Application(
         )
 
     suspend fun getTenant(tenantName: String): Tenant? =
-        getTenantService.getTenant(tenantName)
+        getTenantService.getTenantByName(tenantName)
 
     suspend fun listTenants(): List<Tenant> =
         getTenantService.listTenants()

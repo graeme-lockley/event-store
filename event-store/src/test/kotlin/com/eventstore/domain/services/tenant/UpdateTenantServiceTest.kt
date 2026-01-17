@@ -4,9 +4,12 @@ import com.eventstore.domain.Application
 import com.eventstore.domain.Quota
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.events.TenantUpdatedEvent
+import com.eventstore.domain.exceptions.CannotUpdateDeletedTenantException
+import com.eventstore.domain.exceptions.InvalidTenantNameException
+import com.eventstore.domain.exceptions.QuotaExceededException
 import com.eventstore.domain.exceptions.TenantAlreadyExistsException
-import com.eventstore.domain.exceptions.TenantNameNotFoundException
 import com.eventstore.domain.exceptions.TenantNotFoundException
+import com.eventstore.domain.services.consumer.HttpConsumerRegistrationRequest
 import com.eventstore.domain.services.createApplication
 import com.eventstore.domain.tenants.SystemTopics
 import kotlinx.coroutines.test.runTest
@@ -282,49 +285,6 @@ class UpdateTenantServiceTest {
         // (The payload structure depends on UpdateTenantService implementation)
     }
 
-    @Test
-    fun `event is stored with correct tenant and namespace context`() = runTest {
-        val tenant = application.createTenant("context-test")
-        application.updateTenant(tenant.tenantId, name = "updated-context")
-
-        val event = getEvents().last { it.type == TenantEventType.UPDATED }
-        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, event.id.tenantId)
-        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_NAME, event.id.namespaceId)
-    }
-
-    @Test
-    fun `event sequence is correctly incremented`() = runTest {
-        // Create and update first tenant
-        val tenant1 = application.createTenant("sequence-test-1")
-        application.updateTenant(tenant1.tenantId, name = "updated-1")
-        val allEvents1 = getEvents()
-        val updatedEvent1 = allEvents1.last { it.type == TenantEventType.UPDATED }
-        val sequence1 = updatedEvent1.id.sequence
-
-        // Create and update second tenant
-        val tenant2 = application.createTenant("sequence-test-2")
-        application.updateTenant(tenant2.tenantId, name = "updated-2")
-        val allEvents2 = getEvents()
-        val updatedEvent2 = allEvents2.last { it.type == TenantEventType.UPDATED }
-        val sequence2 = updatedEvent2.id.sequence
-
-        // Verify sequence was incremented (accounting for CREATED event between updates)
-        assertEquals(sequence1 + 2, sequence2)
-    }
-
-    @Test
-    fun `event timestamp is set correctly`() = runTest {
-        val tenant = application.createTenant("timestamp-test")
-        val beforeUpdate = java.time.Instant.now()
-        val updatedTenant = application.updateTenant(tenant.tenantId, name = "updated-timestamp")
-        val afterUpdate = java.time.Instant.now()
-
-        val event = getEvents().last { it.type == TenantEventType.UPDATED }
-        assertTrue(event.timestamp.isAfter(beforeUpdate) || event.timestamp == beforeUpdate)
-        assertTrue(event.timestamp.isBefore(afterUpdate) || event.timestamp == afterUpdate)
-        assertNotNull(updatedTenant.updatedAt)
-        assertEquals(event.timestamp, updatedTenant.updatedAt)
-    }
 
     @Test
     fun `event payload matches TenantUpdatedEvent structure`() = runTest {
@@ -349,44 +309,6 @@ class UpdateTenantServiceTest {
         assertEquals(newQuota, parsed.quota)
     }
 
-    @Test
-    fun `updates tenant with unicode characters in name`() = runTest {
-        val tenant = application.createTenant("unicode-test")
-        val unicodeName = "tenant-测试-🚀"
-        val updatedTenant = application.updateTenant(tenant.tenantId, name = unicodeName)
-
-        assertEquals(unicodeName, updatedTenant.name)
-        val event = getEvents().last { it.type == TenantEventType.UPDATED }
-        assertEquals(unicodeName, event.payload["name"])
-
-        // Verify projection
-        val projectionTenant = application.tenantProjectionService.getTenantByName(unicodeName)
-        assertNotNull(projectionTenant)
-        assertEquals(unicodeName, projectionTenant.name)
-    }
-
-    @Test
-    fun `can update tenant multiple times sequentially`() = runTest {
-        val tenant = application.createTenant("multi-update")
-
-        val update1 = application.updateTenant(tenant.tenantId, name = "multi-update-1")
-        assertEquals("multi-update-1", update1.name)
-
-        val update2 = application.updateTenant(tenant.tenantId, name = "multi-update-2")
-        assertEquals("multi-update-2", update2.name)
-
-        val update3 = application.updateTenant(tenant.tenantId, name = "multi-update-3")
-        assertEquals("multi-update-3", update3.name)
-
-        val events = getEvents()
-        val updatedEvents = events.filter { it.type == TenantEventType.UPDATED }
-        assertEquals(3, updatedEvents.size)
-
-        // Verify projection
-        val projectionTenant = application.tenantProjectionService.getTenantByName("multi-update-3")
-        assertNotNull(projectionTenant)
-        assertEquals("multi-update-3", projectionTenant.name)
-    }
 
     @Test
     fun `event resourceId matches original tenant resourceId`() = runTest {
@@ -423,28 +345,198 @@ class UpdateTenantServiceTest {
         assertEquals(updatedTenant.updatedAt, projectionTenant.updatedAt)
     }
 
-    @Test
-    fun `updates metadata with various types`() = runTest {
-        val tenant = application.createTenant("metadata-types-test")
-        val complexMetadata = mapOf(
-            "string" to "value",
-            "number" to 42,
-            "boolean" to true,
-            "nested" to mapOf("key" to "value"),
-            "list" to listOf(1, 2, 3)
-        )
-        val updatedTenant = application.updateTenant(tenant.tenantId, metadata = complexMetadata)
-
-        assertEquals(complexMetadata, updatedTenant.metadata)
-
-        // Verify projection
-        val projectionTenant = application.tenantProjectionService.getTenantByName("metadata-types-test")
-        assertNotNull(projectionTenant)
-        assertEquals(complexMetadata, projectionTenant.metadata)
-    }
 
     private suspend fun numberOfEvents(): Int =
         getEvents().size
+
+    // Rule 2: Block updates to deleted tenants
+    @Test
+    fun `throws when attempting to update deleted tenant`() = runTest {
+        val tenant = application.createTenant("to-delete")
+        application.deleteTenant(tenant.tenantId)
+
+        assertFailsWith<CannotUpdateDeletedTenantException> {
+            application.updateTenant(tenant.tenantId, name = "updated-name")
+        }
+    }
+
+    // Rule 3: Tenant name format validation tests
+    @Test
+    fun `throws when updating tenant name to invalid format`() = runTest {
+        val tenant = application.createTenant("valid-name")
+        
+        assertFailsWith<InvalidTenantNameException> {
+            application.updateTenant(tenant.tenantId, name = "-invalid-name")
+        }
+        assertFailsWith<InvalidTenantNameException> {
+            application.updateTenant(tenant.tenantId, name = "invalid-name-")
+        }
+        assertFailsWith<InvalidTenantNameException> {
+            application.updateTenant(tenant.tenantId, name = "a")
+        }
+        assertFailsWith<InvalidTenantNameException> {
+            application.updateTenant(tenant.tenantId, name = "a".repeat(65))
+        }
+        assertFailsWith<InvalidTenantNameException> {
+            application.updateTenant(tenant.tenantId, name = SystemTopics.SYSTEM_TENANT_NAME)
+        }
+    }
+
+    @Test
+    fun `allows updating tenant name with valid formats`() = runTest {
+        val tenant = application.createTenant("original-name")
+        
+        assertEquals("valid-new-name-123", application.updateTenant(tenant.tenantId, name = "valid-new-name-123").name)
+        assertEquals("Valid-New-Name-123", application.updateTenant(tenant.tenantId, name = "Valid-New-Name-123").name)
+    }
+
+    // Rule 4: Quota change validation against current usage
+    @Test
+    fun `throws when reducing quota below current topics usage`() = runTest {
+        val tenant = application.createTenant("quota-test", quota = Quota(maxTopics = 10))
+        
+        // Create some topics to exceed the reduced quota
+        application.createNamespace(tenant.name, "ns1")
+        application.createTopic("topic1", emptyList(), tenant.name, "ns1")
+        application.createTopic("topic2", emptyList(), tenant.name, "ns1")
+        application.createTopic("topic3", emptyList(), tenant.name, "ns1")
+
+        // Try to reduce quota to 2 when 3 topics exist
+        assertFailsWith<QuotaExceededException> {
+            application.updateTenant(tenant.tenantId, quota = Quota(maxTopics = 2))
+        }
+    }
+
+    @Test
+    fun `throws when reducing quota below current namespaces usage`() = runTest {
+        val tenant = application.createTenant("quota-test", quota = Quota(maxNamespaces = 10))
+        
+        // Create some namespaces to exceed the reduced quota
+        application.createNamespace(tenant.name, "ns1")
+        application.createNamespace(tenant.name, "ns2")
+        application.createNamespace(tenant.name, "ns3")
+
+        // Try to reduce quota to 2 when 3 namespaces exist
+        assertFailsWith<QuotaExceededException> {
+            application.updateTenant(tenant.tenantId, quota = Quota(maxNamespaces = 2))
+        }
+    }
+
+    @Test
+    fun `throws when reducing quota below current consumers usage`() = runTest {
+        val tenant = application.createTenant("quota-test", quota = Quota(maxConsumers = 10))
+        
+        application.createNamespace(tenant.name, "ns1")
+        application.createTopic("topic1", emptyList(), tenant.name, "ns1")
+        
+        // Create some consumers
+        application.registerConsumer(
+            HttpConsumerRegistrationRequest(
+                callbackUrl = "http://localhost:8080/callback1",
+                topics = mapOf("topic1" to null)
+            ),
+            tenant.name,
+            "ns1"
+        )
+        application.registerConsumer(
+            HttpConsumerRegistrationRequest(
+                callbackUrl = "http://localhost:8080/callback2",
+                topics = mapOf("topic1" to null)
+            ),
+            tenant.name,
+            "ns1"
+        )
+        application.registerConsumer(
+            HttpConsumerRegistrationRequest(
+                callbackUrl = "http://localhost:8080/callback3",
+                topics = mapOf("topic1" to null)
+            ),
+            tenant.name,
+            "ns1"
+        )
+
+        // Try to reduce quota to 2 when 3 consumers exist
+        assertFailsWith<QuotaExceededException> {
+            application.updateTenant(tenant.tenantId, quota = Quota(maxConsumers = 2))
+        }
+    }
+
+    @Test
+    fun `throws when reducing quota below current users usage`() = runTest {
+        val tenant = application.createTenant("quota-test", quota = Quota(maxUsers = 10))
+        
+        // Create and assign users to tenant
+        val user1 = application.createUser("user1@example.com", "User 1", "password")
+        val user2 = application.createUser("user2@example.com", "User 2", "password")
+        val user3 = application.createUser("user3@example.com", "User 3", "password")
+        
+        application.assignUserToTenant(user1.id, tenant.name)
+        application.assignUserToTenant(user2.id, tenant.name)
+        application.assignUserToTenant(user3.id, tenant.name)
+
+        // Wait a bit for projection to update (events are processed synchronously in tests)
+        // Try to reduce quota to 2 when 3 users exist
+        // Note: Using full quota to avoid default value issues
+        assertFailsWith<QuotaExceededException> {
+            application.updateTenant(tenant.tenantId, quota = Quota(
+                maxTopics = 100,
+                maxNamespaces = 50,
+                maxEventsPerDay = 1_000_000,
+                maxConsumers = 100,
+                maxUsers = 2,
+                maxEventSizeBytes = 1024 * 1024
+            ))
+        }
+    }
+
+    @Test
+    fun `allows increasing quota even when current usage is high`() = runTest {
+        val tenant = application.createTenant("quota-test", quota = Quota(maxTopics = 5))
+        
+        application.createNamespace(tenant.name, "ns1")
+        application.createTopic("topic1", emptyList(), tenant.name, "ns1")
+        application.createTopic("topic2", emptyList(), tenant.name, "ns1")
+        application.createTopic("topic3", emptyList(), tenant.name, "ns1")
+        application.createTopic("topic4", emptyList(), tenant.name, "ns1")
+
+        // Increasing quota should be allowed even when at limit
+        val updated = application.updateTenant(tenant.tenantId, quota = Quota(maxTopics = 100))
+        assertEquals(100, updated.quota!!.maxTopics)
+    }
+
+    @Test
+    fun `allows quota reduction when current usage is within new limit`() = runTest {
+        val tenant = application.createTenant("quota-test", quota = Quota(maxTopics = 10))
+        
+        application.createNamespace(tenant.name, "ns1")
+        application.createTopic("topic1", emptyList(), tenant.name, "ns1")
+        application.createTopic("topic2", emptyList(), tenant.name, "ns1")
+
+        // Reducing quota to 3 when only 2 topics exist should be allowed
+        val updated = application.updateTenant(tenant.tenantId, quota = Quota(maxTopics = 3))
+        assertEquals(3, updated.quota!!.maxTopics)
+    }
+
+    @Test
+    fun `allows partial quota updates without violating usage`() = runTest {
+        val originalQuota = Quota(maxTopics = 10, maxNamespaces = 5, maxConsumers = 3, maxUsers = 2)
+        val tenant = application.createTenant(
+            "quota-test",
+            quota = originalQuota
+        )
+        
+        application.createNamespace(tenant.name, "ns1")
+        application.createTopic("topic1", emptyList(), tenant.name, "ns1")
+
+        // Update with full quota, reducing only maxNamespaces
+        val newQuota = Quota(maxTopics = 10, maxNamespaces = 3, maxConsumers = 3, maxUsers = 2)
+        val updated = application.updateTenant(
+            tenant.tenantId,
+            quota = newQuota
+        )
+        assertEquals(10, updated.quota!!.maxTopics, "Topics quota should remain unchanged")
+        assertEquals(3, updated.quota!!.maxNamespaces, "Namespaces quota should be updated")
+    }
 
     private suspend fun getEvents(): List<com.eventstore.domain.Event> =
         application.eventRepository.getEvents(

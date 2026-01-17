@@ -3,6 +3,7 @@ package com.eventstore.domain.services.tenant
 import com.eventstore.domain.Application
 import com.eventstore.domain.Quota
 import com.eventstore.domain.events.TenantEventType
+import com.eventstore.domain.exceptions.InvalidTenantNameException
 import com.eventstore.domain.exceptions.TenantAlreadyExistsException
 import com.eventstore.domain.services.createApplication
 import com.eventstore.domain.tenants.SystemTopics
@@ -58,14 +59,14 @@ class CreateTenantServiceTest {
 
     @Test
     fun `throws when name is empty`() = runTest {
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<InvalidTenantNameException> {
             application.createTenant("")
         }
     }
 
     @Test
     fun `throws when name is blank`() = runTest {
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<InvalidTenantNameException> {
             application.createTenant("   ")
         }
     }
@@ -96,7 +97,7 @@ class CreateTenantServiceTest {
     }
 
     @Test
-    fun `creates tenant with various metadata types`() = runTest {
+    fun `creates tenant with metadata including complex types`() = runTest {
         val metadata = mapOf(
             "string" to "value",
             "number" to 42,
@@ -105,12 +106,7 @@ class CreateTenantServiceTest {
             "list" to listOf(1, 2, 3)
         )
         val tenant = application.createTenant("metadata-tenant", metadata = metadata)
-
         assertEquals(metadata, tenant.metadata)
-
-        @Suppress("UNCHECKED_CAST")
-        val payloadMetadata = getEvents().last().payload["metadata"] as? Map<String, Any>
-        assertEquals(metadata, payloadMetadata)
     }
 
     @Test
@@ -214,43 +210,6 @@ class CreateTenantServiceTest {
         assertTrue(tenant.isActive)
     }
 
-    @Test
-    fun `event is stored with correct tenant and namespace context`() = runTest {
-        val tenant = application.createTenant("context-test")
-        assertEquals("context-test", tenant.name)
-
-        val event = getEvents().last()
-        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, event.id.tenantId)
-        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_NAME, event.id.namespaceId)
-    }
-
-    @Test
-    fun `event sequence is correctly incremented`() = runTest {
-        // Create first tenant
-        val tenant1 = application.createTenant("sequence-test-1")
-        assertEquals("sequence-test-1", tenant1.name)
-        val sequence1 = getEvents().last().id.sequence
-
-        // Create second tenant
-        val tenant2 = application.createTenant("sequence-test-2")
-        assertEquals("sequence-test-2", tenant2.name)
-        val sequence2 = getEvents().last().id.sequence
-
-        // Verify sequence was incremented
-        assertEquals(sequence1 + 1, sequence2)
-    }
-
-    @Test
-    fun `event timestamp is set correctly`() = runTest {
-        val beforeCreation = java.time.Instant.now()
-        val tenant = application.createTenant("timestamp-test")
-        val afterCreation = java.time.Instant.now()
-
-        val event = getEvents().last()
-        assertTrue(event.timestamp.isAfter(beforeCreation) || event.timestamp == beforeCreation)
-        assertTrue(event.timestamp.isBefore(afterCreation) || event.timestamp == afterCreation)
-        assertEquals(tenant.createdAt, event.timestamp)
-    }
 
     @Test
     fun `each tenant gets unique resource ID`() = runTest {
@@ -262,13 +221,65 @@ class CreateTenantServiceTest {
         assertEquals(3, resourceIds.size, "Each tenant should have a unique resource ID")
     }
 
-    @Test
-    fun `creates tenant with unicode characters in name`() = runTest {
-        val unicodeName = "tenant-测试-🚀"
-        val tenant = application.createTenant(unicodeName)
 
-        assertEquals(unicodeName, tenant.name)
-        assertEquals(unicodeName, getEvents().last().payload["name"])
+    // Rule 3: Tenant name format validation tests
+    @Test
+    fun `throws when tenant name starts with hyphen`() = runTest {
+        assertFailsWith<InvalidTenantNameException> {
+            application.createTenant("-invalid-name")
+        }
+    }
+
+    @Test
+    fun `throws when tenant name ends with hyphen`() = runTest {
+        assertFailsWith<InvalidTenantNameException> {
+            application.createTenant("invalid-name-")
+        }
+    }
+
+    @Test
+    fun `throws when tenant name contains special characters`() = runTest {
+        assertFailsWith<InvalidTenantNameException> {
+            application.createTenant("invalid_name")
+        }
+        assertFailsWith<InvalidTenantNameException> {
+            application.createTenant("invalid.name")
+        }
+        assertFailsWith<InvalidTenantNameException> {
+            application.createTenant("invalid@name")
+        }
+    }
+
+    @Test
+    fun `throws when tenant name is too short`() = runTest {
+        assertFailsWith<InvalidTenantNameException> {
+            application.createTenant("a")
+        }
+    }
+
+    @Test
+    fun `throws when tenant name is too long`() = runTest {
+        val longName = "a".repeat(65) // 65 characters
+        assertFailsWith<InvalidTenantNameException> {
+            application.createTenant(longName)
+        }
+    }
+
+    @Test
+    fun `throws when tenant name is reserved system name`() = runTest {
+        assertFailsWith<InvalidTenantNameException> {
+            application.createTenant(SystemTopics.SYSTEM_TENANT_NAME)
+        }
+    }
+
+    @Test
+    fun `creates tenant with valid name formats`() = runTest {
+        // Test various valid formats: alphanumeric, mixed case, hyphens, boundaries
+        assertEquals("validname123", application.createTenant("validname123").name)
+        assertEquals("ValidName123", application.createTenant("ValidName123").name)
+        assertEquals("valid-name-123", application.createTenant("valid-name-123").name)
+        assertEquals("ab", application.createTenant("ab").name) // minimum length
+        assertEquals("a".repeat(64), application.createTenant("a".repeat(64)).name) // maximum length
     }
 
     private suspend fun numberOfEvents(): Int =

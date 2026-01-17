@@ -5,8 +5,9 @@ import com.eventstore.domain.Quota
 import com.eventstore.domain.Tenant
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.events.TenantUpdatedEvent
+import com.eventstore.domain.exceptions.CannotUpdateDeletedTenantException
+import com.eventstore.domain.exceptions.QuotaExceededException
 import com.eventstore.domain.exceptions.TenantAlreadyExistsException
-import com.eventstore.domain.exceptions.TenantNameNotFoundException
 import com.eventstore.domain.exceptions.TenantNotFoundException
 import com.eventstore.domain.services.BaseSystemService
 import com.eventstore.domain.services.SystemEventPublisher
@@ -25,17 +26,81 @@ data class UpdateTenantRequest(
 
 class UpdateTenantService(
     private val tenantProjectionService: TenantProjectionService,
+    private val tenantUsageService: TenantUsageService,
     config: Config,
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: UpdateTenantRequest): Tenant {
-        val existing = tenantProjectionService.getTenantById(request.tenantId)
+        // Get existing tenant (including deleted ones for the check)
+        val existing = tenantProjectionService.getTenantByIdIncludingDeleted(request.tenantId)
             ?: throw TenantNotFoundException(request.tenantId)
 
-        if (request.name != null && request.name != existing.name) {
-            val tenantWithSameName = tenantProjectionService.getTenantByName(request.name)
-            if (tenantWithSameName != null) {
-                throw TenantAlreadyExistsException(request.name)
+        // Rule 2: Block updates to deleted tenants
+        if (!existing.isActive) {
+            throw CannotUpdateDeletedTenantException(request.tenantId)
+        }
+
+        // Rule 3: Validate tenant name format if provided
+        if (request.name != null) {
+            TenantNameValidator.validate(request.name)
+
+            // Check uniqueness if name is changing
+            if (request.name != existing.name) {
+                val tenantWithSameName = tenantProjectionService.getTenantByName(request.name)
+                if (tenantWithSameName != null) {
+                    throw TenantAlreadyExistsException(request.name)
+                }
+            }
+        }
+
+        // Rule 4: Validate quota changes against current usage
+        if (request.quota != null) {
+            val usage = tenantUsageService.getUsage(existing.tenantId, existing.name)
+            val currentQuota = existing.quota
+
+            // Validate each quota field that is being reduced
+            if (currentQuota == null || request.quota.maxTopics < currentQuota.maxTopics) {
+                if (request.quota.maxTopics < usage.topics) {
+                    throw QuotaExceededException(
+                        existing.tenantId,
+                        "topics",
+                        usage.topics,
+                        request.quota.maxTopics
+                    )
+                }
+            }
+
+            if (currentQuota == null || request.quota.maxNamespaces < currentQuota.maxNamespaces) {
+                if (request.quota.maxNamespaces < usage.namespaces) {
+                    throw QuotaExceededException(
+                        existing.tenantId,
+                        "namespaces",
+                        usage.namespaces,
+                        request.quota.maxNamespaces
+                    )
+                }
+            }
+
+            if (currentQuota == null || request.quota.maxConsumers < currentQuota.maxConsumers) {
+                if (request.quota.maxConsumers < usage.consumers) {
+                    throw QuotaExceededException(
+                        existing.tenantId,
+                        "consumers",
+                        usage.consumers,
+                        request.quota.maxConsumers
+                    )
+                }
+            }
+
+            if (currentQuota == null || request.quota.maxUsers < currentQuota.maxUsers) {
+                if (request.quota.maxUsers < usage.users) {
+                    throw QuotaExceededException(
+                        existing.tenantId,
+                        "users",
+                        usage.users,
+                        request.quota.maxUsers
+                    )
+                }
             }
         }
 

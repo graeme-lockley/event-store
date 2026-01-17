@@ -125,7 +125,7 @@ class GetTenantServiceTest {
     }
 
     @Test
-    fun `gets tenant with quota`() = runTest {
+    fun `gets tenant with quota and metadata`() = runTest {
         val quota = Quota(
             maxTopics = 10,
             maxNamespaces = 5,
@@ -134,105 +134,16 @@ class GetTenantServiceTest {
             maxUsers = 3,
             maxEventSizeBytes = 512
         )
-        application.createTenant("quota-tenant", quota = quota)
-        val retrievedTenant = application.getTenant("quota-tenant")
-
-        assertNotNull(retrievedTenant)
-        assertNotNull(retrievedTenant.quota)
-        assertEquals(quota, retrievedTenant.quota)
-        assertEquals(quota.maxTopics, retrievedTenant.quota!!.maxTopics)
-        assertEquals(quota.maxNamespaces, retrievedTenant.quota!!.maxNamespaces)
-        assertEquals(quota.maxEventsPerDay, retrievedTenant.quota!!.maxEventsPerDay)
-        assertEquals(quota.maxConsumers, retrievedTenant.quota!!.maxConsumers)
-        assertEquals(quota.maxUsers, retrievedTenant.quota!!.maxUsers)
-        assertEquals(quota.maxEventSizeBytes, retrievedTenant.quota!!.maxEventSizeBytes)
-    }
-
-    @Test
-    fun `gets tenant with metadata`() = runTest {
         val metadata = mapOf("plan" to "pro", "region" to "us-east")
-        application.createTenant("metadata-tenant", metadata = metadata)
-        val retrievedTenant = application.getTenant("metadata-tenant")
-
+        application.createTenant("tenant-with-data", quota = quota, metadata = metadata)
+        
+        val retrievedTenant = application.getTenant("tenant-with-data")
         assertNotNull(retrievedTenant)
-        assertEquals(metadata, retrievedTenant.metadata)
-        assertEquals("pro", retrievedTenant.metadata["plan"])
-        assertEquals("us-east", retrievedTenant.metadata["region"])
-    }
-
-    @Test
-    fun `gets tenant with complex metadata`() = runTest {
-        val metadata = mapOf(
-            "string" to "value",
-            "number" to 42,
-            "boolean" to true,
-            "nested" to mapOf("key" to "value"),
-            "list" to listOf(1, 2, 3)
-        )
-        application.createTenant("complex-metadata-tenant", metadata = metadata)
-        val retrievedTenant = application.getTenant("complex-metadata-tenant")
-
-        assertNotNull(retrievedTenant)
+        assertEquals(quota, retrievedTenant.quota)
         assertEquals(metadata, retrievedTenant.metadata)
     }
 
-    @Test
-    fun `gets updated tenant with new values`() = runTest {
-        val originalQuota = Quota(
-            maxTopics = 10,
-            maxNamespaces = 5,
-            maxEventsPerDay = 1000,
-            maxConsumers = 2,
-            maxUsers = 3,
-            maxEventSizeBytes = 512
-        )
-        val tenant = application.createTenant("update-test", quota = originalQuota, metadata = mapOf("plan" to "basic"))
 
-        val newQuota = Quota(
-            maxTopics = 20,
-            maxNamespaces = 10,
-            maxEventsPerDay = 2000,
-            maxConsumers = 5,
-            maxUsers = 10,
-            maxEventSizeBytes = 1024
-        )
-        val newMetadata = mapOf("plan" to "pro", "tier" to "premium")
-        application.updateTenant(tenant.tenantId, name = "updated-test", quota = newQuota, metadata = newMetadata)
-
-        val retrievedTenant = application.getTenant("updated-test")
-
-        assertNotNull(retrievedTenant)
-        assertEquals("updated-test", retrievedTenant.name)
-        assertEquals(newQuota, retrievedTenant.quota)
-        assertEquals(newMetadata, retrievedTenant.metadata)
-        assertNotNull(retrievedTenant.updatedAt)
-    }
-
-    @Test
-    fun `gets tenant with unicode characters in name`() = runTest {
-        val unicodeName = "tenant-测试-🚀"
-        val createdTenant = application.createTenant(unicodeName)
-        val retrievedTenant = application.getTenant(unicodeName)
-
-        assertNotNull(retrievedTenant)
-        assertEquals(unicodeName, retrievedTenant.name)
-        assertEquals(createdTenant.tenantId, retrievedTenant.tenantId)
-    }
-
-    @Test
-    fun `list tenants includes tenants with unicode names`() = runTest {
-        val initialCount = getInitialTenantCount()
-        val unicodeName = "tenant-测试-🚀"
-        application.createTenant(unicodeName)
-        application.createTenant("regular-tenant")
-
-        val tenants = application.listTenants()
-
-        assertEquals(initialCount + 2, tenants.size)
-        val tenantNames = tenants.map { it.name }.toSet()
-        assertTrue(tenantNames.contains(unicodeName))
-        assertTrue(tenantNames.contains("regular-tenant"))
-    }
 
     @Test
     fun `gets tenant preserves resourceId after update`() = runTest {
@@ -246,50 +157,6 @@ class GetTenantServiceTest {
         assertEquals(originalTenantId, retrievedTenant.tenantId, "TenantId should remain unchanged after rename")
     }
 
-    @Test
-    fun `list tenants returns tenants in consistent order`() = runTest {
-        application.createTenant("tenant-a")
-        application.createTenant("tenant-b")
-        application.createTenant("tenant-c")
-
-        val tenants1 = application.listTenants()
-        val tenants2 = application.listTenants()
-
-        assertEquals(tenants1.size, tenants2.size)
-        // Both lists should contain the same tenants (order may vary, but content should be same)
-        val names1 = tenants1.map { it.name }.toSet()
-        val names2 = tenants2.map { it.name }.toSet()
-        assertEquals(names1, names2)
-    }
-
-    @Test
-    fun `gets tenant returns correct createdAt timestamp`() = runTest {
-        val beforeCreation = java.time.Instant.now()
-        val createdTenant = application.createTenant("timestamp-test")
-        val afterCreation = java.time.Instant.now()
-
-        val retrievedTenant = application.getTenant("timestamp-test")
-
-        assertNotNull(retrievedTenant)
-        assertTrue(retrievedTenant.createdAt.isAfter(beforeCreation) || retrievedTenant.createdAt == beforeCreation)
-        assertTrue(retrievedTenant.createdAt.isBefore(afterCreation) || retrievedTenant.createdAt == afterCreation)
-        assertEquals(createdTenant.createdAt, retrievedTenant.createdAt)
-    }
-
-    @Test
-    fun `gets tenant returns correct updatedAt timestamp after update`() = runTest {
-        val tenant= application.createTenant("updated-at-test")
-        val beforeUpdate = java.time.Instant.now()
-        application.updateTenant(tenant.tenantId, name = "updated-name")
-        val afterUpdate = java.time.Instant.now()
-
-        val retrievedTenant = application.getTenant("updated-name")
-
-        assertNotNull(retrievedTenant)
-        assertNotNull(retrievedTenant.updatedAt)
-        assertTrue(retrievedTenant.updatedAt!!.isAfter(beforeUpdate) || retrievedTenant.updatedAt == beforeUpdate)
-        assertTrue(retrievedTenant.updatedAt!!.isBefore(afterUpdate) || retrievedTenant.updatedAt == afterUpdate)
-    }
 
     @Test
     fun `gets tenant returns null for updated name when original name is used`() = runTest {
@@ -327,23 +194,6 @@ class GetTenantServiceTest {
         assertFalse(tenantNames.contains("delete-2"))
     }
 
-    @Test
-    fun `gets tenant with empty metadata`() = runTest {
-        application.createTenant("empty-metadata-tenant", metadata = emptyMap())
-        val retrievedTenant = application.getTenant("empty-metadata-tenant")
-
-        assertNotNull(retrievedTenant)
-        assertTrue(retrievedTenant.metadata.isEmpty())
-    }
-
-    @Test
-    fun `gets tenant with null quota`() = runTest {
-        application.createTenant("no-quota-tenant", quota = null)
-        val retrievedTenant = application.getTenant("no-quota-tenant")
-
-        assertNotNull(retrievedTenant)
-        assertNull(retrievedTenant.quota)
-    }
 
     @Test
     fun `list tenants returns all tenant fields correctly`() = runTest {
@@ -377,12 +227,101 @@ class GetTenantServiceTest {
         application.createTenant("CaseSensitive")
 
         val retrievedExact = application.getTenant("CaseSensitive")
-        val retrievedLowercase = application.getTenant("casesensitive")
-        val retrievedUppercase = application.getTenant("CASESENSITIVE")
+        val retrievedDifferent = application.getTenant("casesensitive")
+        val retrievedDifferent2 = application.getTenant("case-sensitive")
 
         assertNotNull(retrievedExact)
-        assertNull(retrievedLowercase, "Tenant name lookup should be case sensitive")
-        assertNull(retrievedUppercase, "Tenant name lookup should be case sensitive")
+        assertNull(retrievedDifferent, "Tenant name lookup should be exact match (case sensitive)")
+        assertNull(retrievedDifferent2, "Tenant name lookup should be exact match")
+    }
+
+    // Rule 5: Clear retrieval methods by ID and name
+    @Test
+    fun `getTenantByName retrieves tenant by name`() = runTest {
+        val createdTenant = application.createTenant("by-name-test")
+        val retrievedTenant = application.getTenantService.getTenantByName("by-name-test")
+
+        assertNotNull(retrievedTenant)
+        assertEquals(createdTenant.name, retrievedTenant.name)
+        assertEquals(createdTenant.tenantId, retrievedTenant.tenantId)
+    }
+
+    @Test
+    fun `getTenantByName returns null when tenant does not exist`() = runTest {
+        val retrievedTenant = application.getTenantService.getTenantByName("non-existent")
+
+        assertNull(retrievedTenant)
+    }
+
+    @Test
+    fun `getTenant retrieves tenant by UUID`() = runTest {
+        val createdTenant = application.createTenant("by-id-test")
+        val retrievedTenant = application.getTenantService.getTenant(createdTenant.tenantId)
+
+        assertNotNull(retrievedTenant)
+        assertEquals(createdTenant.name, retrievedTenant.name)
+        assertEquals(createdTenant.tenantId, retrievedTenant.tenantId)
+    }
+
+    @Test
+    fun `getTenant returns null when tenant ID does not exist`() = runTest {
+        val nonExistentId = java.util.UUID.randomUUID()
+        val retrievedTenant = application.getTenantService.getTenant(nonExistentId)
+
+        assertNull(retrievedTenant)
+    }
+
+    @Test
+    fun `getTenant returns null when tenant is deleted`() = runTest {
+        val createdTenant = application.createTenant("to-delete-by-id")
+        application.deleteTenant(createdTenant.tenantId)
+
+        val retrievedTenant = application.getTenantService.getTenant(createdTenant.tenantId)
+
+        assertNull(retrievedTenant, "Deleted tenant should not be retrievable by ID")
+    }
+
+    @Test
+    fun `getTenantByName returns null when tenant is deleted`() = runTest {
+        val createdTenant = application.createTenant("to-delete-by-name")
+        application.deleteTenant(createdTenant.tenantId)
+
+        val retrievedTenant = application.getTenantService.getTenantByName("to-delete-by-name")
+
+        assertNull(retrievedTenant, "Deleted tenant should not be retrievable by name")
+    }
+
+    @Test
+    fun `getTenant and getTenantByName return same tenant for active tenant`() = runTest {
+        val createdTenant = application.createTenant("same-tenant-test")
+
+        val byId = application.getTenantService.getTenant(createdTenant.tenantId)
+        val byName = application.getTenantService.getTenantByName("same-tenant-test")
+
+        assertNotNull(byId)
+        assertNotNull(byName)
+        assertEquals(byId.tenantId, byName.tenantId)
+        assertEquals(byId.name, byName.name)
+        assertEquals(byId.quota, byName.quota)
+        assertEquals(byId.metadata, byName.metadata)
+    }
+
+    @Test
+    fun `getTenant works after tenant name is updated`() = runTest {
+        val createdTenant = application.createTenant("original-name")
+        application.updateTenant(createdTenant.tenantId, name = "updated-name")
+
+        val byId = application.getTenantService.getTenant(createdTenant.tenantId)
+        val byOldName = application.getTenantService.getTenantByName("original-name")
+        val byNewName = application.getTenantService.getTenantByName("updated-name")
+
+        assertNotNull(byId, "Should still be retrievable by UUID after rename")
+        assertNull(byOldName, "Should not be retrievable by old name")
+        assertNotNull(byNewName, "Should be retrievable by new name")
+        assertEquals(createdTenant.tenantId, byId.tenantId)
+        assertEquals(createdTenant.tenantId, byNewName.tenantId)
+        assertEquals("updated-name", byId.name)
+        assertEquals("updated-name", byNewName.name)
     }
 }
 

@@ -23,9 +23,11 @@ class DeleteTenantService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: DeleteTenantRequest): Boolean {
-        val existing = tenantProjectionService.getTenantById(request.tenantId)
+        // Use getTenantByIdIncludingDeleted to check if tenant exists at all (including deleted)
+        val existing = tenantProjectionService.getTenantByIdIncludingDeleted(request.tenantId)
             ?: throw TenantNotFoundException(request.tenantId)
 
+        // Rule D-3: Idempotent deletion - return false if already deleted, no error
         if (!existing.isActive) {
             return false
         }
