@@ -21,8 +21,9 @@ class GetEventsServiceTest {
     fun setup() = runTest {
         application = createApplication()
         // Create tenant and namespace
-        application.createTenant("default")
-        application.createNamespace("default", "default")
+        val tenant = application.createTenant("default")
+        val tenantId = tenant.tenantId
+        application.createNamespace(tenantId, "default")
         // Create topic with schema
         application.createTopic(
             name = topicName,
@@ -99,8 +100,9 @@ class GetEventsServiceTest {
     @Test
     fun `should get events with tenant and namespace scoping`() = runTest {
         // Create another tenant and namespace
-        application.createTenant("acme")
-        application.createNamespace("acme", "production")
+        val tenant = application.createTenant("acme")
+        val tenantId = tenant.tenantId
+        application.createNamespace(tenantId, "production")
         application.createTopic(
             name = topicName,
             schemas = listOf(

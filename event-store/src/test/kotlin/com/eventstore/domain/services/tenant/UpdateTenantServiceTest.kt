@@ -396,7 +396,7 @@ class UpdateTenantServiceTest {
         val tenant = application.createTenant("quota-test", quota = Quota(maxTopics = 10))
         
         // Create some topics to exceed the reduced quota
-        application.createNamespace(tenant.name, "ns1")
+        application.createNamespace(tenant.tenantId, "ns1")
         application.createTopic("topic1", emptyList(), tenant.name, "ns1")
         application.createTopic("topic2", emptyList(), tenant.name, "ns1")
         application.createTopic("topic3", emptyList(), tenant.name, "ns1")
@@ -412,9 +412,9 @@ class UpdateTenantServiceTest {
         val tenant = application.createTenant("quota-test", quota = Quota(maxNamespaces = 10))
         
         // Create some namespaces to exceed the reduced quota
-        application.createNamespace(tenant.name, "ns1")
-        application.createNamespace(tenant.name, "ns2")
-        application.createNamespace(tenant.name, "ns3")
+        application.createNamespace(tenant.tenantId, "ns1")
+        application.createNamespace(tenant.tenantId, "ns2")
+        application.createNamespace(tenant.tenantId, "ns3")
 
         // Try to reduce quota to 2 when 3 namespaces exist
         assertFailsWith<QuotaExceededException> {
@@ -426,7 +426,7 @@ class UpdateTenantServiceTest {
     fun `throws when reducing quota below current consumers usage`() = runTest {
         val tenant = application.createTenant("quota-test", quota = Quota(maxConsumers = 10))
         
-        application.createNamespace(tenant.name, "ns1")
+        application.createNamespace(tenant.tenantId, "ns1")
         application.createTopic("topic1", emptyList(), tenant.name, "ns1")
         
         // Create some consumers
@@ -493,7 +493,7 @@ class UpdateTenantServiceTest {
     fun `allows increasing quota even when current usage is high`() = runTest {
         val tenant = application.createTenant("quota-test", quota = Quota(maxTopics = 5))
         
-        application.createNamespace(tenant.name, "ns1")
+        application.createNamespace(tenant.tenantId, "ns1")
         application.createTopic("topic1", emptyList(), tenant.name, "ns1")
         application.createTopic("topic2", emptyList(), tenant.name, "ns1")
         application.createTopic("topic3", emptyList(), tenant.name, "ns1")
@@ -508,7 +508,7 @@ class UpdateTenantServiceTest {
     fun `allows quota reduction when current usage is within new limit`() = runTest {
         val tenant = application.createTenant("quota-test", quota = Quota(maxTopics = 10))
         
-        application.createNamespace(tenant.name, "ns1")
+        application.createNamespace(tenant.tenantId, "ns1")
         application.createTopic("topic1", emptyList(), tenant.name, "ns1")
         application.createTopic("topic2", emptyList(), tenant.name, "ns1")
 
@@ -525,7 +525,7 @@ class UpdateTenantServiceTest {
             quota = originalQuota
         )
         
-        application.createNamespace(tenant.name, "ns1")
+        application.createNamespace(tenant.tenantId, "ns1")
         application.createTopic("topic1", emptyList(), tenant.name, "ns1")
 
         // Update with full quota, reducing only maxNamespaces

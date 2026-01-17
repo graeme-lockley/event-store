@@ -8,25 +8,23 @@ import com.eventstore.domain.services.BaseSystemService
 import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
-import com.eventstore.infrastructure.projections.TenantProjectionService
 import java.time.Instant
+import java.util.*
 
 data class DeleteNamespaceRequest(
-    val tenantName: String,
-    val namespaceName: String,
+    val namespaceId: UUID,
     val deletedBy: String = "system",
     val reason: String? = null
 )
 
 class DeleteNamespaceService(
-    private val tenantProjectionService: TenantProjectionService,
     private val namespaceProjectionService: NamespaceProjectionService,
     config: Config,
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: DeleteNamespaceRequest): Boolean {
-        val existing = namespaceProjectionService.getNamespaceByName(request.tenantName, request.namespaceName)
-            ?: throw NamespaceNotFoundException(request.namespaceName)
+        val existing = namespaceProjectionService.getNamespaceById(request.namespaceId)
+            ?: throw NamespaceNotFoundException(request.namespaceId.toString())
 
         if (!existing.isActive) {
             return false
@@ -34,8 +32,7 @@ class DeleteNamespaceService(
 
         val now = Instant.now()
         val payload = NamespaceDeletedEvent(
-            resourceId = existing.resourceId,
-            tenantResourceId = existing.tenantResourceId,
+            namespaceId = existing.namespaceId,
             deletedBy = request.deletedBy,
             deletedAt = now,
             reason = request.reason

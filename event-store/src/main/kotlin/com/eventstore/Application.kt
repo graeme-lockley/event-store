@@ -116,7 +116,10 @@ fun Application.configureApplication(config: Config) {
             !domainApplication.namespaceProjectionService.namespaceExistsByName("default", "default")
         ) {
             runCatching {
-                domainApplication.createNamespace("default", "default")
+                val defaultTenant = domainApplication.getTenant("default")
+                if (defaultTenant != null) {
+                    domainApplication.createNamespace(defaultTenant.tenantId, "default")
+                }
             }
         }
     }

@@ -15,9 +15,8 @@ sealed interface NamespaceEventPayload {
 }
 
 data class NamespaceCreatedEvent(
-    val resourceId: UUID,        // Stable GUID, never changes (used in permissions)
-    val tenantResourceId: UUID,   // Reference to tenant's resourceId (stable)
-    val tenantName: String,        // Human-readable tenant name (for reference)
+    val namespaceId: UUID,        // Stable GUID, never changes (used in permissions)
+    val tenantId: UUID,           // Reference to tenant's tenantId (stable)
     val name: String,             // Human-readable identifier (used in URLs and for display)
     val description: String? = null,
     val createdBy: String = "system",
@@ -25,16 +24,14 @@ data class NamespaceCreatedEvent(
     val metadata: Map<String, Any> = emptyMap()
 ) : NamespaceEventPayload {
     init {
-        require(tenantName.isNotBlank()) { "tenantName is required" }
         require(name.isNotBlank()) { "name is required" }
     }
 
     override val type: String = NamespaceEventType.CREATED
 
     override fun toPayload(): Map<String, Any> = buildMap {
-        put("resourceId", resourceId.toString())
-        put("tenantResourceId", tenantResourceId.toString())
-        put("tenantName", tenantName)
+        put("namespaceId", namespaceId.toString())
+        put("tenantId", tenantId.toString())
         put("name", name)
         description?.let { put("description", it) }
         put("createdBy", createdBy)
@@ -44,24 +41,19 @@ data class NamespaceCreatedEvent(
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): NamespaceCreatedEvent {
-            // Support both old format (without resourceId) and new format (with resourceId)
-            val resourceId = (payload["resourceId"] as? String)?.let { UUID.fromString(it) }
-                ?: UUID.randomUUID() // Generate UUID for backward compatibility
-            val tenantResourceId = (payload["tenantResourceId"] as? String)?.let { UUID.fromString(it) }
-                ?: error("tenantResourceId missing - cannot create namespace without tenant reference")
-            // Support old format with tenantId/namespaceId fields for backward compatibility
-            val tenantName = (payload["tenantName"] as? String) ?: (payload["tenantId"] as? String)
-            ?: error("tenantName is required")
-            val name = (payload["name"] as? String) ?: (payload["namespaceId"] as? String)
-            ?: error("name is required")
+            val namespaceId = (payload["namespaceId"] as? String)?.let { UUID.fromString(it) }
+                ?: error("namespaceId missing - cannot create namespace without stable identifier")
+            val tenantId = (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
+                ?: error("tenantId missing - cannot create namespace without tenant reference")
+            val name = payload["name"] as? String
+                ?: error("name is required")
             val description = payload["description"] as? String
             val createdBy = payload["createdBy"] as? String ?: "system"
             val createdAt = parseInstant(payload["createdAt"])
             val metadata = payload["metadata"] as? Map<String, Any> ?: emptyMap()
             return NamespaceCreatedEvent(
-                resourceId,
-                tenantResourceId,
-                tenantName,
+                namespaceId,
+                tenantId,
                 name,
                 description,
                 createdBy,
@@ -73,9 +65,8 @@ data class NamespaceCreatedEvent(
 }
 
 data class NamespaceUpdatedEvent(
-    val resourceId: UUID,        // Stable GUID reference (used to identify namespace)
-    val tenantResourceId: UUID,  // Reference to tenant's resourceId (stable)
-    val name: String? = null,    // Human-readable identifier (may change on rename)
+    val namespaceId: UUID,        // Stable GUID reference (used to identify namespace)
+    val name: String? = null,     // Human-readable identifier (may change on rename)
     val description: String? = null,
     val updatedBy: String = "system",
     val updatedAt: Instant,
@@ -84,8 +75,7 @@ data class NamespaceUpdatedEvent(
     override val type: String = NamespaceEventType.UPDATED
 
     override fun toPayload(): Map<String, Any> = buildMap {
-        put("resourceId", resourceId.toString())
-        put("tenantResourceId", tenantResourceId.toString())
+        put("namespaceId", namespaceId.toString())
         name?.let { put("name", it) }
         description?.let { put("description", it) }
         put("updatedBy", updatedBy)
@@ -95,18 +85,15 @@ data class NamespaceUpdatedEvent(
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): NamespaceUpdatedEvent {
-            val resourceId = (payload["resourceId"] as? String)?.let { UUID.fromString(it) }
-                ?: error("resourceId missing - cannot update namespace without stable identifier")
-            val tenantResourceId = (payload["tenantResourceId"] as? String)?.let { UUID.fromString(it) }
-                ?: error("tenantResourceId missing - cannot update namespace without tenant reference")
+            val namespaceId = (payload["namespaceId"] as? String)?.let { UUID.fromString(it) }
+                ?: error("namespaceId missing - cannot update namespace without stable identifier")
             val name = payload["name"] as? String
             val description = payload["description"] as? String
             val updatedBy = payload["updatedBy"] as? String ?: "system"
             val updatedAt = parseInstant(payload["updatedAt"])
             val metadata = payload["metadata"] as? Map<String, Any>
             return NamespaceUpdatedEvent(
-                resourceId,
-                tenantResourceId,
+                namespaceId,
                 name,
                 description,
                 updatedBy,
@@ -118,8 +105,7 @@ data class NamespaceUpdatedEvent(
 }
 
 data class NamespaceDeletedEvent(
-    val resourceId: UUID,        // Stable GUID reference (used to identify namespace)
-    val tenantResourceId: UUID,    // Reference to tenant's resourceId (stable)
+    val namespaceId: UUID,        // Stable GUID reference (used to identify namespace)
     val deletedBy: String = "system",
     val deletedAt: Instant,
     val reason: String? = null
@@ -127,8 +113,7 @@ data class NamespaceDeletedEvent(
     override val type: String = NamespaceEventType.DELETED
 
     override fun toPayload(): Map<String, Any> = buildMap {
-        put("resourceId", resourceId.toString())
-        put("tenantResourceId", tenantResourceId.toString())
+        put("namespaceId", namespaceId.toString())
         put("deletedBy", deletedBy)
         put("deletedAt", deletedAt.toString())
         reason?.let { put("reason", it) }
@@ -136,14 +121,12 @@ data class NamespaceDeletedEvent(
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): NamespaceDeletedEvent {
-            val resourceId = (payload["resourceId"] as? String)?.let { UUID.fromString(it) }
-                ?: error("resourceId missing - cannot delete namespace without stable identifier")
-            val tenantResourceId = (payload["tenantResourceId"] as? String)?.let { UUID.fromString(it) }
-                ?: error("tenantResourceId missing - cannot delete namespace without tenant reference")
+            val namespaceId = (payload["namespaceId"] as? String)?.let { UUID.fromString(it) }
+                ?: error("namespaceId missing - cannot delete namespace without stable identifier")
             val deletedBy = payload["deletedBy"] as? String ?: "system"
             val deletedAt = parseInstant(payload["deletedAt"])
             val reason = payload["reason"] as? String
-            return NamespaceDeletedEvent(resourceId, tenantResourceId, deletedBy, deletedAt, reason)
+            return NamespaceDeletedEvent(namespaceId, deletedBy, deletedAt, reason)
         }
     }
 }
@@ -152,4 +135,3 @@ private fun parseInstant(value: Any?): Instant {
     val text = value as? String ?: error("timestamp value is required")
     return Instant.parse(text)
 }
-

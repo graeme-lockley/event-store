@@ -1,7 +1,9 @@
 package com.eventstore.interfaces.http.dto
 
+import java.util.*
+
 data class NamespaceCreateRequest(
-    val id: String,
+    val tenantId: UUID,
     val name: String,
     val description: String? = null,
     val metadata: Map<String, Any> = emptyMap()

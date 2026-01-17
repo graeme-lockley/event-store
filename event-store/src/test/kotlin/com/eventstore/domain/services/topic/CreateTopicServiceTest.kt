@@ -20,8 +20,9 @@ class CreateTopicServiceTest {
     fun setup() = runTest {
         application = createApplication()
         // Create tenant and namespace
-        application.createTenant("default")
-        application.createNamespace("default", "default")
+        val tenant = application.createTenant("default")
+        val tenantId = tenant.tenantId
+        application.createNamespace(tenantId, "default")
     }
 
     @Test
@@ -92,8 +93,9 @@ class CreateTopicServiceTest {
             Schema(eventType = "order.created", properties = mapOf("id" to "string"))
         )
 
-        application.createTenant(tenantName)
-        application.createNamespace(tenantName, namespaceName)
+        val tenant = application.createTenant(tenantName)
+        val tenantId = tenant.tenantId
+        application.createNamespace(tenantId, namespaceName)
 
         val topic = application.createTopic(name, schemas, tenantName, namespaceName)
 

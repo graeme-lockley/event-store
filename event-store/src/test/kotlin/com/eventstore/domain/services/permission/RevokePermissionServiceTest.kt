@@ -101,7 +101,8 @@ class RevokePermissionServiceTest {
         val namespaceName = "test-namespace"
 
         // Create namespace
-        application.createNamespace(tenantName, namespaceName)
+        val tenant = application.getTenant(tenantName)!!
+        application.createNamespace(tenant.tenantId, namespaceName)
 
         val event = application.revokePermission(
             RevokePermissionRequest(
@@ -125,7 +126,8 @@ class RevokePermissionServiceTest {
         val topicName = "test-topic"
 
         // Create namespace and topic
-        application.createNamespace(tenantName, namespaceName)
+        val tenant = application.getTenant(tenantName)!!
+        application.createNamespace(tenant.tenantId, namespaceName)
         application.createTopic(
             name = topicName,
             schemas = emptyList(),

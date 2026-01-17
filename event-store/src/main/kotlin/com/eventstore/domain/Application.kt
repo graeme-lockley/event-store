@@ -61,7 +61,7 @@ class Application(
 
     val tenantProjectionService = TenantProjectionService(tenantRepository)
     val namespaceProjectionService =
-        NamespaceProjectionService(namespaceRepository)
+        NamespaceProjectionService(namespaceRepository, tenantProjectionService)
     val userProjectionService = UserProjectionService(userRepository)
     val permissionProjectionService = PermissionProjectionService(permissionRepository)
     val apiKeyProjectionService = ApiKeyProjectionService(apiKeyRepository)
@@ -88,13 +88,13 @@ class Application(
         GetTenantService(tenantProjectionService)
 
     private val createNamespaceService: CreateNamespaceService =
-        CreateNamespaceService(tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
+        CreateNamespaceService(tenantProjectionService, namespaceProjectionService, tenantUsageService, config, systemEventPublisher)
 
     private val deleteNamespaceService: DeleteNamespaceService =
-        DeleteNamespaceService(tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
+        DeleteNamespaceService( namespaceProjectionService, config, systemEventPublisher)
 
     private val updateNamespaceService: UpdateNamespaceService =
-        UpdateNamespaceService(tenantProjectionService, namespaceProjectionService, config, systemEventPublisher)
+        UpdateNamespaceService( namespaceProjectionService, config, systemEventPublisher)
 
     val getNamespaceService: GetNamespaceService =
         GetNamespaceService(namespaceProjectionService)
@@ -281,7 +281,7 @@ class Application(
         getTenantService.listTenants()
 
     suspend fun createNamespace(
-        tenantName: String,
+        tenantId: UUID,
         namespaceName: String = "default",
         description: String? = null,
         metadata: Map<String, Any> = emptyMap(),
@@ -289,7 +289,7 @@ class Application(
     ) =
         createNamespaceService.execute(
             CreateNamespaceRequest(
-                tenantName = tenantName,
+                tenantId = tenantId,
                 name = namespaceName,
                 description = description,
                 metadata = metadata,
@@ -298,23 +298,20 @@ class Application(
         )
 
     suspend fun deleteNamespace(
-        tenantName: String,
-        namespaceName: String,
+        namespaceId: UUID,
         deletedBy: String = "system",
         reason: String? = null
     ): Boolean =
         deleteNamespaceService.execute(
             DeleteNamespaceRequest(
-                tenantName = tenantName,
-                namespaceName = namespaceName,
+                namespaceId = namespaceId,
                 deletedBy = deletedBy,
                 reason = reason
             )
         )
 
     suspend fun updateNamespace(
-        tenantName: String,
-        namespaceName: String,
+        namespaceId: UUID,
         name: String? = null,
         description: String? = null,
         metadata: Map<String, Any>? = null,
@@ -322,8 +319,7 @@ class Application(
     ): Namespace =
         updateNamespaceService.execute(
             UpdateNamespaceRequest(
-                tenantName = tenantName,
-                namespaceName = namespaceName,
+                namespaceId = namespaceId,
                 name = name,
                 description = description,
                 metadata = metadata,
@@ -331,11 +327,14 @@ class Application(
             )
         )
 
-    suspend fun getNamespace(tenantName: String, namespaceName: String): Namespace? =
-        getNamespaceService.getNamespace(tenantName, namespaceName)
+    suspend fun getNamespace(namespaceId: UUID): Namespace? =
+        getNamespaceService.getNamespace(namespaceId)
 
-    suspend fun listNamespaces(tenantName: String): List<Namespace> =
-        getNamespaceService.listNamespaces(tenantName)
+    suspend fun getNamespaceByName(tenantName: String, namespaceName: String): Namespace? =
+        getNamespaceService.getNamespaceByName(tenantName, namespaceName)
+
+    suspend fun listNamespaces(tenantId: UUID? = null): List<Namespace> =
+        getNamespaceService.listNamespaces(tenantId)
 
     suspend fun createTopic(
         name: String,

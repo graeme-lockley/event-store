@@ -35,7 +35,7 @@ class AuthorizationServiceTest {
             permissionRepository = InMemoryPermissionRepository()
             permissionProjectionService = PermissionProjectionService(permissionRepository)
             tenantProjectionService = TenantProjectionService(InMemoryTenantRepository())
-            namespaceProjectionService = NamespaceProjectionService(InMemoryNamespaceRepository())
+            namespaceProjectionService = NamespaceProjectionService(InMemoryNamespaceRepository(), tenantProjectionService)
             topicRepository = InMemoryTopicRepository()
             resourceResolver = ResourceResolverImpl(
                 tenantProjectionService = tenantProjectionService,

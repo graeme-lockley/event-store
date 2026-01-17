@@ -22,8 +22,9 @@ class UpdateTopicSchemasServiceTest {
     fun setup() = runTest {
         application = createApplication()
         // Create tenant and namespace
-        application.createTenant("default")
-        application.createNamespace("default", "default")
+        val tenant = application.createTenant("default")
+        val tenantId = tenant.tenantId
+        application.createNamespace(tenantId, "default")
     }
 
     @Test
@@ -114,8 +115,9 @@ class UpdateTopicSchemasServiceTest {
             Schema(eventType = "order.created", properties = mapOf("id" to "string"))
         )
 
-        application.createTenant(tenantName)
-        application.createNamespace(tenantName, namespaceName)
+        val tenant = application.createTenant(tenantName)
+        val tenantId = tenant.tenantId
+        application.createNamespace(tenantId, namespaceName)
         application.createTopic(topicName, initialSchemas, tenantName, namespaceName)
 
         val newSchemas = initialSchemas + Schema(eventType = "order.cancelled", properties = mapOf("id" to "string"))

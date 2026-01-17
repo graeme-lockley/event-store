@@ -26,7 +26,7 @@ class TenantUsageService(
 
         // Count namespaces for this tenant
         val namespaces = namespaceProjectionService.getAllNamespaces()
-            .count { it.tenantResourceId == tenantId }
+            .count { it.tenantId == tenantId }
 
         // Count consumers for this tenant (consumers are associated via topics)
         // Topics are qualified names like "tenant-name/namespace-name/topic-name"

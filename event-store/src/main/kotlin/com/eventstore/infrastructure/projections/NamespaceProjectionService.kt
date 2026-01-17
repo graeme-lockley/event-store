@@ -14,7 +14,8 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 class NamespaceProjectionService(
-    private val namespaceRepository: NamespaceRepository
+    private val namespaceRepository: NamespaceRepository,
+    private val tenantProjectionService: TenantProjectionService? = null
 ) {
     private val logger = LoggerFactory.getLogger(NamespaceProjectionService::class.java)
     private val mutex = Mutex()
@@ -35,8 +36,12 @@ class NamespaceProjectionService(
         return namespaceRepository.findByName(tenantName, name)?.takeIf { it.isActive }
     }
 
-    suspend fun getNamespaceByResourceId(tenantResourceId: UUID, resourceId: UUID): Namespace? {
-        return namespaceRepository.findByResourceId(tenantResourceId, resourceId)?.takeIf { it.isActive }
+    suspend fun getNamespaceById(tenantId: UUID, namespaceId: UUID): Namespace? {
+        return namespaceRepository.findById(tenantId, namespaceId)?.takeIf { it.isActive }
+    }
+
+    suspend fun getNamespaceById(namespaceId: UUID): Namespace? {
+        return namespaceRepository.findById(namespaceId)?.takeIf { it.isActive }
     }
 
     suspend fun getAllNamespaces(): List<Namespace> =
@@ -59,10 +64,14 @@ class NamespaceProjectionService(
         when (event.type) {
             NamespaceEventType.CREATED -> {
                 val payload = NamespaceCreatedEvent.fromPayload(event.payload)
+                // Get tenantName from payload (included by service layer) or look up from tenant
+                val tenantName = (event.payload["tenantName"] as? String)
+                    ?: tenantProjectionService?.getTenantById(payload.tenantId)?.name
+                    ?: error("tenantName not found in event payload and tenant lookup unavailable")
                 val ns = Namespace(
-                    resourceId = payload.resourceId,
-                    tenantResourceId = payload.tenantResourceId,
-                    tenantName = payload.tenantName,
+                    namespaceId = payload.namespaceId,
+                    tenantId = payload.tenantId,
+                    tenantName = tenantName,
                     name = payload.name,
                     description = payload.description,
                     createdAt = payload.createdAt,
@@ -75,9 +84,9 @@ class NamespaceProjectionService(
 
             NamespaceEventType.UPDATED -> {
                 val payload = NamespaceUpdatedEvent.fromPayload(event.payload)
-                val existing = namespaceRepository.findByResourceId(payload.tenantResourceId, payload.resourceId)
+                val existing = namespaceRepository.findById(payload.namespaceId)
                 if (existing == null) {
-                    logger.warn("Received namespace.updated for unknown namespace resourceId ${payload.resourceId}")
+                    logger.warn("Received namespace.updated for unknown namespace namespaceId ${payload.namespaceId}")
                     return
                 }
                 val updated = existing.copy(
@@ -91,9 +100,9 @@ class NamespaceProjectionService(
 
             NamespaceEventType.DELETED -> {
                 val payload = NamespaceDeletedEvent.fromPayload(event.payload)
-                val existing = namespaceRepository.findByResourceId(payload.tenantResourceId, payload.resourceId)
+                val existing = namespaceRepository.findById(payload.namespaceId)
                 if (existing == null) {
-                    logger.warn("Received namespace.deleted for unknown namespace resourceId ${payload.resourceId}")
+                    logger.warn("Received namespace.deleted for unknown namespace namespaceId ${payload.namespaceId}")
                     return
                 }
                 val deleted = existing.copy(deletedAt = payload.deletedAt, updatedAt = payload.deletedAt)

@@ -29,7 +29,7 @@ class ResourceResolverImpl(
             ?: throw TenantNameNotFoundException("tenantId: $tenantId")
         val namespace = namespaceProjectionService.getNamespaceByName(tenant.name, namespaceName)
             ?: throw NamespaceNotFoundException(namespaceName)
-        return namespace.resourceId
+        return namespace.namespaceId
     }
 
     override suspend fun resolveTopicName(
@@ -39,7 +39,7 @@ class ResourceResolverImpl(
     ): UUID {
         val tenant = tenantProjectionService.getTenantById(tenantId)
             ?: throw TenantNameNotFoundException("tenantId: $tenantId")
-        val namespace = namespaceProjectionService.getNamespaceByResourceId(tenantId, namespaceId)
+        val namespace = namespaceProjectionService.getNamespaceById(tenantId, namespaceId)
             ?: throw NamespaceNotFoundException("namespaceId: $namespaceId")
         val topic = topicRepository.getTopic(topicName, tenant.name, namespace.name)
             ?: throw TopicNotFoundException(topicName)

@@ -117,16 +117,16 @@ class BootstrapServiceImpl(
             metadata = emptyMap()
         )
 
-        val namespaceCreatedEvent = NamespaceCreatedEvent(
-            resourceId = SystemTopics.MANAGEMENT_NAMESPACE_ID,
-            tenantResourceId = SystemTopics.SYSTEM_TENANT_ID,
-            tenantName = SystemTopics.SYSTEM_TENANT_NAME,
+        val namespaceCreatedEventPayload = NamespaceCreatedEvent(
+            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID,
+            tenantId = SystemTopics.SYSTEM_TENANT_ID,
             name = SystemTopics.MANAGEMENT_NAMESPACE_NAME,
             description = "System management namespace",
             createdBy = "bootstrap",
             createdAt = timestamp,
             metadata = emptyMap()
-        )
+        ).toPayload().toMutableMap()
+        namespaceCreatedEventPayload["tenantName"] = SystemTopics.SYSTEM_TENANT_NAME // Include for projection service
 
         val events = mutableListOf(
             Event(
@@ -157,7 +157,7 @@ class BootstrapServiceImpl(
                 ),
                 timestamp = timestamp,
                 type = NamespaceEventType.CREATED,
-                payload = namespaceCreatedEvent.toPayload()
+                payload = namespaceCreatedEventPayload
             )
         )
 

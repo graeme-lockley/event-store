@@ -28,9 +28,16 @@ class NamespaceProjectionServiceTest {
 
     @Test
     fun `applies created and updated events`() = runTest {
-        val tenantResourceId = UUID.randomUUID()
-        val namespaceResourceId = UUID.randomUUID()
+        val tenantId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         val createdAt = Instant.now()
+        val createdPayload = NamespaceCreatedEvent(
+            namespaceId = namespaceId,
+            tenantId = tenantId,
+            name = "billing",
+            createdAt = createdAt
+        ).toPayload().toMutableMap()
+        createdPayload["tenantName"] = "acme" // Include tenantName for projection service
         val created = Event(
             id = EventId.create(
                 SystemTopics.NAMESPACES_TOPIC_NAME,
@@ -40,13 +47,7 @@ class NamespaceProjectionServiceTest {
             ),
             timestamp = createdAt,
             type = NamespaceEventType.CREATED,
-            payload = NamespaceCreatedEvent(
-                resourceId = namespaceResourceId,
-                tenantResourceId = tenantResourceId,
-                tenantName = "acme",
-                name = "billing",
-                createdAt = createdAt
-            ).toPayload()
+            payload = createdPayload
         )
         val updatedAt = createdAt.plusSeconds(10)
         val updated = Event(
@@ -59,8 +60,7 @@ class NamespaceProjectionServiceTest {
             timestamp = updatedAt,
             type = NamespaceEventType.UPDATED,
             payload = NamespaceUpdatedEvent(
-                resourceId = namespaceResourceId,
-                tenantResourceId = tenantResourceId,
+                namespaceId = namespaceId,
                 name = "Billing App",
                 description = "desc",
                 updatedAt = updatedAt
@@ -80,9 +80,16 @@ class NamespaceProjectionServiceTest {
 
     @Test
     fun `applies delete hides namespace`() = runTest {
-        val tenantResourceId = UUID.randomUUID()
-        val namespaceResourceId = UUID.randomUUID()
+        val tenantId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         val createdAt = Instant.now()
+        val createdPayload = NamespaceCreatedEvent(
+            namespaceId = namespaceId,
+            tenantId = tenantId,
+            name = "billing",
+            createdAt = createdAt
+        ).toPayload().toMutableMap()
+        createdPayload["tenantName"] = "acme" // Include tenantName for projection service
         val created = Event(
             id = EventId.create(
                 SystemTopics.NAMESPACES_TOPIC_NAME,
@@ -92,13 +99,7 @@ class NamespaceProjectionServiceTest {
             ),
             timestamp = createdAt,
             type = NamespaceEventType.CREATED,
-            payload = NamespaceCreatedEvent(
-                resourceId = namespaceResourceId,
-                tenantResourceId = tenantResourceId,
-                tenantName = "acme",
-                name = "billing",
-                createdAt = createdAt
-            ).toPayload()
+            payload = createdPayload
         )
         val deletedAt = createdAt.plusSeconds(5)
         val deleted = Event(
@@ -111,8 +112,7 @@ class NamespaceProjectionServiceTest {
             timestamp = deletedAt,
             type = NamespaceEventType.DELETED,
             payload = NamespaceDeletedEvent(
-                resourceId = namespaceResourceId,
-                tenantResourceId = tenantResourceId,
+                namespaceId = namespaceId,
                 deletedAt = deletedAt
             ).toPayload()
         )
@@ -120,6 +120,44 @@ class NamespaceProjectionServiceTest {
         service.handleEvents(listOf(created, deleted))
 
         assertNull(service.getNamespaceByName("acme", "billing"))
+    }
+
+    @Test
+    fun `getNamespaceById returns namespace by single UUID`() = runTest {
+        val tenantId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
+        val createdAt = Instant.now()
+        val createdPayload = NamespaceCreatedEvent(
+            namespaceId = namespaceId,
+            tenantId = tenantId,
+            name = "billing",
+            createdAt = createdAt
+        ).toPayload().toMutableMap()
+        createdPayload["tenantName"] = "acme"
+        val created = Event(
+            id = EventId.create(
+                SystemTopics.NAMESPACES_TOPIC_NAME,
+                1,
+                SystemTopics.SYSTEM_TENANT_NAME,
+                SystemTopics.MANAGEMENT_NAMESPACE_NAME
+            ),
+            timestamp = createdAt,
+            type = NamespaceEventType.CREATED,
+            payload = createdPayload
+        )
+
+        service.handleEvents(listOf(created))
+
+        val ns = service.getNamespaceById(namespaceId)
+        assertNotNull(ns)
+        assertEquals(namespaceId, ns.namespaceId)
+        assertEquals("billing", ns.name)
+    }
+
+    @Test
+    fun `getNamespaceById returns null for non-existent namespace`() = runTest {
+        val nonExistentId = UUID.randomUUID()
+        assertNull(service.getNamespaceById(nonExistentId))
     }
 }
 

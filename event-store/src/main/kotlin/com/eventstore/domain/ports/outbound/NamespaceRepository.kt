@@ -6,7 +6,8 @@ import java.util.*
 interface NamespaceRepository {
     suspend fun save(namespace: Namespace)
     suspend fun findByName(tenantName: String, name: String): Namespace?
-    suspend fun findByResourceId(tenantResourceId: UUID, resourceId: UUID): Namespace?
+    suspend fun findById(tenantId: UUID, namespaceId: UUID): Namespace?
+    suspend fun findById(namespaceId: UUID): Namespace?
     suspend fun findAll(): List<Namespace>
 
     // Backward compatibility - deprecated

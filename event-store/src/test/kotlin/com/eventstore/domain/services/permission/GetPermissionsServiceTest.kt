@@ -65,7 +65,8 @@ class GetPermissionsServiceTest {
         val namespaceName = "test-namespace"
 
         // Create namespace
-        application.createNamespace(tenantName, namespaceName)
+        val tenant = application.getTenant(tenantName)!!
+        application.createNamespace(tenant.tenantId, namespaceName)
 
         // Grant permission
         application.grantPermission(
@@ -100,7 +101,8 @@ class GetPermissionsServiceTest {
         val topicName = "test-topic"
 
         // Create namespace and topic
-        application.createNamespace(tenantName, namespaceName)
+        val tenant = application.getTenant(tenantName)!!
+        application.createNamespace(tenant.tenantId, namespaceName)
         application.createTopic(
             name = topicName,
             schemas = emptyList(),
@@ -154,7 +156,8 @@ class GetPermissionsServiceTest {
         val namespaceName = "test-namespace"
 
         // Create namespace
-        application.createNamespace(tenantName, namespaceName)
+        val tenant = application.getTenant(tenantName)!!
+        application.createNamespace(tenant.tenantId, namespaceName)
 
         // Grant multiple permissions
         application.grantPermission(

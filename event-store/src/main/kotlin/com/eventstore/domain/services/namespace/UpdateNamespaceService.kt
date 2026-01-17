@@ -9,12 +9,11 @@ import com.eventstore.domain.services.BaseSystemService
 import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
-import com.eventstore.infrastructure.projections.TenantProjectionService
 import java.time.Instant
+import java.util.*
 
 data class UpdateNamespaceRequest(
-    val tenantName: String,
-    val namespaceName: String,
+    val namespaceId: UUID,
     val name: String? = null,
     val description: String? = null,
     val metadata: Map<String, Any>? = null,
@@ -22,19 +21,17 @@ data class UpdateNamespaceRequest(
 )
 
 class UpdateNamespaceService(
-    private val tenantProjectionService: TenantProjectionService,
     private val namespaceProjectionService: NamespaceProjectionService,
     config: Config,
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: UpdateNamespaceRequest): Namespace {
-        val existing = namespaceProjectionService.getNamespaceByName(request.tenantName, request.namespaceName)
-            ?: throw NamespaceNotFoundException(request.namespaceName)
+        val existing = namespaceProjectionService.getNamespaceById(request.namespaceId)
+            ?: throw NamespaceNotFoundException(request.namespaceId.toString())
 
         val now = Instant.now()
         val payload = NamespaceUpdatedEvent(
-            resourceId = existing.resourceId,
-            tenantResourceId = existing.tenantResourceId,
+            namespaceId = existing.namespaceId,
             name = request.name,
             description = request.description,
             updatedBy = request.updatedBy,

@@ -46,12 +46,10 @@ data class TenantCreatedEvent(
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): TenantCreatedEvent {
-            // Support both old format (without tenantId) and new format (with tenantId)
             val tenantId = (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
-                ?: UUID.randomUUID() // Generate UUID for backward compatibility
-            // Support old format with tenantId field for backward compatibility
-            val name = (payload["name"] as? String) ?: (payload["tenantId"] as? String)
-            ?: error("name is required")
+                ?: error("tenantId missing - cannot create tenant without stable identifier")
+            val name = payload["name"] as? String
+                ?: error("name is required")
             val createdBy = payload["createdBy"] as? String ?: "system"
             val createdAt = parseInstant(payload["createdAt"])
             val metadata = payload["metadata"] as? Map<String, Any> ?: emptyMap()
@@ -93,7 +91,6 @@ data class TenantUpdatedEvent(
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): TenantUpdatedEvent {
-            // Support both old format (without tenantId) and new format (with tenantId)
             val tenantId = (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
                 ?: error("tenantId missing - cannot update tenant without stable identifier")
             val name = payload["name"] as? String
@@ -134,7 +131,6 @@ data class TenantDeletedEvent(
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): TenantDeletedEvent {
-            // Support both old format (without tenantId) and new format (with tenantId)
             val tenantId = (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
                 ?: error("tenantId missing - cannot delete tenant without stable identifier")
             val deletedBy = payload["deletedBy"] as? String ?: "system"
@@ -185,4 +181,3 @@ private fun parseInstant(value: Any?): Instant {
     val text = value as? String ?: error("timestamp value is required")
     return Instant.parse(text)
 }
-

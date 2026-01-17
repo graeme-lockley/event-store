@@ -6,16 +6,16 @@ import java.util.*
 /**
  * Domain entity representing a namespace.
  * 
- * - resourceId: Stable UUID that never changes (used in permissions and references)
- * - tenantResourceId: Reference to tenant's stable resourceId
+ * - namespaceId: Stable UUID that never changes (used in permissions and references)
+ * - tenantId: Reference to tenant's stable tenantId
  * - tenantName: Human-readable tenant name (for URLs/display)
  * - name: Human-readable identifier used in URLs and for display (can be renamed with migration)
  */
 data class Namespace(
-    val resourceId: UUID,        // Stable GUID, never changes (used in permissions)
-    val tenantResourceId: UUID,   // Reference to tenant's resourceId (stable)
-    val tenantName: String,      // Human-readable tenant name (for URLs/display)
-    val name: String,            // Human-readable identifier (used in URLs and for display)
+    val namespaceId: UUID,        // Stable GUID, never changes (used in permissions)
+    val tenantId: UUID,           // Reference to tenant's tenantId (stable)
+    val tenantName: String,       // Human-readable tenant name (for URLs/display)
+    val name: String,             // Human-readable identifier (used in URLs and for display)
     val description: String? = null,
     val createdAt: Instant,
     val updatedAt: Instant? = null,

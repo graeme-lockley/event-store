@@ -20,8 +20,9 @@ class GetTopicsServiceTest {
     fun setup() = runTest {
         application = createApplication()
         // Create tenant and namespace
-        application.createTenant("default")
-        application.createNamespace("default", "default")
+        val tenant = application.createTenant("default")
+        val tenantId = tenant.tenantId
+        application.createNamespace(tenantId, "default")
     }
 
     @Test
@@ -69,10 +70,10 @@ class GetTopicsServiceTest {
         val namespace2 = "staging"
         val topicName = "events"
 
-        application.createTenant(tenant1)
-        application.createNamespace(tenant1, namespace1)
-        application.createTenant(tenant2)
-        application.createNamespace(tenant2, namespace2)
+        val t1 = application.createTenant(tenant1)
+        application.createNamespace(t1.tenantId, namespace1)
+        val t2 = application.createTenant(tenant2)
+        application.createNamespace(t2.tenantId, namespace2)
 
         application.createTopic(topicName, listOf(Schema(eventType = "event.created")), tenant1, namespace1)
         application.createTopic(topicName, listOf(Schema(eventType = "event.created")), tenant2, namespace2)
@@ -92,8 +93,8 @@ class GetTopicsServiceTest {
         val namespaceName = "production"
         val topicName = "order-events"
 
-        application.createTenant(tenantName)
-        application.createNamespace(tenantName, namespaceName)
+        val tenant = application.createTenant(tenantName)
+        application.createNamespace(tenant.tenantId, namespaceName)
         application.createTopic(topicName, listOf(Schema(eventType = "order.created")), tenantName, namespaceName)
 
         val result = application.getTopic(topicName, tenantName, namespaceName)

@@ -60,7 +60,7 @@ class AuthorizationMiddlewareIntegrationTest {
         )
 
         tenantProjectionService = TenantProjectionService(InMemoryTenantRepository())
-        namespaceProjectionService = NamespaceProjectionService(InMemoryNamespaceRepository())
+        namespaceProjectionService = NamespaceProjectionService(InMemoryNamespaceRepository(), tenantProjectionService)
         permissionProjectionService = PermissionProjectionService(InMemoryPermissionRepository())
         topicRepository = InMemoryTopicRepository()
 
@@ -273,12 +273,13 @@ class AuthorizationMiddlewareIntegrationTest {
                 timestamp = Instant.now(),
                 type = com.eventstore.domain.events.NamespaceEventType.CREATED,
                 payload = com.eventstore.domain.events.NamespaceCreatedEvent(
-                    resourceId = namespaceResourceId,
-                    tenantResourceId = testTenantResourceId,
-                    tenantName = testTenantName,
+                    namespaceId = namespaceResourceId,
+                    tenantId = testTenantResourceId,
                     name = testNamespaceName,
                     createdAt = Instant.now()
-                ).toPayload()
+                ).toPayload().toMutableMap().also {
+                    it["tenantName"] = testTenantName // Include for projection service
+                }
             )
             namespaceProjectionService.handleEvents(listOf(namespaceEvent))
 
@@ -814,12 +815,13 @@ class AuthorizationMiddlewareIntegrationTest {
                 timestamp = Instant.now(),
                 type = com.eventstore.domain.events.NamespaceEventType.CREATED,
                 payload = com.eventstore.domain.events.NamespaceCreatedEvent(
-                    resourceId = namespaceResourceId,
-                    tenantResourceId = testTenantResourceId,
-                    tenantName = testTenantName,
+                    namespaceId = namespaceResourceId,
+                    tenantId = testTenantResourceId,
                     name = testNamespaceName,
                     createdAt = Instant.now()
-                ).toPayload()
+                ).toPayload().toMutableMap().also {
+                    it["tenantName"] = testTenantName // Include for projection service
+                }
             )
             namespaceProjectionService.handleEvents(listOf(namespaceEvent))
 
@@ -963,12 +965,13 @@ class AuthorizationMiddlewareIntegrationTest {
                 timestamp = Instant.now(),
                 type = com.eventstore.domain.events.NamespaceEventType.CREATED,
                 payload = com.eventstore.domain.events.NamespaceCreatedEvent(
-                    resourceId = namespaceResourceId,
-                    tenantResourceId = testTenantResourceId,
-                    tenantName = testTenantName,
+                    namespaceId = namespaceResourceId,
+                    tenantId = testTenantResourceId,
                     name = testNamespaceName,
                     createdAt = Instant.now()
-                ).toPayload()
+                ).toPayload().toMutableMap().also {
+                    it["tenantName"] = testTenantName // Include for projection service
+                }
             )
             namespaceProjectionService.handleEvents(listOf(namespaceEvent))
 
@@ -1065,12 +1068,13 @@ class AuthorizationMiddlewareIntegrationTest {
                 timestamp = Instant.now(),
                 type = com.eventstore.domain.events.NamespaceEventType.CREATED,
                 payload = com.eventstore.domain.events.NamespaceCreatedEvent(
-                    resourceId = namespaceResourceId,
-                    tenantResourceId = testTenantResourceId,
-                    tenantName = testTenantName,
+                    namespaceId = namespaceResourceId,
+                    tenantId = testTenantResourceId,
                     name = testNamespaceName,
                     createdAt = Instant.now()
-                ).toPayload()
+                ).toPayload().toMutableMap().also {
+                    it["tenantName"] = testTenantName // Include for projection service
+                }
             )
             namespaceProjectionService.handleEvents(listOf(namespaceEvent))
 
