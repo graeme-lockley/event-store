@@ -94,5 +94,17 @@ class EventStoreTestHelper(
      * Checks if the event-store instance is currently running.
      */
     fun isRunning(): Boolean = server != null
+    
+    /**
+     * Gets the email for the bootstrapped admin user.
+     * Defaults to "admin@system" unless SYSTEM_ADMIN_EMAIL environment variable is set.
+     */
+    fun getAdminEmail(): String = System.getenv("SYSTEM_ADMIN_EMAIL") ?: "admin@system"
+    
+    /**
+     * Gets the password for the bootstrapped admin user.
+     * Defaults to "admin123" unless SYSTEM_ADMIN_PASSWORD environment variable is set.
+     */
+    fun getAdminPassword(): String = System.getenv("SYSTEM_ADMIN_PASSWORD") ?: "admin123"
 }
 
