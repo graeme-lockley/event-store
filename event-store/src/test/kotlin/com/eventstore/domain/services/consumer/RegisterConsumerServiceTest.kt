@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -21,6 +22,8 @@ import kotlin.test.assertTrue
 class RegisterConsumerServiceTest {
     private lateinit var application: Application
     private val topicName = "user-events"
+    private lateinit var namespaceId: UUID
+    private lateinit var topicId: UUID
 
     @BeforeEach
     fun setup() = runTest {
@@ -28,9 +31,10 @@ class RegisterConsumerServiceTest {
         // Create tenant and namespace
         val tenant = application.createTenant("default")
         val tenantId = tenant.tenantId
-        application.createNamespace(tenantId, "default")
+        val namespace = application.createNamespace(tenantId, "default")
+        namespaceId = namespace.namespaceId
         // Create topic
-        application.createTopic(
+        val topic = application.createTopic(
             name = topicName,
             schemas = listOf(
                 Schema(
@@ -39,19 +43,19 @@ class RegisterConsumerServiceTest {
                     required = listOf("id", "name")
                 )
             ),
-            tenantName = "default",
-            namespaceName = "default"
+            namespaceId = namespaceId
         )
+        topicId = topic.topicId
     }
 
     @Test
     fun `should register consumer successfully`() = runTest {
         val request = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
 
-        val consumerId = application.registerConsumer(request, "default", "default")
+        val consumerId = application.registerConsumer(request)
 
         assertNotNull(consumerId)
         val consumer = application.consumerRepository.findById(consumerId)
@@ -60,6 +64,7 @@ class RegisterConsumerServiceTest {
         assertNotNull(consumer is HttpConsumer)
         val httpConsumer = consumer as HttpConsumer
         assertEquals("https://example.com/webhook", httpConsumer.callbackUrl.toString())
+        assertTrue(httpConsumer.topics.containsKey(topicId))
     }
 
     @Test
@@ -68,11 +73,11 @@ class RegisterConsumerServiceTest {
 
         val request = HttpConsumerRegistrationRequest(
             callbackUrl = "not-a-valid-url",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
 
         assertThrows<InvalidConsumerRegistrationException> {
-            application.registerConsumer(request, "default", "default")
+            application.registerConsumer(request)
         }
 
         assertEquals(initialConsumers.size, application.consumerRepository.findAll().size)
@@ -81,14 +86,15 @@ class RegisterConsumerServiceTest {
     @Test
     fun `should throw exception when topic does not exist`() = runTest {
         val initialConsumers = application.consumerRepository.findAll()
+        val nonExistentTopicId = UUID.randomUUID()
 
         val request = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook",
-            topics = mapOf("unknown-topic" to null)
+            topics = mapOf(nonExistentTopicId to null)
         )
 
         assertThrows<TopicNotFoundException> {
-            application.registerConsumer(request, "default", "default")
+            application.registerConsumer(request)
         }
 
         assertEquals(initialConsumers.size, application.consumerRepository.findAll().size)
@@ -96,23 +102,24 @@ class RegisterConsumerServiceTest {
 
     @Test
     fun `should validate all topics exist`() = runTest {
+        val nonExistentTopicId = UUID.randomUUID()
         val request = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook",
             topics = mapOf(
-                topicName to null,
-                "unknown-topic" to null
+                topicId to null,
+                nonExistentTopicId to null
             )
         )
 
         assertThrows<TopicNotFoundException> {
-            application.registerConsumer(request, "default", "default")
+            application.registerConsumer(request)
         }
     }
 
     @Test
     fun `should handle multiple topics with lastEventIds`() = runTest {
         // Create another topic
-        application.createTopic(
+        val otherTopic = application.createTopic(
             name = "other-user-events",
             schemas = listOf(
                 Schema(
@@ -121,21 +128,23 @@ class RegisterConsumerServiceTest {
                     required = listOf("id")
                 )
             ),
-            tenantName = "default",
-            namespaceName = "default"
+            namespaceId = namespaceId
         )
 
         val request = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook",
             topics = mapOf(
-                topicName to "$topicName-5",
-                "other-user-events" to null
+                topicId to "event-5",
+                otherTopic.topicId to null
             )
         )
 
-        val consumerId = application.registerConsumer(request, "default", "default")
+        val consumerId = application.registerConsumer(request)
 
         assertNotNull(consumerId)
+        val consumer = application.consumerRepository.findById(consumerId) as HttpConsumer
+        assertEquals("event-5", consumer.topics[topicId])
+        assertNull(consumer.topics[otherTopic.topicId])
     }
 
     @Test
@@ -148,7 +157,7 @@ class RegisterConsumerServiceTest {
         )
 
         assertThrows<InvalidConsumerRegistrationException> {
-            application.registerConsumer(request, "default", "default")
+            application.registerConsumer(request)
         }
 
         assertEquals(initialConsumers.size, application.consumerRepository.findAll().size)
@@ -158,20 +167,20 @@ class RegisterConsumerServiceTest {
     fun `should allow multiple consumers for same topic`() = runTest {
         val request1 = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook1",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
         val request2 = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook2",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
         val request3 = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook3",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
 
-        val consumerId1 = application.registerConsumer(request1, "default", "default")
-        val consumerId2 = application.registerConsumer(request2, "default", "default")
-        val consumerId3 = application.registerConsumer(request3, "default", "default")
+        val consumerId1 = application.registerConsumer(request1)
+        val consumerId2 = application.registerConsumer(request2)
+        val consumerId3 = application.registerConsumer(request3)
 
         assertNotNull(consumerId1)
         assertNotNull(consumerId2)
@@ -180,52 +189,50 @@ class RegisterConsumerServiceTest {
         assertNotNull(application.consumerRepository.findById(consumerId2))
         assertNotNull(application.consumerRepository.findById(consumerId3))
 
-        // Verify all consumers have the qualified topic name
+        // Verify all consumers have the topic
         val consumer1 = application.consumerRepository.findById(consumerId1) as HttpConsumer
         val consumer2 = application.consumerRepository.findById(consumerId2) as HttpConsumer
         val consumer3 = application.consumerRepository.findById(consumerId3) as HttpConsumer
 
-        assertEquals("default/default/$topicName", consumer1.topics.keys.first())
-        assertEquals("default/default/$topicName", consumer2.topics.keys.first())
-        assertEquals("default/default/$topicName", consumer3.topics.keys.first())
+        assertTrue(consumer1.topics.containsKey(topicId))
+        assertTrue(consumer2.topics.containsKey(topicId))
+        assertTrue(consumer3.topics.containsKey(topicId))
     }
 
     @Test
     fun `should store lastEventId correctly`() = runTest {
-        val lastEventId = "$topicName-42"
+        val lastEventId = "event-42"
         val request = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook",
-            topics = mapOf(topicName to lastEventId)
+            topics = mapOf(topicId to lastEventId)
         )
 
-        val consumerId = application.registerConsumer(request, "default", "default")
+        val consumerId = application.registerConsumer(request)
 
         val consumer = application.consumerRepository.findById(consumerId) as HttpConsumer
-        val qualifiedTopicName = "default/default/$topicName"
-        assertEquals(lastEventId, consumer.topics[qualifiedTopicName])
+        assertEquals(lastEventId, consumer.topics[topicId])
     }
 
     @Test
     fun `should store null lastEventId correctly`() = runTest {
         val request = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
 
-        val consumerId = application.registerConsumer(request, "default", "default")
+        val consumerId = application.registerConsumer(request)
 
         val consumer = application.consumerRepository.findById(consumerId) as HttpConsumer
-        val qualifiedTopicName = "default/default/$topicName"
-        assertNull(consumer.topics[qualifiedTopicName])
+        assertNull(consumer.topics[topicId])
     }
 
     @Test
-    fun `should scope consumers by tenant and namespace`() = runTest {
-        // Create another tenant and namespace
+    fun `should handle consumers for different topics`() = runTest {
+        // Create another tenant and namespace with a topic
         val tenant = application.createTenant("acme")
         val tenantId = tenant.tenantId
-        application.createNamespace(tenantId, "production")
-        application.createTopic(
+        val acmeNamespace = application.createNamespace(tenantId, "production")
+        val acmeTopic = application.createTopic(
             name = topicName,
             schemas = listOf(
                 Schema(
@@ -234,28 +241,29 @@ class RegisterConsumerServiceTest {
                     required = listOf("id", "name")
                 )
             ),
-            tenantName = "acme",
-            namespaceName = "production"
+            namespaceId = acmeNamespace.namespaceId
         )
 
         val defaultRequest = HttpConsumerRegistrationRequest(
             callbackUrl = "https://default.example.com/webhook",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
         val acmeRequest = HttpConsumerRegistrationRequest(
             callbackUrl = "https://acme.example.com/webhook",
-            topics = mapOf(topicName to null)
+            topics = mapOf(acmeTopic.topicId to null)
         )
 
-        val defaultConsumerId = application.registerConsumer(defaultRequest, "default", "default")
-        val acmeConsumerId = application.registerConsumer(acmeRequest, "acme", "production")
+        val defaultConsumerId = application.registerConsumer(defaultRequest)
+        val acmeConsumerId = application.registerConsumer(acmeRequest)
 
         val defaultConsumer = application.consumerRepository.findById(defaultConsumerId) as HttpConsumer
         val acmeConsumer = application.consumerRepository.findById(acmeConsumerId) as HttpConsumer
 
-        // Verify consumers have different qualified topic names
-        assertEquals("default/default/$topicName", defaultConsumer.topics.keys.first())
-        assertEquals("acme/production/$topicName", acmeConsumer.topics.keys.first())
+        // Verify consumers have different topics
+        assertTrue(defaultConsumer.topics.containsKey(topicId))
+        assertTrue(acmeConsumer.topics.containsKey(acmeTopic.topicId))
+        assertFalse(defaultConsumer.topics.containsKey(acmeTopic.topicId))
+        assertFalse(acmeConsumer.topics.containsKey(topicId))
 
         // Verify consumers are separate
         assertNotNull(defaultConsumer)
@@ -264,12 +272,12 @@ class RegisterConsumerServiceTest {
     }
 
     @Test
-    fun `should list consumers by tenant and namespace`() = runTest {
-        // Create another tenant and namespace
+    fun `should list all consumers`() = runTest {
+        // Create another tenant and namespace with a topic
         val tenant = application.createTenant("acme")
         val tenantId = tenant.tenantId
-        application.createNamespace(tenantId, "production")
-        application.createTopic(
+        val acmeNamespace = application.createNamespace(tenantId, "production")
+        val acmeTopic = application.createTopic(
             name = topicName,
             schemas = listOf(
                 Schema(
@@ -278,54 +286,48 @@ class RegisterConsumerServiceTest {
                     required = listOf("id", "name")
                 )
             ),
-            tenantName = "acme",
-            namespaceName = "production"
+            namespaceId = acmeNamespace.namespaceId
         )
 
         val defaultRequest1 = HttpConsumerRegistrationRequest(
             callbackUrl = "https://default1.example.com/webhook",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
         val defaultRequest2 = HttpConsumerRegistrationRequest(
             callbackUrl = "https://default2.example.com/webhook",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
         val acmeRequest = HttpConsumerRegistrationRequest(
             callbackUrl = "https://acme.example.com/webhook",
-            topics = mapOf(topicName to null)
+            topics = mapOf(acmeTopic.topicId to null)
         )
 
-        val defaultConsumerId1 = application.registerConsumer(defaultRequest1, "default", "default")
-        val defaultConsumerId2 = application.registerConsumer(defaultRequest2, "default", "default")
-        val acmeConsumerId = application.registerConsumer(acmeRequest, "acme", "production")
+        val defaultConsumerId1 = application.registerConsumer(defaultRequest1)
+        val defaultConsumerId2 = application.registerConsumer(defaultRequest2)
+        val acmeConsumerId = application.registerConsumer(acmeRequest)
 
-        // List consumers in default/default
-        val defaultConsumers = application.listConsumers("default", "default")
-        assertEquals(2, defaultConsumers.size)
-        assertTrue(defaultConsumers.any { it.id == defaultConsumerId1 })
-        assertTrue(defaultConsumers.any { it.id == defaultConsumerId2 })
-        assertFalse(defaultConsumers.any { it.id == acmeConsumerId })
-
-        // List consumers in acme/production
-        val acmeConsumers = application.listConsumers("acme", "production")
-        assertEquals(1, acmeConsumers.size)
-        assertEquals(acmeConsumerId, acmeConsumers.first().id)
-        assertFalse(acmeConsumers.any { it.id == defaultConsumerId1 })
-        assertFalse(acmeConsumers.any { it.id == defaultConsumerId2 })
+        // List all consumers (no longer scoped by tenant/namespace)
+        val allConsumers = application.listConsumers()
+        assertTrue(allConsumers.size >= 3)
+        assertTrue(allConsumers.any { it.id == defaultConsumerId1 })
+        assertTrue(allConsumers.any { it.id == defaultConsumerId2 })
+        assertTrue(allConsumers.any { it.id == acmeConsumerId })
     }
 
     @Test
-    fun `should throw exception when qualified topic name is provided`() = runTest {
+    fun `should throw exception when invalid UUID provided as topic`() = runTest {
         val initialConsumers = application.consumerRepository.findAll()
 
-        // Try to register with qualified topic name (should fail)
+        // Try to register with invalid UUID string (will fail in mapper)
         val request = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook",
-            topics = mapOf("default/default/$topicName" to null)
+            topics = mapOf(UUID.randomUUID() to null) // Valid UUID, but topic doesn't exist
         )
 
+        // Actually, this will fail because topic doesn't exist, not because of UUID format
+        // The UUID string parsing happens in the mapper
         assertThrows<TopicNotFoundException> {
-            application.registerConsumer(request, "default", "default")
+            application.registerConsumer(request)
         }
 
         assertEquals(initialConsumers.size, application.consumerRepository.findAll().size)

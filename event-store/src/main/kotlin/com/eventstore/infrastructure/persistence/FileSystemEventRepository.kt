@@ -36,25 +36,12 @@ class FileSystemEventRepository(
         }
     }
 
-    private fun resolveBaseDir(
-        topic: String,
-        tenantId: String?,
-        namespaceId: String?
-    ): Path =
-        if (tenantId != null && namespaceId != null) {
-            dataDir.resolve(tenantId).resolve(namespaceId).resolve(topic)
-        } else {
-            dataDir.resolve(topic)
-        }
-
-    private fun resolveBaseDir(
-        topic: String,
-        eventId: EventId?
-    ): Path =
-        resolveBaseDir(topic, eventId?.tenantId, eventId?.namespaceId)
+    private fun resolveBaseDir(topicId: UUID): Path {
+        return dataDir.resolve(topicId.toString())
+    }
 
     private fun getEventFilePath(
-        topic: String,
+        topicId: UUID,
         eventId: EventId
     ): Path {
         val sequence = eventId.sequence
@@ -70,7 +57,7 @@ class FileSystemEventRepository(
         // Use sequence number as filename to avoid issues with EventId.value containing slashes
         // The full EventId.value is stored in the JSON content
         val fileName = "$sequence.json"
-        return resolveBaseDir(topic, eventId)
+        return resolveBaseDir(topicId)
             .resolve(group1)
             .resolve(group2)
             .resolve(group3)
@@ -78,7 +65,7 @@ class FileSystemEventRepository(
     }
 
     override suspend fun storeEvent(
-        topic: String,
+        topicId: UUID,
         type: String,
         payload: Map<String, Any>,
         eventId: EventId,
@@ -87,7 +74,7 @@ class FileSystemEventRepository(
         return withContext(Dispatchers.IO) {
             try {
                 val event = Event(eventId, timestamp, type, payload)
-                val filePath = getEventFilePath(topic, eventId)
+                val filePath = getEventFilePath(topicId, eventId)
 
                 Files.createDirectories(filePath.parent)
 
@@ -104,7 +91,7 @@ class FileSystemEventRepository(
             } catch (e: EventStorageException) {
                 throw e
             } catch (e: Exception) {
-                throw EventStorageException("Failed to store event ${eventId.value} for topic $topic", e)
+                throw EventStorageException("Failed to store event ${eventId.value} for topic $topicId", e)
             }
         }
     }
@@ -112,7 +99,6 @@ class FileSystemEventRepository(
     override suspend fun storeEvent(event: Event): Event {
         return withContext(Dispatchers.IO) {
             try {
-                // Use event.id.topicId for the topic parameter, and event.id for tenant/namespace extraction
                 val filePath = getEventFilePath(event.id.topicId, event.id)
 
                 Files.createDirectories(filePath.parent)
@@ -184,12 +170,12 @@ class FileSystemEventRepository(
     }
 
     override suspend fun getEvent(
-        topic: String,
+        topicId: UUID,
         eventId: EventId
     ): Event? {
         return withContext(Dispatchers.IO) {
             try {
-                val filePath = getEventFilePath(topic, eventId)
+                val filePath = getEventFilePath(topicId, eventId)
 
                 if (!Files.exists(filePath)) {
                     return@withContext null
@@ -211,19 +197,13 @@ class FileSystemEventRepository(
     }
 
     override suspend fun getEvents(
-        topic: String,
+        topicId: UUID,
         sinceEventId: EventId?,
         date: String?,
-        limit: Int?,
-        tenantId: String?,
-        namespaceId: String?
+        limit: Int?
     ): List<Event> {
         return withContext(Dispatchers.IO) {
-            val topicDir =
-                if (sinceEventId == null)
-                    resolveBaseDir(topic, tenantId, namespaceId)
-                else
-                    resolveBaseDir(topic, sinceEventId)
+            val topicDir = resolveBaseDir(topicId)
 
             if (!Files.exists(topicDir)) {
                 return@withContext emptyList()
@@ -294,12 +274,9 @@ class FileSystemEventRepository(
                                                                 val eventFile: EventFile = objectMapper.readValue(json)
                                                                 val parsedEventId = EventId.fromString(eventFile.id)
                                                                 
-                                                                // Verify the EventId matches the expected topic and tenant/namespace
+                                                                // Verify the EventId matches the expected topicId
                                                                 // This ensures we only return events that belong to the queried topic
-                                                                if (parsedEventId.topicId != topic ||
-                                                                    (tenantId != null && parsedEventId.tenantId != tenantId) ||
-                                                                    (namespaceId != null && parsedEventId.namespaceId != namespaceId)
-                                                                ) {
+                                                                if (parsedEventId.topicId != topicId) {
                                                                     return@fileLoop
                                                                 }
                                                                 
@@ -367,19 +344,19 @@ class FileSystemEventRepository(
     }
 
     override suspend fun getLatestEventId(
-        topic: String,
-        tenantId: String?,
-        namespaceId: String?
+        topicId: UUID
     ): EventId? {
-        val events = getEvents(topic, tenantId = tenantId, namespaceId = namespaceId)
+        val events = getEvents(topicId)
         return events.lastOrNull()?.id
     }
 
     private fun compareEventIds(id1: EventId, id2: EventId): Int {
-        if (id1.topicId != id2.topicId) {
-            return id1.topicId.compareTo(id2.topicId)
+        val topicComparison = id1.topicId.compareTo(id2.topicId)
+        return if (topicComparison != 0) {
+            topicComparison
+        } else {
+            id1.sequence.compareTo(id2.sequence)
         }
-        return id1.sequence.compareTo(id2.sequence)
     }
 }
  

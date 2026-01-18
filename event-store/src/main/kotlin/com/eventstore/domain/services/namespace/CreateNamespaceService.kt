@@ -68,7 +68,7 @@ class CreateNamespaceService(
         eventPayload["tenantName"] = tenant.name // Include tenantName for projection service
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.NAMESPACES_TOPIC_NAME,
+            topicId = SystemTopics.NAMESPACES_TOPIC_ID,
             eventType = NamespaceEventType.CREATED,
             payload = eventPayload,
             timestamp = now

@@ -33,10 +33,8 @@ class TenantProjectionServiceTest {
         val createdAt = Instant.now()
         val createdEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC_NAME,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.TENANTS_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = createdAt,
             type = TenantEventType.CREATED,
@@ -51,10 +49,8 @@ class TenantProjectionServiceTest {
         val updatedAt = createdAt.plusSeconds(60)
         val updatedEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC_NAME,
-                sequence = 2,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.TENANTS_TOPIC_ID,
+                sequence = 2
             ),
             timestamp = updatedAt,
             type = TenantEventType.UPDATED,
@@ -83,10 +79,8 @@ class TenantProjectionServiceTest {
         val createdAt = Instant.now()
         val createdEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC_NAME,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.TENANTS_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = createdAt,
             type = TenantEventType.CREATED,
@@ -101,10 +95,8 @@ class TenantProjectionServiceTest {
         val deletedAt = createdAt.plusSeconds(30)
         val deletedEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.TENANTS_TOPIC_NAME,
-                sequence = 2,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.TENANTS_TOPIC_ID,
+                sequence = 2
             ),
             timestamp = deletedAt,
             type = TenantEventType.DELETED,

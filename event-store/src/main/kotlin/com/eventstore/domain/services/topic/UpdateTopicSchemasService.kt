@@ -5,16 +5,15 @@ import com.eventstore.domain.Topic
 import com.eventstore.domain.exceptions.TopicNotFoundException
 import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
+import java.util.*
 
 class UpdateTopicSchemasService(
     private val topicRepository: TopicRepository,
     private val schemaValidator: SchemaValidator
 ) {
     suspend fun execute(
-        topicName: String,
-        newSchemas: List<Schema>,
-        tenantName: String = "default",
-        namespaceName: String = "default"
+        topicId: UUID,
+        newSchemas: List<Schema>
     ): Topic {
         Schema.unique(newSchemas)
 
@@ -29,8 +28,8 @@ class UpdateTopicSchemasService(
         }
 
         // Load current topic
-        val currentTopic = topicRepository.getTopic(topicName, tenantName, namespaceName)
-            ?: throw TopicNotFoundException(topicName)
+        val currentTopic = topicRepository.getTopic(topicId)
+            ?: throw TopicNotFoundException(topicId.toString())
 
         // Extract existing eventTypes
         val existingTypes = currentTopic.schemas.map { it.eventType }.toSet()
@@ -45,10 +44,10 @@ class UpdateTopicSchemasService(
         }
 
         // Update schemas
-        val updatedTopic = topicRepository.updateSchemas(topicName, newSchemas, tenantName, namespaceName)
+        val updatedTopic = topicRepository.updateSchemas(topicId, newSchemas)
 
         // Re-register schemas with validator
-        schemaValidator.registerSchemas(topicName, newSchemas)
+        schemaValidator.registerSchemas(topicId, newSchemas)
 
         return updatedTopic
     }

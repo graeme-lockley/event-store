@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -15,6 +16,8 @@ import kotlin.test.assertTrue
 class GetHealthStatusServiceTest {
     private lateinit var application: Application
     private val topicName = "user-events"
+    private lateinit var namespaceId: UUID
+    private lateinit var topicId: UUID
 
     @BeforeEach
     fun setup() = runTest {
@@ -22,9 +25,10 @@ class GetHealthStatusServiceTest {
         // Create tenant and namespace
         val tenant = application.createTenant("default")
         val tenantId = tenant.tenantId
-        application.createNamespace(tenantId, "default")
+        val namespace = application.createNamespace(tenantId, "default")
+        namespaceId = namespace.namespaceId
         // Create topic
-        application.createTopic(
+        val topic = application.createTopic(
             name = topicName,
             schemas = listOf(
                 Schema(
@@ -33,9 +37,9 @@ class GetHealthStatusServiceTest {
                     required = listOf("id", "name")
                 )
             ),
-            tenantName = "default",
-            namespaceName = "default"
+            namespaceId = namespaceId
         )
+        topicId = topic.topicId
     }
 
     private suspend fun getInitialConsumerCount(): Int {
@@ -48,30 +52,28 @@ class GetHealthStatusServiceTest {
 
         val request1 = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook1",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
         val request2 = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook2",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
         val request3 = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook3",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
 
-        application.registerConsumer(request1, "default", "default")
-        application.registerConsumer(request2, "default", "default")
-        application.registerConsumer(request3, "default", "default")
+        application.registerConsumer(request1)
+        application.registerConsumer(request2)
+        application.registerConsumer(request3)
 
         // Publish an event to trigger dispatcher processing
         application.publishEvents(
             listOf(
                 com.eventstore.domain.services.event.EventRequest(
-                    topic = topicName,
+                    topicId = topicId,
                     type = "user.created",
-                    payload = mapOf("id" to "1", "name" to "Alice"),
-                    "default",
-                    "default"
+                    payload = mapOf("id" to "1", "name" to "Alice")
                 )
             )
         )
@@ -102,16 +104,16 @@ class GetHealthStatusServiceTest {
         // Create a consumer - this triggers ensureDispatchersRunning which adds to processedTopics
         val request = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
 
-        application.registerConsumer(request, "default", "default")
+        application.registerConsumer(request)
 
         val result = application.getHealthStatus()
 
         assertEquals("healthy", result.status)
         assertEquals(initialConsumerCount + 1, result.consumers)
         // Registering a consumer triggers ensureDispatchersRunning, so dispatcher is tracked
-        assertTrue(result.runningDispatchers.contains("default/default/$topicName"))
+        assertTrue(result.runningDispatchers.contains(topicId.toString()))
     }
 }

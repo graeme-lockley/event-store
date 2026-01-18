@@ -2,6 +2,7 @@ package com.eventstore.domain.services.tenant
 
 import com.eventstore.domain.Application
 import com.eventstore.domain.Quota
+import com.eventstore.domain.Schema
 import com.eventstore.domain.events.TenantEventType
 import com.eventstore.domain.events.TenantUpdatedEvent
 import com.eventstore.domain.exceptions.CannotUpdateDeletedTenantException
@@ -396,10 +397,10 @@ class UpdateTenantServiceTest {
         val tenant = application.createTenant("quota-test", quota = Quota(maxTopics = 10))
         
         // Create some topics to exceed the reduced quota
-        application.createNamespace(tenant.tenantId, "ns1")
-        application.createTopic("topic1", emptyList(), tenant.name, "ns1")
-        application.createTopic("topic2", emptyList(), tenant.name, "ns1")
-        application.createTopic("topic3", emptyList(), tenant.name, "ns1")
+        val namespace = application.createNamespace(tenant.tenantId, "ns1")
+        application.createTopic("topic1", listOf(Schema(eventType = "test.event")), namespace.namespaceId)
+        application.createTopic("topic2", listOf(Schema(eventType = "test.event")), namespace.namespaceId)
+        application.createTopic("topic3", listOf(Schema(eventType = "test.event")), namespace.namespaceId)
 
         // Try to reduce quota to 2 when 3 topics exist
         assertFailsWith<QuotaExceededException> {
@@ -426,33 +427,27 @@ class UpdateTenantServiceTest {
     fun `throws when reducing quota below current consumers usage`() = runTest {
         val tenant = application.createTenant("quota-test", quota = Quota(maxConsumers = 10))
         
-        application.createNamespace(tenant.tenantId, "ns1")
-        application.createTopic("topic1", emptyList(), tenant.name, "ns1")
+        val namespace = application.createNamespace(tenant.tenantId, "ns1")
+        val topic = application.createTopic("topic1", listOf(Schema(eventType = "test.event")), namespace.namespaceId)
         
         // Create some consumers
         application.registerConsumer(
             HttpConsumerRegistrationRequest(
                 callbackUrl = "http://localhost:8080/callback1",
-                topics = mapOf("topic1" to null)
-            ),
-            tenant.name,
-            "ns1"
+                topics = mapOf(topic.topicId to null)
+            )
         )
         application.registerConsumer(
             HttpConsumerRegistrationRequest(
                 callbackUrl = "http://localhost:8080/callback2",
-                topics = mapOf("topic1" to null)
-            ),
-            tenant.name,
-            "ns1"
+                topics = mapOf(topic.topicId to null)
+            )
         )
         application.registerConsumer(
             HttpConsumerRegistrationRequest(
                 callbackUrl = "http://localhost:8080/callback3",
-                topics = mapOf("topic1" to null)
-            ),
-            tenant.name,
-            "ns1"
+                topics = mapOf(topic.topicId to null)
+            )
         )
 
         // Try to reduce quota to 2 when 3 consumers exist
@@ -493,11 +488,11 @@ class UpdateTenantServiceTest {
     fun `allows increasing quota even when current usage is high`() = runTest {
         val tenant = application.createTenant("quota-test", quota = Quota(maxTopics = 5))
         
-        application.createNamespace(tenant.tenantId, "ns1")
-        application.createTopic("topic1", emptyList(), tenant.name, "ns1")
-        application.createTopic("topic2", emptyList(), tenant.name, "ns1")
-        application.createTopic("topic3", emptyList(), tenant.name, "ns1")
-        application.createTopic("topic4", emptyList(), tenant.name, "ns1")
+        val namespace = application.createNamespace(tenant.tenantId, "ns1")
+        application.createTopic("topic1", listOf(Schema(eventType = "test.event")), namespace.namespaceId)
+        application.createTopic("topic2", listOf(Schema(eventType = "test.event")), namespace.namespaceId)
+        application.createTopic("topic3", listOf(Schema(eventType = "test.event")), namespace.namespaceId)
+        application.createTopic("topic4", listOf(Schema(eventType = "test.event")), namespace.namespaceId)
 
         // Increasing quota should be allowed even when at limit
         val updated = application.updateTenant(tenant.tenantId, quota = Quota(maxTopics = 100))
@@ -508,9 +503,9 @@ class UpdateTenantServiceTest {
     fun `allows quota reduction when current usage is within new limit`() = runTest {
         val tenant = application.createTenant("quota-test", quota = Quota(maxTopics = 10))
         
-        application.createNamespace(tenant.tenantId, "ns1")
-        application.createTopic("topic1", emptyList(), tenant.name, "ns1")
-        application.createTopic("topic2", emptyList(), tenant.name, "ns1")
+        val namespace = application.createNamespace(tenant.tenantId, "ns1")
+        application.createTopic("topic1", listOf(Schema(eventType = "test.event")), namespace.namespaceId)
+        application.createTopic("topic2", listOf(Schema(eventType = "test.event")), namespace.namespaceId)
 
         // Reducing quota to 3 when only 2 topics exist should be allowed
         val updated = application.updateTenant(tenant.tenantId, quota = Quota(maxTopics = 3))
@@ -525,8 +520,8 @@ class UpdateTenantServiceTest {
             quota = originalQuota
         )
         
-        application.createNamespace(tenant.tenantId, "ns1")
-        application.createTopic("topic1", emptyList(), tenant.name, "ns1")
+        val namespace = application.createNamespace(tenant.tenantId, "ns1")
+        application.createTopic("topic1", listOf(Schema(eventType = "test.event")), namespace.namespaceId)
 
         // Update with full quota, reducing only maxNamespaces
         val newQuota = Quota(maxTopics = 10, maxNamespaces = 3, maxConsumers = 3, maxUsers = 2)
@@ -540,9 +535,7 @@ class UpdateTenantServiceTest {
 
     private suspend fun getEvents(): List<com.eventstore.domain.Event> =
         application.eventRepository.getEvents(
-            SystemTopics.TENANTS_TOPIC_NAME,
-            tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+            topicId = SystemTopics.TENANTS_TOPIC_ID
         )
 }
 

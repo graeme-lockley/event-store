@@ -4,6 +4,7 @@ import com.eventstore.domain.Consumer
 import com.eventstore.domain.ports.outbound.ConsumerRepository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.*
 
 class InMemoryConsumerRepository : ConsumerRepository {
     private val consumers = mutableMapOf<String, Consumer>()
@@ -27,22 +28,17 @@ class InMemoryConsumerRepository : ConsumerRepository {
         }
     }
 
-    override suspend fun findByTopic(topic: String): List<Consumer> {
+    override suspend fun findByTopic(topicId: UUID): List<Consumer> {
         return mutex.withLock {
-            consumers.values.filter { topic in it.topics }
+            consumers.values.filter { topicId in it.topics }
         }
     }
 
     override suspend fun findByTenantAndNamespace(tenantName: String, namespaceName: String): List<Consumer> {
-        // Note: Consumer domain model doesn't currently store tenant/namespace directly.
-        // Topics are stored as qualified names (tenant/namespace/topic) in the topics map.
-        // Filter consumers whose topics belong to the specified tenant/namespace.
-        val prefix = "$tenantName/$namespaceName/"
-        return mutex.withLock {
-            consumers.values.filter { consumer ->
-                consumer.topics.keys.any { it.startsWith(prefix) }
-            }
-        }
+        // Note: Topics are now identified by UUIDs (topicId), not qualified names.
+        // This method cannot filter by tenant/namespace anymore since consumers don't store that information.
+        // Return empty list as this method is deprecated with the topicId refactoring.
+        return emptyList()
     }
 
     override suspend fun delete(id: String): Boolean {

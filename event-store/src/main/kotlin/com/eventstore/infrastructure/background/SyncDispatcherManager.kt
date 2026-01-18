@@ -6,6 +6,7 @@ import com.eventstore.domain.ports.outbound.ConsumerRepository
 import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.EventRepository
 import org.slf4j.LoggerFactory
+import java.util.*
 
 /**
  * Synchronous event dispatcher for use in tests.
@@ -17,33 +18,33 @@ class SyncDispatcherManager(
     private val eventRepository: EventRepository
 ) : EventDispatcher {
     private val logger = LoggerFactory.getLogger(SyncDispatcherManager::class.java)
-    private val processedTopics = mutableSetOf<String>()
+    private val processedTopics = mutableSetOf<UUID>()
 
-    suspend fun getRunningDispatchers(): List<String> {
-        // For synchronous dispatcher, return topics that have been processed
+    suspend fun getRunningDispatchers(): List<UUID> {
+        // For synchronous dispatcher, return topic IDs that have been processed
         // This is a simplified implementation for tests
         return processedTopics.toList()
     }
 
-    override suspend fun notifyEventPublished(topic: String) {
-        processEventsForTopic(topic)
-        processedTopics.add(topic)
+    override suspend fun notifyEventPublished(topicId: UUID) {
+        processEventsForTopic(topicId)
+        processedTopics.add(topicId)
     }
 
-    override suspend fun notifyEventsPublished(topics: Set<String>) {
+    override suspend fun notifyEventsPublished(topicIds: Set<UUID>) {
         // Process events synchronously for each topic, one after another
-        for (topic in topics) {
-            processEventsForTopic(topic)
-            processedTopics.add(topic)
+        for (topicId in topicIds) {
+            processEventsForTopic(topicId)
+            processedTopics.add(topicId)
         }
     }
 
-    override suspend fun ensureDispatchersRunning(topics: Set<String>) {
+    override suspend fun ensureDispatchersRunning(topicIds: Set<UUID>) {
         // For synchronous dispatcher, we just process events immediately
         // No need to track running state or start background jobs
-        for (topic in topics) {
-            processEventsForTopic(topic)
-            processedTopics.add(topic)
+        for (topicId in topicIds) {
+            processEventsForTopic(topicId)
+            processedTopics.add(topicId)
         }
     }
 
@@ -51,15 +52,15 @@ class SyncDispatcherManager(
      * Process all pending events for a topic synchronously.
      * Events are delivered to consumers sequentially, one consumer at a time.
      */
-    private suspend fun processEventsForTopic(topic: String) {
-        val consumers = consumerRepository.findByTopic(topic)
+    private suspend fun processEventsForTopic(topicId: UUID) {
+        val consumers = consumerRepository.findByTopic(topicId)
 
         // Process each consumer sequentially (one after another)
         for (consumer in consumers) {
             try {
-                deliverPendingEvents(consumer, topic)
+                deliverPendingEvents(consumer, topicId)
             } catch (e: Exception) {
-                logger.error("Failed to deliver events to consumer ${consumer.id} for topic $topic", e)
+                logger.error("Failed to deliver events to consumer ${consumer.id} for topic $topicId", e)
             }
         }
     }
@@ -69,33 +70,28 @@ class SyncDispatcherManager(
      * This is similar to TopicDispatcher.deliverPendingEvents but without retry logic
      * and backoff, as we want immediate synchronous processing in tests.
      */
-    private suspend fun deliverPendingEvents(consumer: Consumer, topic: String) {
+    private suspend fun deliverPendingEvents(consumer: Consumer, topicId: UUID) {
         val eventsToDeliver = mutableListOf<com.eventstore.domain.Event>()
-        val topicToLatestEventId = mutableMapOf<String, String>()
-
-        // Parse tenant/namespace/topic from the topic (which may be qualified)
-        val (simpleTopicName, tenantId, namespaceId) = parseTopicName(topic)
+        val topicToLatestEventId = mutableMapOf<UUID, String>()
 
         // Check each topic the consumer is interested in
-        for ((topicName, lastEventIdStr) in consumer.topics) {
-            if (topicName != topic) continue
+        for ((consumerTopicId, lastEventIdStr) in consumer.topics) {
+            if (consumerTopicId != topicId) continue
 
             try {
                 val lastEventId = lastEventIdStr?.let { EventId.fromString(it) }
                 val events = eventRepository.getEvents(
-                    topic = simpleTopicName,
-                    sinceEventId = lastEventId,
-                    tenantId = tenantId,
-                    namespaceId = namespaceId
+                    topicId = topicId,
+                    sinceEventId = lastEventId
                 )
 
                 if (events.isNotEmpty()) {
                     eventsToDeliver.addAll(events)
                     // Track the latest event ID for this topic
-                    topicToLatestEventId[topicName] = events.last().id.value
+                    topicToLatestEventId[topicId] = events.last().id.value
                 }
             } catch (e: Exception) {
-                logger.error("Failed to get events for consumer ${consumer.id} for topic $topicName", e)
+                logger.error("Failed to get events for consumer ${consumer.id} for topic $consumerTopicId", e)
             }
         }
 
@@ -109,33 +105,13 @@ class SyncDispatcherManager(
         if (result.success) {
             // Update consumer state only after successful delivery
             var updatedConsumer = consumer
-            for ((topicName, latestEventId) in topicToLatestEventId) {
-                updatedConsumer = updatedConsumer.withUpdatedLastEventId(topicName, latestEventId)
+            for ((consumerTopicId, latestEventId) in topicToLatestEventId) {
+                updatedConsumer = updatedConsumer.withUpdatedLastEventId(consumerTopicId, latestEventId)
             }
             consumerRepository.save(updatedConsumer)
         } else {
             // In synchronous mode, we don't retry - just log the failure
-            logger.warn("Failed to deliver events to consumer ${consumer.id} for topic $topic: ${result.error ?: "Unknown error"}")
-        }
-    }
-
-    /**
-     * Parse a topic name that may be in qualified format (tenant/namespace/topic) or simple format (topic).
-     * Returns (simpleTopicName, tenantId, namespaceId).
-     * For qualified names, extracts tenant/namespace. For simple names, uses null (legacy format).
-     */
-    private fun parseTopicName(topicName: String): Triple<String, String?, String?> {
-        val parts = topicName.split("/")
-        return when (parts.size) {
-            3 -> {
-                // Qualified name: tenant/namespace/topic
-                val tenant = if (parts[0] == "default") null else parts[0]
-                val namespace = if (parts[1] == "default") null else parts[1]
-                Triple(parts[2], tenant, namespace)
-            }
-
-            1 -> Triple(parts[0], null, null) // topic (legacy format)
-            else -> Triple(topicName, null, null) // fallback to original
+            logger.warn("Failed to deliver events to consumer ${consumer.id} for topic $topicId: ${result.error ?: "Unknown error"}")
         }
     }
 }

@@ -4,12 +4,13 @@ import com.eventstore.domain.Consumer
 import com.eventstore.domain.ConsumerType
 import com.eventstore.domain.Event
 import com.eventstore.domain.ports.outbound.DeliveryResult
+import java.util.*
 
 class AzureEventGridConsumer(
     id: String,
     val endpointUrl: String,
     val accessKey: String,
-    topics: Map<String, String?>
+    topics: Map<UUID, String?>
 ) : Consumer(id, topics) {
 
     override fun getType(): ConsumerType = ConsumerType.AZURE_EVENT_GRID
@@ -27,12 +28,12 @@ class AzureEventGridConsumer(
         return "AzureEventGridConsumer(id=$id, endpointUrl=$endpointUrl, topics=$topics)"
     }
 
-    override fun withUpdatedLastEventId(topic: String, eventId: String): Consumer {
+    override fun withUpdatedLastEventId(topicId: UUID, eventId: String): Consumer {
         return AzureEventGridConsumer(
             id = id,
             endpointUrl = endpointUrl,
             accessKey = accessKey,
-            topics = topics + (topic to eventId)
+            topics = topics + (topicId to eventId)
         )
     }
 }

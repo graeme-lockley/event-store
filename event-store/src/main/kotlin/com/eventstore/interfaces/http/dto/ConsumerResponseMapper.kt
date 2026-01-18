@@ -17,7 +17,7 @@ object ConsumerResponseMapper {
         return ConsumerResponse(
             id = consumer.id,
             callback = callback,
-            topics = consumer.topics
+            topics = consumer.topics.mapKeys { it.key.toString() }
         )
     }
 }

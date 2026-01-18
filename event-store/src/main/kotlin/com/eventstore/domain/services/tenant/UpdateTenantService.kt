@@ -117,7 +117,7 @@ class UpdateTenantService(
         val payload = eventPayload.toPayload()
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.TENANTS_TOPIC_NAME,
+            topicId = SystemTopics.TENANTS_TOPIC_ID,
             eventType = TenantEventType.UPDATED,
             payload = payload,
             timestamp = now

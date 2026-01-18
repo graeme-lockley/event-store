@@ -40,7 +40,7 @@ class ChangePasswordService(
         )
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.USERS_TOPIC_NAME,
+            topicId = SystemTopics.USERS_TOPIC_ID,
             eventType = UserEventType.PASSWORD_CHANGED,
             payload = payload.toPayload(),
             timestamp = now

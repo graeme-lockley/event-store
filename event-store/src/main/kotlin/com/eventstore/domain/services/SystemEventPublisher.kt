@@ -8,6 +8,7 @@ import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.domain.tenants.SystemTopics
 import java.time.Instant
+import java.util.*
 
 /**
  * Helper class for publishing system events (tenant and namespace events)
@@ -20,28 +21,22 @@ class SystemEventPublisher(
     private val eventDispatcher: EventDispatcher
 ) {
     suspend fun publishEvent(
-        topic: String,
+        topicId: UUID,
         eventType: String,
         payload: Map<String, Any>,
         timestamp: Instant = Instant.now()
     ): Event {
         // Validate event payload against schema
-        schemaValidator.validateEvent(topic, eventType, payload)
+        schemaValidator.validateEvent(topicId, eventType, payload)
 
         // Get sequence for the event
-        val sequence = topicRepository.getAndIncrementSequence(
-            topicName = topic,
-            tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
-        )
+        val sequence = topicRepository.getAndIncrementSequence(topicId)
 
         // Create event
         val event = Event(
             id = EventId.create(
-                topic = topic,
-                sequence = sequence,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = topicId,
+                sequence = sequence
             ),
             timestamp = timestamp,
             type = eventType,
@@ -50,7 +45,7 @@ class SystemEventPublisher(
 
         // Store and notify
         eventRepository.storeEvent(event)
-        eventDispatcher.notifyEventPublished(event.id.qualifiedTopic)
+        eventDispatcher.notifyEventPublished(topicId)
 
         return event
     }

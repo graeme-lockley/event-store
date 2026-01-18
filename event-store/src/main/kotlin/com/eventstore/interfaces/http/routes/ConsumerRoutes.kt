@@ -32,7 +32,7 @@ fun Route.consumerRoutes(
                     return@post
                 }
 
-                val consumerId = application.registerConsumer(registrationRequest, tenantName, namespaceName)
+                val consumerId = application.registerConsumer(registrationRequest)
 
                 call.respond(HttpStatusCode.Created, ConsumerRegistrationResponse(consumerId))
             } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
@@ -60,7 +60,7 @@ fun Route.consumerRoutes(
                     call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
                 val namespaceName =
                     call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
-                val consumers = application.listConsumers(tenantName, namespaceName)
+                val consumers = application.listConsumers()
                 val consumerInfo = consumers.map { consumer ->
                     ConsumerResponseMapper.toDto(consumer)
                 }
@@ -84,7 +84,7 @@ fun Route.consumerRoutes(
                     ?: throw IllegalArgumentException("Consumer ID is required")
 
                 try {
-                    application.unregisterConsumer(consumerId, tenantName, namespaceName)
+                    application.unregisterConsumer(consumerId)
                     call.respond(
                         HttpStatusCode.OK,
                         mapOf("message" to "Consumer $consumerId unregistered")

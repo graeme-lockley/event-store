@@ -93,7 +93,7 @@ fun Application.configureApplication(config: Config) {
         applicationScope.launch {
             val topics = topicRepository.getAllTopics()
             topics.forEach { topic ->
-                schemaValidator.registerSchemas(topic.name, topic.schemas)
+                schemaValidator.registerSchemas(topic.topicId, topic.schemas)
             }
         }
     }

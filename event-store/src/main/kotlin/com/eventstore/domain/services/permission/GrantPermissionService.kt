@@ -40,10 +40,15 @@ class GrantPermissionService(
             resourceResolver.resolveNamespaceName(tenantResourceId, it)
         }
 
-        // Resolve topic resourceId if provided
-        val topicResourceId = request.topicName?.let {
+        // If topicName is provided, it should be a UUID string (API uses UUIDs)
+        val topicId = request.topicName?.let {
             requireNotNull(namespaceResourceId) { "Namespace required when granting topic permissions" }
-            resourceResolver.resolveTopicName(tenantResourceId, namespaceResourceId, it)
+            // topicName is actually a UUID string when provided from API
+            try {
+                UUID.fromString(it)
+            } catch (e: IllegalArgumentException) {
+                throw com.eventstore.domain.exceptions.TopicNotFoundException(it)
+            }
         }
 
         // Resolve target resourceId based on resourceType
@@ -55,7 +60,7 @@ class GrantPermissionService(
         } ?: when (request.resourceType) {
             ResourceType.TENANT -> tenantResourceId
             ResourceType.NAMESPACE -> namespaceResourceId
-            ResourceType.TOPIC -> topicResourceId
+            ResourceType.TOPIC -> topicId
             else -> null
         }
 
@@ -67,7 +72,7 @@ class GrantPermissionService(
             resourceId = targetResourceId?.toString(),
             tenantResourceId = tenantResourceId.toString(),
             namespaceResourceId = namespaceResourceId?.toString(),
-            topicResourceId = topicResourceId?.toString(),
+            topicId = topicId?.toString(),
             permissions = request.permissions,
             grantedBy = request.grantedBy,
             grantedAt = now,
@@ -77,7 +82,7 @@ class GrantPermissionService(
         val eventPayload = event.toPayload()
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
+            topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
             eventType = PermissionEventType.GRANTED,
             payload = eventPayload,
             timestamp = now

@@ -3,6 +3,7 @@ package com.eventstore.interfaces.http.dto
 import com.fasterxml.jackson.annotation.JsonProperty
 
 data class TopicCreationRequest(
+    val namespaceId: String,
     val name: String,
     val schemas: List<SchemaDto>
 )

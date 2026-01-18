@@ -7,14 +7,15 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.Instant
 import java.time.format.DateTimeFormatter
+import java.util.*
 
 class InMemoryEventRepository : EventRepository {
-    // Map of topic key to list of events
+    // Map of topic key (topicId UUID as string) to list of events
     private val eventsByTopic = mutableMapOf<String, MutableList<Event>>()
     private val mutex = Mutex()
 
     override suspend fun storeEvent(
-        topic: String,
+        topicId: UUID,
         type: String,
         payload: Map<String, Any>,
         eventId: EventId,
@@ -22,7 +23,7 @@ class InMemoryEventRepository : EventRepository {
     ): Event {
         return mutex.withLock {
             val event = Event(eventId, timestamp, type, payload)
-            val key = topicKey(topic, eventId.tenantId, eventId.namespaceId, eventId)
+            val key = topicKey(topicId)
             val events = eventsByTopic.getOrPut(key) { mutableListOf() }
             events.add(event)
             event
@@ -31,7 +32,7 @@ class InMemoryEventRepository : EventRepository {
 
     override suspend fun storeEvent(event: Event): Event {
         return mutex.withLock {
-            val key = topicKey(event.id.topicId, event.id.tenantId, event.id.namespaceId, event.id)
+            val key = topicKey(event.id.topicId)
             val events = eventsByTopic.getOrPut(key) { mutableListOf() }
             events.add(event)
             event
@@ -49,7 +50,7 @@ class InMemoryEventRepository : EventRepository {
             val storedEvents = mutableListOf<Event>()
             try {
                 for (event in events) {
-                    val key = topicKey(event.id.topicId, event.id.tenantId, event.id.namespaceId, event.id)
+                    val key = topicKey(event.id.topicId)
                     val eventsList = eventsByTopic.getOrPut(key) { mutableListOf() }
                     eventsList.add(event)
                     storedEvents.add(event)
@@ -58,7 +59,7 @@ class InMemoryEventRepository : EventRepository {
             } catch (e: Exception) {
                 // Rollback: remove events that were added
                 for (event in storedEvents) {
-                    val key = topicKey(event.id.topicId, event.id.tenantId, event.id.namespaceId, event.id)
+                    val key = topicKey(event.id.topicId)
                     eventsByTopic[key]?.remove(event)
                 }
                 throw e
@@ -67,25 +68,23 @@ class InMemoryEventRepository : EventRepository {
     }
 
     override suspend fun getEvent(
-        topic: String,
+        topicId: UUID,
         eventId: EventId
     ): Event? {
         return mutex.withLock {
-            val key = topicKey(topic, eventId.tenantId, eventId.namespaceId, eventId)
+            val key = topicKey(topicId)
             eventsByTopic[key]?.firstOrNull { it.id == eventId }
         }
     }
 
     override suspend fun getEvents(
-        topic: String,
+        topicId: UUID,
         sinceEventId: EventId?,
         date: String?,
-        limit: Int?,
-        tenantId: String?,
-        namespaceId: String?
+        limit: Int?
     ): List<Event> {
         return mutex.withLock {
-            val key = topicKey(topic, tenantId, namespaceId, sinceEventId)
+            val key = topicKey(topicId)
             val events = eventsByTopic[key]?.toList() ?: return@withLock emptyList()
 
             var filtered = events.asSequence()
@@ -115,30 +114,23 @@ class InMemoryEventRepository : EventRepository {
     }
 
     override suspend fun getLatestEventId(
-        topic: String,
-        tenantId: String?,
-        namespaceId: String?
+        topicId: UUID
     ): EventId? {
-        val events = getEvents(topic, tenantId = tenantId, namespaceId = namespaceId)
+        val events = getEvents(topicId)
         return events.lastOrNull()?.id
     }
 
-    private fun topicKey(topic: String, tenantId: String?, namespaceId: String?, eventId: EventId?): String {
-        val resolvedTenant = tenantId ?: eventId?.tenantId
-        val resolvedNamespace = namespaceId ?: eventId?.namespaceId
-
-        return if (resolvedTenant != null && resolvedNamespace != null) {
-            "$resolvedTenant/$resolvedNamespace/$topic"
-        } else {
-            topic
-        }
+    private fun topicKey(topicId: UUID): String {
+        return topicId.toString()
     }
 
     private fun compareEventIds(id1: EventId, id2: EventId): Int {
-        if (id1.topicId != id2.topicId) {
-            return id1.topicId.compareTo(id2.topicId)
+        val topicComparison = id1.topicId.compareTo(id2.topicId)
+        return if (topicComparison != 0) {
+            topicComparison
+        } else {
+            id1.sequence.compareTo(id2.sequence)
         }
-        return id1.sequence.compareTo(id2.sequence)
     }
 }
 

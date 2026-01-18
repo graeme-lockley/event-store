@@ -3,38 +3,38 @@ package com.eventstore.domain.services
 import com.eventstore.domain.services.consumer.HttpConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.RegisterConsumerService
 import com.eventstore.domain.services.health.GetHealthStatusService
-
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.*
 import kotlin.test.assertEquals
 
 class GetHealthStatusServiceTest {
-    val topicName = "user-events"
-
+    private lateinit var topicId: UUID
     private lateinit var helper: PopulateEventStoreState
 
     @BeforeEach
     fun setup() = runBlocking {
-        helper = createEventStore(topicName)
+        helper = createEventStore("user-events")
+        topicId = helper.topicId ?: UUID.randomUUID()
     }
 
     @Test
     fun `should return health status with consumer count and dispatchers`() = runTest {
         val request = HttpConsumerRegistrationRequest(
             callbackUrl = "https://example.com/webhook",
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
         val consumerFactory = ConsumerFactoryImpl()
         val eventDispatcher = InMemoryEventDispatcher()
         val registerConsumerService =
             RegisterConsumerService(helper.consumerRepository, helper.topicRepository, consumerFactory, eventDispatcher)
 
-        registerConsumerService.execute(request, "default", "default")
-        registerConsumerService.execute(request, "default", "default")
-        registerConsumerService.execute(request, "default", "default")
+        registerConsumerService.execute(request)
+        registerConsumerService.execute(request)
+        registerConsumerService.execute(request)
 
         val runningDispatchers = listOf("topic1", "topic2")
         val service = GetHealthStatusService(helper.consumerRepository) { runningDispatchers }

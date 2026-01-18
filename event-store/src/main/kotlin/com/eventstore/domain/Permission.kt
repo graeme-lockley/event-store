@@ -57,7 +57,7 @@ enum class ResourceType {
  * - resourceId: UUID of specific resource, or null for all resources of this type
  * - tenantResourceId: UUID of tenant (for context and inheritance)
  * - namespaceResourceId: UUID of namespace (for context and inheritance)
- * - topicResourceId: UUID of topic (for context and inheritance)
+ * - topicId: UUID of topic (for context and inheritance)
  */
 data class PermissionGrant(
     val principalId: String,              // UUID of user/API key/role/group
@@ -66,7 +66,7 @@ data class PermissionGrant(
     val resourceId: String? = null,       // UUID of specific resource, or null for all resources of this type
     val tenantResourceId: String,         // UUID of tenant (for context and inheritance)
     val namespaceResourceId: String? = null, // UUID of namespace (for context and inheritance)
-    val topicResourceId: String? = null,   // UUID of topic (for context and inheritance)
+    val topicId: String? = null,   // UUID of topic (for context and inheritance)
     val permissions: Set<Permission>,
     val grantedBy: String,                // UUID of user who granted permission
     val grantedAt: java.time.Instant,

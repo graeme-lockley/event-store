@@ -4,6 +4,7 @@ import com.eventstore.domain.consumers.HttpConsumer
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import java.net.URI
+import java.util.*
 import kotlin.test.*
 
 class InMemoryConsumerRepositoryTest {
@@ -12,10 +13,11 @@ class InMemoryConsumerRepositoryTest {
 
     @Test
     fun `should save and find consumer`() = runTest {
+        val topicId = UUID.randomUUID()
         val consumer = HttpConsumer(
             id = "consumer-1",
             callbackUrl = URI("https://example.com/webhook").toURL(),
-            topics = mapOf("user-events" to null)
+            topics = mapOf(topicId to null)
         )
 
         repository.save(consumer)
@@ -34,8 +36,10 @@ class InMemoryConsumerRepositoryTest {
 
     @Test
     fun `should find all consumers`() = runTest {
-        val consumer1 = HttpConsumer("consumer-1", URI("https://example.com/webhook1").toURL(), mapOf("topic1" to null))
-        val consumer2 = HttpConsumer("consumer-2", URI("https://example.com/webhook2").toURL(), mapOf("topic2" to null))
+        val topicId1 = UUID.randomUUID()
+        val topicId2 = UUID.randomUUID()
+        val consumer1 = HttpConsumer("consumer-1", URI("https://example.com/webhook1").toURL(), mapOf(topicId1 to null))
+        val consumer2 = HttpConsumer("consumer-2", URI("https://example.com/webhook2").toURL(), mapOf(topicId2 to null))
 
         repository.save(consumer1)
         repository.save(consumer2)
@@ -49,22 +53,24 @@ class InMemoryConsumerRepositoryTest {
 
     @Test
     fun `should find consumers by topic`() = runTest {
+        val userEventsTopicId = UUID.randomUUID()
+        val orderEventsTopicId = UUID.randomUUID()
         val consumer1 =
-            HttpConsumer("consumer-1", URI("https://example.com/webhook1").toURL(), mapOf("user-events" to null))
+            HttpConsumer("consumer-1", URI("https://example.com/webhook1").toURL(), mapOf(userEventsTopicId to null))
         val consumer2 =
-            HttpConsumer("consumer-2", URI("https://example.com/webhook2").toURL(), mapOf("order-events" to null))
+            HttpConsumer("consumer-2", URI("https://example.com/webhook2").toURL(), mapOf(orderEventsTopicId to null))
         val consumer3 =
             HttpConsumer(
                 "consumer-3",
                 URI("https://example.com/webhook3").toURL(),
-                mapOf("user-events" to "user-events-5")
+                mapOf(userEventsTopicId to "event-5")
             )
 
         repository.save(consumer1)
         repository.save(consumer2)
         repository.save(consumer3)
 
-        val found = repository.findByTopic("user-events")
+        val found = repository.findByTopic(userEventsTopicId)
 
         assertEquals(2, found.size)
         assertTrue(found.any { it.id == consumer1.id })
@@ -74,7 +80,8 @@ class InMemoryConsumerRepositoryTest {
 
     @Test
     fun `should delete consumer`() = runTest {
-        val consumer = HttpConsumer("consumer-1", URI("https://example.com/webhook").toURL(), mapOf("topic1" to null))
+        val topicId = UUID.randomUUID()
+        val consumer = HttpConsumer("consumer-1", URI("https://example.com/webhook").toURL(), mapOf(topicId to null))
 
         repository.save(consumer)
         val deleted = repository.delete("consumer-1")
@@ -93,20 +100,22 @@ class InMemoryConsumerRepositoryTest {
     fun `should return correct count`() = runTest {
         assertEquals(0, repository.count())
 
+        val topicId1 = UUID.randomUUID()
         repository.save(
             HttpConsumer(
                 "consumer-1",
                 URI("https://example.com/webhook1").toURL(),
-                mapOf("topic1" to null)
+                mapOf(topicId1 to null)
             )
         )
         assertEquals(1, repository.count())
 
+        val topicId2 = UUID.randomUUID()
         repository.save(
             HttpConsumer(
                 "consumer-2",
                 URI("https://example.com/webhook2").toURL(),
-                mapOf("topic2" to null)
+                mapOf(topicId2 to null)
             )
         )
         assertEquals(2, repository.count())
@@ -118,7 +127,8 @@ class InMemoryConsumerRepositoryTest {
     @Test
     fun `should handle concurrent operations`() = runTest {
         val consumers = (1..10).map { i ->
-            HttpConsumer("consumer-$i", URI("https://example.com/webhook$i").toURL(), mapOf("topic$i" to null))
+            val topicId = UUID.randomUUID()
+            HttpConsumer("consumer-$i", URI("https://example.com/webhook$i").toURL(), mapOf(topicId to null))
         }
 
         consumers.forEach { repository.save(it) }

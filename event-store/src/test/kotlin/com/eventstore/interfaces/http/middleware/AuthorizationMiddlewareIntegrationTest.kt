@@ -84,10 +84,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val tenantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.TENANTS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.TENANTS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = TenantEventType.CREATED,
@@ -185,10 +183,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -223,10 +219,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -265,10 +259,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Create namespace
             val namespaceEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.NAMESPACES_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.NAMESPACES_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = com.eventstore.domain.events.NamespaceEventType.CREATED,
@@ -286,10 +278,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Grant permission
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -335,10 +325,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Grant different permissions
             val readGrant = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -383,10 +371,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -438,10 +424,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -478,10 +462,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -516,10 +498,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -556,10 +536,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Grant global permission for all tenants in the tenant context (resourceId = null means all tenant resources)
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -595,10 +573,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -645,10 +621,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -694,10 +668,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Grant permission only to testUserId
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -764,10 +736,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -807,10 +777,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Create namespace and topic
             val namespaceEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.NAMESPACES_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.NAMESPACES_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = com.eventstore.domain.events.NamespaceEventType.CREATED,
@@ -827,22 +795,17 @@ class AuthorizationMiddlewareIntegrationTest {
 
             // Create topic
             topicRepository.createTopic(
-                resourceId = topicResourceId,
-                tenantResourceId = testTenantResourceId,
-                namespaceResourceId = namespaceResourceId,
+                topicId = topicResourceId,
+                namespaceId = namespaceResourceId,
                 name = testTopicName,
-                schemas = emptyList(),
-                tenantName = testTenantName,
-                namespaceName = testNamespaceName
+                schemas = emptyList()
             )
 
             // Grant SCHEMA_MANAGE permission
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -879,10 +842,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -917,10 +878,8 @@ class AuthorizationMiddlewareIntegrationTest {
         runBlocking {
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -957,10 +916,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Create namespace
             val namespaceEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.NAMESPACES_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.NAMESPACES_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = com.eventstore.domain.events.NamespaceEventType.CREATED,
@@ -978,10 +935,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Grant EVENT CREATE permission
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -1019,10 +974,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Grant USER READ permission
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -1060,10 +1013,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Create namespace
             val namespaceEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.NAMESPACES_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.NAMESPACES_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = com.eventstore.domain.events.NamespaceEventType.CREATED,
@@ -1080,22 +1031,17 @@ class AuthorizationMiddlewareIntegrationTest {
 
             // Create topic
             topicRepository.createTopic(
-                resourceId = topicResourceId,
-                tenantResourceId = testTenantResourceId,
-                namespaceResourceId = namespaceResourceId,
+                topicId = topicResourceId,
+                namespaceId = namespaceResourceId,
                 name = testTopicName,
-                schemas = emptyList(),
-                tenantName = testTenantName,
-                namespaceName = testNamespaceName
+                schemas = emptyList()
             )
 
             // Grant TOPIC READ permission
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -1146,10 +1092,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Create another tenant
             val otherTenantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.TENANTS_TOPIC_NAME,
-                    sequence = 2,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.TENANTS_TOPIC_ID,
+                    sequence = 2
                 ),
                 timestamp = Instant.now(),
                 type = TenantEventType.CREATED,
@@ -1164,10 +1108,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Grant permission only for testTenantResourceId (not global)
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -1227,10 +1169,8 @@ class AuthorizationMiddlewareIntegrationTest {
             val expiredAt = Instant.now().minusSeconds(3600) // Expired 1 hour ago
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,
@@ -1270,10 +1210,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Create tenant with special characters
             val tenantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.TENANTS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.TENANTS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = TenantEventType.CREATED,
@@ -1288,10 +1226,8 @@ class AuthorizationMiddlewareIntegrationTest {
             // Grant permission
             val grantEvent = Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = 1,
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = 1
                 ),
                 timestamp = Instant.now(),
                 type = PermissionEventType.GRANTED,

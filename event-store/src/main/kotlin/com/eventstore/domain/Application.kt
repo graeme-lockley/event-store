@@ -100,7 +100,7 @@ class Application(
         GetNamespaceService(namespaceProjectionService)
 
     private val createTopicService: CreateTopicService =
-        CreateTopicService(topicRepository, schemaValidator, tenantProjectionService, namespaceProjectionService)
+        CreateTopicService(topicRepository, schemaValidator, namespaceProjectionService)
 
     private val getTopicsService: GetTopicsService =
         GetTopicsService(topicRepository)
@@ -117,8 +117,8 @@ class Application(
     private val getHealthStatusService: GetHealthStatusService =
         GetHealthStatusService(consumerRepository) {
             when (dispatcherManager) {
-                is SyncDispatcherManager -> dispatcherManager.getRunningDispatchers()
-                is AsyncDispatcherManager -> dispatcherManager.getRunningDispatchers()
+                is SyncDispatcherManager -> dispatcherManager.getRunningDispatchers().map { it.toString() }
+                is AsyncDispatcherManager -> dispatcherManager.getRunningDispatchers().map { it.toString() }
                 else -> emptyList()
             }
         }
@@ -189,42 +189,32 @@ class Application(
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> tenantProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.TENANTS_TOPIC_NAME to null)
-                ),
-                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topics = mapOf(SystemTopics.TENANTS_TOPIC_ID to null)
+                )
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> namespaceProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.NAMESPACES_TOPIC_NAME to null)
-                ),
-                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topics = mapOf(SystemTopics.NAMESPACES_TOPIC_ID to null)
+                )
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> userProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.USERS_TOPIC_NAME to null)
-                ),
-                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topics = mapOf(SystemTopics.USERS_TOPIC_ID to null)
+                )
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> permissionProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.PERMISSIONS_TOPIC_NAME to null)
-                ),
-                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topics = mapOf(SystemTopics.PERMISSIONS_TOPIC_ID to null)
+                )
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> apiKeyProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.API_KEYS_TOPIC_NAME to null)
-                ),
-                tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topics = mapOf(SystemTopics.API_KEYS_TOPIC_ID to null)
+                )
             )
         }
     }
@@ -339,37 +329,27 @@ class Application(
     suspend fun createTopic(
         name: String,
         schemas: List<Schema>,
-        tenantName: String = "default",
-        namespaceName: String = "default"
+        namespaceId: UUID
     ): Topic {
-        val topic = createTopicService.execute(name, schemas, tenantName, namespaceName)
+        val topic = createTopicService.execute(name, schemas, namespaceId)
         // Start dispatcher for the topic if using AsyncDispatcherManager
         if (dispatcherManager is AsyncDispatcherManager) {
-            dispatcherManager.startDispatcher(topic.name)
+            dispatcherManager.startDispatcher(topic.topicId)
         }
         return topic
     }
 
-    suspend fun getTopic(
-        topicName: String,
-        tenantName: String = "default",
-        namespaceName: String = "default"
-    ): Topic =
-        getTopicsService.get(topicName, tenantName, namespaceName)
+    suspend fun getTopic(topicId: UUID): Topic =
+        getTopicsService.get(topicId)
 
-    suspend fun listTopics(
-        tenantName: String = "default",
-        namespaceName: String = "default"
-    ): List<Topic> =
-        getTopicsService.list(tenantName, namespaceName)
+    suspend fun listTopics(namespaceId: UUID? = null): List<Topic> =
+        getTopicsService.list(namespaceId)
 
     suspend fun updateTopicSchemas(
-        topicName: String,
-        schemas: List<Schema>,
-        tenantName: String = "default",
-        namespaceName: String = "default"
+        topicId: UUID,
+        schemas: List<Schema>
     ): Topic =
-        updateTopicSchemasService.execute(topicName, schemas, tenantName, namespaceName)
+        updateTopicSchemasService.execute(topicId, schemas)
 
     suspend fun createUser(
         email: String,
@@ -505,24 +485,15 @@ class Application(
         revokeApiKeyService.execute(RevokeApiKeyRequest(keyId = keyId))
 
     suspend fun registerConsumer(
-        request: ConsumerRegistrationRequest,
-        tenantName: String,
-        namespaceName: String
+        request: ConsumerRegistrationRequest
     ): String =
-        registerConsumerService.execute(request, tenantName, namespaceName)
+        registerConsumerService.execute(request)
 
-    suspend fun unregisterConsumer(
-        consumerId: String,
-        tenantName: String,
-        namespaceName: String
-    ): Boolean =
-        unregisterConsumerService.execute(consumerId, tenantName, namespaceName)
+    suspend fun unregisterConsumer(consumerId: String): Boolean =
+        unregisterConsumerService.execute(consumerId)
 
-    suspend fun listConsumers(
-        tenantName: String,
-        namespaceName: String
-    ): List<Consumer> =
-        consumerRepository.findByTenantAndNamespace(tenantName, namespaceName)
+    suspend fun listConsumers(): List<Consumer> =
+        consumerRepository.findAll()
 
     suspend fun publishEvents(
         requests: List<EventRequest>
@@ -530,14 +501,12 @@ class Application(
         publishEventsService.execute(requests)
 
     suspend fun getEvents(
-        topic: String,
+        topicId: UUID,
         sinceEventId: String? = null,
         date: String? = null,
-        limit: Int? = null,
-        tenantName: String = "default",
-        namespaceName: String = "default"
+        limit: Int? = null
     ): List<Event> =
-        getEventsService.execute(topic, sinceEventId, date, limit, tenantName, namespaceName)
+        getEventsService.execute(topicId, sinceEventId, date, limit)
 
     suspend fun getHealthStatus(): HealthStatus =
         getHealthStatusService.execute()

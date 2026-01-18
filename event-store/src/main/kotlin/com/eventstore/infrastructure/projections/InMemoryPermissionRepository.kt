@@ -19,7 +19,7 @@ class InMemoryPermissionRepository : PermissionRepository {
                         it.resourceId == grant.resourceId &&
                         it.tenantResourceId == grant.tenantResourceId &&
                         it.namespaceResourceId == grant.namespaceResourceId &&
-                        it.topicResourceId == grant.topicResourceId
+                        it.topicId == grant.topicId
             }
             grants.add(grant)
         }
@@ -54,7 +54,7 @@ class InMemoryPermissionRepository : PermissionRepository {
                         it.resourceId == grant.resourceId &&
                         it.tenantResourceId == grant.tenantResourceId &&
                         it.namespaceResourceId == grant.namespaceResourceId &&
-                        it.topicResourceId == grant.topicResourceId &&
+                        it.topicId == grant.topicId &&
                         it.permissions == grant.permissions &&
                         it.grantedAt == grant.grantedAt
             }

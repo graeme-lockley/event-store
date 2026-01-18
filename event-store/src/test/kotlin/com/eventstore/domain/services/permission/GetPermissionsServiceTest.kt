@@ -4,6 +4,7 @@ import com.eventstore.domain.Application
 import com.eventstore.domain.Permission
 import com.eventstore.domain.PrincipalType
 import com.eventstore.domain.ResourceType
+import com.eventstore.domain.Schema
 import com.eventstore.domain.services.createApplication
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
@@ -102,12 +103,11 @@ class GetPermissionsServiceTest {
 
         // Create namespace and topic
         val tenant = application.getTenant(tenantName)!!
-        application.createNamespace(tenant.tenantId, namespaceName)
-        application.createTopic(
+        val namespace = application.createNamespace(tenant.tenantId, namespaceName)
+        val topic = application.createTopic(
             name = topicName,
-            schemas = emptyList(),
-            tenantName = tenantName,
-            namespaceName = namespaceName
+            schemas = listOf(Schema(eventType = "test.event")),
+            namespaceId = namespace.namespaceId
         )
 
         // Grant permission
@@ -118,7 +118,7 @@ class GetPermissionsServiceTest {
                 resourceType = ResourceType.TOPIC,
                 tenantName = tenantName,
                 namespaceName = namespaceName,
-                topicName = topicName,
+                topicName = topic.topicId.toString(), // topicName is now expected to be UUID string
                 permissions = setOf(Permission.READ),
                 grantedBy = "admin"
             )
@@ -130,7 +130,7 @@ class GetPermissionsServiceTest {
                 principalId = userId,
                 tenantName = tenantName,
                 namespaceName = namespaceName,
-                topicName = topicName
+                topicName = topic.topicId.toString() // topicName is now expected to be UUID string
             )
         )
 

@@ -9,13 +9,20 @@ import com.eventstore.domain.services.consumer.HttpConsumerRegistrationRequest
  * Note: InMemoryConsumerRegistrationRequest cannot be created from HTTP
  * as closures/functions cannot be serialized. It's only available programmatically.
  */
+import java.util.*
+
 object ConsumerRegistrationRequestMapper {
     fun toDomain(dto: ConsumerRegistrationRequestDto): ConsumerRegistrationRequest {
         // Normalize empty strings to null for lastEventId
-        fun normalizeTopics(topics: Map<String, String?>): Map<String, String?> {
-            return topics.mapValues { (_, value) ->
-                if (value.isNullOrBlank()) null else value
-            }
+        // Convert topicId strings to UUIDs
+        fun normalizeTopics(topics: Map<String, String?>): Map<UUID, String?> {
+            return topics.mapNotNull { (key, value) ->
+                try {
+                    UUID.fromString(key) to (if (value.isNullOrBlank()) null else value)
+                } catch (e: IllegalArgumentException) {
+                    null // Skip invalid UUIDs
+                }
+            }.toMap()
         }
 
         return when (dto) {

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -17,6 +18,8 @@ import kotlin.test.assertTrue
 class UpdateTopicSchemasServiceTest {
     private lateinit var application: Application
     private val topicName = "user-events"
+    private lateinit var namespaceId: UUID
+    private lateinit var topicId: UUID
 
     @BeforeEach
     fun setup() = runTest {
@@ -24,7 +27,8 @@ class UpdateTopicSchemasServiceTest {
         // Create tenant and namespace
         val tenant = application.createTenant("default")
         val tenantId = tenant.tenantId
-        application.createNamespace(tenantId, "default")
+        val namespace = application.createNamespace(tenantId, "default")
+        namespaceId = namespace.namespaceId
     }
 
     @Test
@@ -32,17 +36,18 @@ class UpdateTopicSchemasServiceTest {
         val initialSchemas = listOf(
             Schema(eventType = "user.created", properties = mapOf("id" to "string"))
         )
-        application.createTopic(topicName, initialSchemas)
+        val topic = application.createTopic(topicName, initialSchemas, namespaceId)
+        topicId = topic.topicId
 
         val newSchemas = initialSchemas + Schema(eventType = "user.deleted", properties = mapOf("id" to "string"))
 
-        val result = application.updateTopicSchemas(topicName, newSchemas)
+        val result = application.updateTopicSchemas(topicId, newSchemas)
 
         assertEquals(newSchemas.size, result.schemas.size)
         assertTrue(result.schemas.any { it.eventType == "user.created" })
         assertTrue(result.schemas.any { it.eventType == "user.deleted" })
 
-        val retrieved = application.getTopic(topicName)
+        val retrieved = application.getTopic(topicId)
         assertEquals(newSchemas.size, retrieved.schemas.size)
     }
 
@@ -51,20 +56,21 @@ class UpdateTopicSchemasServiceTest {
         val initialSchemas = listOf(
             Schema(eventType = "user.created", properties = mapOf("id" to "string"))
         )
-        application.createTopic(topicName, initialSchemas)
+        val topic = application.createTopic(topicName, initialSchemas, namespaceId)
+        topicId = topic.topicId
 
         val newSchemas = listOf(
             Schema(eventType = "user.created", properties = mapOf("id" to "string", "email" to "string"))
         )
 
-        val result = application.updateTopicSchemas(topicName, newSchemas)
+        val result = application.updateTopicSchemas(topicId, newSchemas)
 
         assertEquals(newSchemas.size, result.schemas.size)
         val updatedSchema = result.schemas.find { it.eventType == "user.created" }
         assertNotNull(updatedSchema)
         assertTrue(updatedSchema.properties.containsKey("email"))
 
-        val retrieved = application.getTopic(topicName)
+        val retrieved = application.getTopic(topicId)
         assertEquals(newSchemas.size, retrieved.schemas.size)
     }
 
@@ -73,21 +79,22 @@ class UpdateTopicSchemasServiceTest {
         val initialSchemas = listOf(
             Schema(eventType = "user.created", properties = mapOf("id" to "string"))
         )
-        application.createTopic(topicName, initialSchemas)
+        val topic = application.createTopic(topicName, initialSchemas, namespaceId)
+        topicId = topic.topicId
 
         val newSchemas = initialSchemas + initialSchemas[0]
 
         assertThrows<IllegalArgumentException> {
-            application.updateTopicSchemas(topicName, newSchemas)
+            application.updateTopicSchemas(topicId, newSchemas)
         }
     }
 
     @Test
     fun `should throw exception when topic does not exist`() = runTest {
-        val unknownTopic = "unknown-topic"
+        val nonExistentTopicId = UUID.randomUUID()
 
         assertThrows<TopicNotFoundException> {
-            application.updateTopicSchemas(unknownTopic, listOf())
+            application.updateTopicSchemas(nonExistentTopicId, listOf())
         }
     }
 
@@ -97,17 +104,18 @@ class UpdateTopicSchemasServiceTest {
             Schema(eventType = "user.created", properties = mapOf("id" to "string")),
             Schema(eventType = "user.updated", properties = mapOf("id" to "string"))
         )
-        application.createTopic(topicName, initialSchemas)
+        val topic = application.createTopic(topicName, initialSchemas, namespaceId)
+        topicId = topic.topicId
 
         val newSchemas = initialSchemas.drop(1)
 
         assertThrows<IllegalArgumentException> {
-            application.updateTopicSchemas(topicName, newSchemas)
+            application.updateTopicSchemas(topicId, newSchemas)
         }
     }
 
     @Test
-    fun `should update schemas in specific tenant and namespace`() = runTest {
+    fun `should update schemas in specific namespace`() = runTest {
         val tenantName = "acme"
         val namespaceName = "production"
         val topicName = "order-events"
@@ -117,15 +125,45 @@ class UpdateTopicSchemasServiceTest {
 
         val tenant = application.createTenant(tenantName)
         val tenantId = tenant.tenantId
-        application.createNamespace(tenantId, namespaceName)
-        application.createTopic(topicName, initialSchemas, tenantName, namespaceName)
+        val namespace = application.createNamespace(tenantId, namespaceName)
+        val topic = application.createTopic(topicName, initialSchemas, namespace.namespaceId)
 
         val newSchemas = initialSchemas + Schema(eventType = "order.cancelled", properties = mapOf("id" to "string"))
 
-        val result = application.updateTopicSchemas(topicName, newSchemas, tenantName, namespaceName)
+        val result = application.updateTopicSchemas(topic.topicId, newSchemas)
 
         assertEquals(newSchemas.size, result.schemas.size)
         assertTrue(result.schemas.any { it.eventType == "order.created" })
         assertTrue(result.schemas.any { it.eventType == "order.cancelled" })
+    }
+
+    @Test
+    fun `should throw exception when schema eventType is blank`() = runTest {
+        // Rule SM-3: Schema must have non-blank eventType
+        // Schema validation happens at construction time, so we catch it when creating the Schema
+        val initialSchemas = listOf(
+            Schema(eventType = "user.created", properties = mapOf("id" to "string"))
+        )
+        val topic = application.createTopic(topicName, initialSchemas, namespaceId)
+        topicId = topic.topicId
+
+        assertThrows<IllegalArgumentException> {
+            Schema(eventType = "", properties = mapOf("id" to "string"))
+        }
+    }
+
+    @Test
+    fun `should throw exception when schema schema field is blank`() = runTest {
+        // Rule SM-3: Schema must have non-blank schema field
+        // Schema validation happens at construction time, so we catch it when creating the Schema
+        val initialSchemas = listOf(
+            Schema(eventType = "user.created", properties = mapOf("id" to "string"))
+        )
+        val topic = application.createTopic(topicName, initialSchemas, namespaceId)
+        topicId = topic.topicId
+
+        assertThrows<IllegalArgumentException> {
+            Schema(eventType = "user.created", schema = "", properties = mapOf("id" to "string"))
+        }
     }
 }

@@ -10,8 +10,10 @@ import kotlinx.coroutines.flow.StateFlow
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
+import java.util.*
+
 class TopicDispatcher(
-    private val topic: String,
+    private val topicId: UUID,
     private val consumerRepository: ConsumerRepository,
     private val eventRepository: EventRepository,
     private val checkIntervalMs: Long = 500
@@ -43,7 +45,7 @@ class TopicDispatcher(
                     delay(checkIntervalMs)
                 }
             } catch (e: Exception) {
-                logger.error("Dispatcher for topic $topic encountered an error and will stop", e)
+                logger.error("Dispatcher for topic $topicId encountered an error and will stop", e)
             } finally {
                 _isRunning.value = false
             }
@@ -60,13 +62,13 @@ class TopicDispatcher(
     }
 
     private suspend fun checkAndDeliverEvents() {
-        val consumers = consumerRepository.findByTopic(topic)
+        val consumers = consumerRepository.findByTopic(topicId)
 
         for (consumer in consumers) {
             try {
                 deliverPendingEvents(consumer)
             } catch (e: Exception) {
-                logger.error("Failed to deliver events to consumer ${consumer.id} for topic $topic", e)
+                logger.error("Failed to deliver events to consumer ${consumer.id} for topic $topicId", e)
             }
         }
     }
@@ -79,14 +81,11 @@ class TopicDispatcher(
         }
 
         val eventsToDeliver = mutableListOf<com.eventstore.domain.Event>()
-        val topicToLatestEventId = mutableMapOf<String, String>()
-
-        // Parse tenant/namespace/topic from the dispatcher's topic (which may be qualified)
-        val (simpleTopicName, tenantId, namespaceId) = parseTopicName(topic)
+        val topicToLatestEventId = mutableMapOf<UUID, String>()
 
         // Check each topic the consumer is interested in
-        for ((topicName, lastEventIdStr) in consumer.topics) {
-            if (topicName != topic) continue
+        for ((consumerTopicId, lastEventIdStr) in consumer.topics) {
+            if (consumerTopicId != topicId) continue
 
             try {
                 // ConsumerRegistrationRequestMapper already normalizes empty strings to null,
@@ -94,19 +93,17 @@ class TopicDispatcher(
                 // If EventId construction fails, it indicates data corruption and should not be silently ignored.
                 val lastEventId = lastEventIdStr?.let { EventId.fromString(it) }
                 val events = eventRepository.getEvents(
-                    topic = simpleTopicName,
-                    sinceEventId = lastEventId,
-                    tenantId = tenantId,
-                    namespaceId = namespaceId
+                    topicId = topicId,
+                    sinceEventId = lastEventId
                 )
 
                 if (events.isNotEmpty()) {
                     eventsToDeliver.addAll(events)
                     // Track the latest event ID for this topic (will update consumer state only after successful delivery)
-                    topicToLatestEventId[topicName] = events.last().id.value
+                    topicToLatestEventId[topicId] = events.last().id.value
                 }
             } catch (e: Exception) {
-                logger.error("Failed to deliver events to consumer ${consumer.id} for topic $topicName", e)
+                logger.error("Failed to deliver events to consumer ${consumer.id} for topic $consumerTopicId", e)
             }
         }
 
@@ -120,8 +117,8 @@ class TopicDispatcher(
         if (result.success) {
             // Update consumer state only after successful delivery
             var updatedConsumer = consumer
-            for ((topicName, latestEventId) in topicToLatestEventId) {
-                updatedConsumer = updatedConsumer.withUpdatedLastEventId(topicName, latestEventId)
+            for ((consumerTopicId, latestEventId) in topicToLatestEventId) {
+                updatedConsumer = updatedConsumer.withUpdatedLastEventId(consumerTopicId, latestEventId)
             }
             consumerRepository.save(updatedConsumer)
 
@@ -142,32 +139,6 @@ class TopicDispatcher(
                 // Unregister consumer after max retries
                 retryState.remove(consumer.id)
                 consumerRepository.delete(consumer.id)
-            }
-        }
-    }
-
-    /**
-     * Parse a topic name that may be in qualified format (tenant/namespace/topic) or simple format (topic).
-     * Returns (simpleTopicName, tenantId, namespaceId).
-     * Since legacy format is no longer supported, we always extract tenant/namespace from qualified names,
-     * or use "default"/"default" for simple topic names.
-     */
-    private fun parseTopicName(topicName: String): Triple<String, String, String> {
-        val parts = topicName.split("/")
-        return when (parts.size) {
-            3 -> {
-                // Qualified name: tenant/namespace/topic
-                // Always use the actual values, even if "default"
-                Triple(parts[2], parts[0], parts[1])
-            }
-
-            1 -> {
-                // Simple topic name - use default tenant/namespace since legacy format is removed
-                Triple(parts[0], "default", "default")
-            }
-            else -> {
-                // Fallback: treat as simple topic name with defaults
-                Triple(topicName, "default", "default")
             }
         }
     }

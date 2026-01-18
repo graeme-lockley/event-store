@@ -33,10 +33,8 @@ class PermissionProjectionServiceTest {
 
         val event = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = grantedAt,
             type = PermissionEventType.GRANTED,
@@ -76,10 +74,8 @@ class PermissionProjectionServiceTest {
         // First grant permission
         val grantEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = grantedAt,
             type = PermissionEventType.GRANTED,
@@ -99,10 +95,8 @@ class PermissionProjectionServiceTest {
         val revokeAt = grantedAt.plusSeconds(10)
         val revokeEvent = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                sequence = 2,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                sequence = 2
             ),
             timestamp = revokeAt,
             type = PermissionEventType.REVOKED,
@@ -134,10 +128,8 @@ class PermissionProjectionServiceTest {
 
         val event = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = grantedAt,
             type = PermissionEventType.GRANTED,
@@ -193,10 +185,8 @@ class PermissionProjectionServiceTest {
 
         val event = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = grantedAt,
             type = PermissionEventType.GRANTED,
@@ -244,10 +234,8 @@ class PermissionProjectionServiceTest {
         // Grant permission for all tenants (resourceId = null)
         val event = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = grantedAt,
             type = PermissionEventType.GRANTED,
@@ -288,10 +276,8 @@ class PermissionProjectionServiceTest {
 
         val event = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = grantedAt,
             type = PermissionEventType.GRANTED,
@@ -337,10 +323,8 @@ class PermissionProjectionServiceTest {
         // Grant permission in tenant1
         val event = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = grantedAt,
             type = PermissionEventType.GRANTED,

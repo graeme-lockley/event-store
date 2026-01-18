@@ -9,46 +9,21 @@ import java.util.*
  */
 interface TopicRepository {
     suspend fun createTopic(
-        resourceId: UUID,
-        tenantResourceId: UUID,
-        namespaceResourceId: UUID,
+        topicId: UUID,
+        namespaceId: UUID,
         name: String,
-        schemas: List<Schema>,
-        tenantName: String,
-        namespaceName: String
+        schemas: List<Schema>
     ): Topic
 
-    suspend fun getTopic(
-        name: String,
-        tenantName: String = "default",
-        namespaceName: String = "default"
-    ): Topic?
+    suspend fun getTopic(topicId: UUID): Topic?
 
-    suspend fun topicExists(
-        name: String,
-        tenantName: String = "default",
-        namespaceName: String = "default"
-    ): Boolean
+    suspend fun topicExists(topicId: UUID): Boolean
 
-    suspend fun updateSequence(
-        name: String,
-        sequence: Long,
-        tenantName: String = "default",
-        namespaceName: String = "default"
-    )
+    suspend fun updateSequence(topicId: UUID, sequence: Long)
 
-    suspend fun getAndIncrementSequence(
-        topicName: String,
-        tenantName: String = "default",
-        namespaceName: String = "default"
-    ): Long
+    suspend fun getAndIncrementSequence(topicId: UUID): Long
 
-    suspend fun updateSchemas(
-        name: String,
-        schemas: List<Schema>,
-        tenantName: String = "default",
-        namespaceName: String = "default"
-    ): Topic
+    suspend fun updateSchemas(topicId: UUID, schemas: List<Schema>): Topic
 
     suspend fun getAllTopics(): List<Topic>
 }

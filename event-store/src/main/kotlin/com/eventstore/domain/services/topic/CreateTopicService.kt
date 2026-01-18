@@ -6,21 +6,23 @@ import com.eventstore.domain.exceptions.TopicAlreadyExistsException
 import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
-import com.eventstore.infrastructure.projections.TenantProjectionService
 import java.util.*
 
 class CreateTopicService(
     private val topicRepository: TopicRepository,
     private val schemaValidator: SchemaValidator,
-    private val tenantProjectionService: TenantProjectionService,
     private val namespaceProjectionService: NamespaceProjectionService
 ) {
     suspend fun execute(
         name: String,
         schemas: List<Schema>,
-        tenantName: String = "default",
-        namespaceName: String = "default"
+        namespaceId: UUID
     ): Topic {
+        // Rule C-6: At least one schema must be provided
+        require(schemas.isNotEmpty()) {
+            "At least one schema is required when creating a topic"
+        }
+
         Schema.unique(schemas)
 
         // Validate schemas have required fields
@@ -33,33 +35,23 @@ class CreateTopicService(
             }
         }
 
-        // Resolve tenant and namespace to get resourceIds
-        val tenant = tenantProjectionService.getTenantByName(tenantName)
-            ?: throw com.eventstore.domain.exceptions.TenantNameNotFoundException(tenantName)
-        val namespace = namespaceProjectionService.getNamespaceByName(tenantName, namespaceName)
-            ?: throw com.eventstore.domain.exceptions.NamespaceNotFoundException(namespaceName)
+        // Validate namespace exists
+        namespaceProjectionService.getNamespaceById(namespaceId)
+            ?: throw com.eventstore.domain.exceptions.NamespaceNotFoundException(namespaceId.toString())
 
-        // Check if topic already exists
-        if (topicRepository.topicExists(name, tenantName, namespaceName)) {
-            throw TopicAlreadyExistsException(name)
-        }
-
-        // Generate resourceId for topic
-        val resourceId = UUID.randomUUID()
+        // Generate topicId for topic (UUIDs are globally unique, so no need to check for duplicates)
+        val topicId = UUID.randomUUID()
 
         // Create topic
         val topic = topicRepository.createTopic(
-            resourceId = resourceId,
-            tenantResourceId = tenant.tenantId,
-            namespaceResourceId = namespace.namespaceId,
+            topicId = topicId,
+            namespaceId = namespaceId,
             name = name,
-            schemas = schemas,
-            tenantName = tenantName,
-            namespaceName = namespaceName
+            schemas = schemas
         )
 
         // Register schemas with validator
-        schemaValidator.registerSchemas(name, schemas)
+        schemaValidator.registerSchemas(topicId, schemas)
 
         return topic
     }

@@ -2,13 +2,14 @@ package com.eventstore.domain.ports.outbound
 
 import com.eventstore.domain.Event
 import com.eventstore.domain.EventId
+import java.util.*
 
 /**
  * Outbound port for event persistence operations.
  */
 interface EventRepository {
     suspend fun storeEvent(
-        topic: String,
+        topicId: UUID,
         type: String,
         payload: Map<String, Any>,
         eventId: EventId,
@@ -22,23 +23,19 @@ interface EventRepository {
     ): List<Event>
 
     suspend fun getEvent(
-        topic: String,
+        topicId: UUID,
         eventId: EventId
     ): Event?
 
     suspend fun getEvents(
-        topic: String,
+        topicId: UUID,
         sinceEventId: EventId? = null,
         date: String? = null,
-        limit: Int? = null,
-        tenantId: String? = null,
-        namespaceId: String? = null
+        limit: Int? = null
     ): List<Event>
 
     suspend fun getLatestEventId(
-        topic: String,
-        tenantId: String? = null,
-        namespaceId: String? = null
+        topicId: UUID
     ): EventId?
 }
 

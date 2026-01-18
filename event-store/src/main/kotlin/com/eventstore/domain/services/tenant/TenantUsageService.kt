@@ -20,21 +20,29 @@ class TenantUsageService(
     private val userProjectionService: UserProjectionService
 ) {
     suspend fun getUsage(tenantId: UUID, tenantName: String): TenantUsage {
-        // Count topics for this tenant
+        // Count topics for this tenant (via namespaces)
+        // Get all namespaces for this tenant, then count topics in those namespaces
+        val tenantNamespaceIds = namespaceProjectionService.getAllNamespaces()
+            .filter { it.tenantId == tenantId }
+            .map { it.namespaceId }
+            .toSet()
         val topics = topicRepository.getAllTopics()
-            .count { it.tenantResourceId == tenantId }
+            .count { it.namespaceId in tenantNamespaceIds }
 
         // Count namespaces for this tenant
         val namespaces = namespaceProjectionService.getAllNamespaces()
             .count { it.tenantId == tenantId }
 
-        // Count consumers for this tenant (consumers are associated via topics)
-        // Topics are qualified names like "tenant-name/namespace-name/topic-name"
+        // Count consumers for this tenant
+        // Note: Since topics are now UUIDs, we can't filter by tenant name.
+        // We'll need to find topics that belong to tenant's namespaces, then find consumers subscribed to those topics.
+        val tenantTopicIds = topicRepository.getAllTopics()
+            .filter { it.namespaceId in tenantNamespaceIds }
+            .map { it.topicId }
+            .toSet()
         val consumers = consumerRepository.findAll()
             .count { consumer ->
-                consumer.topics.keys.any { topicName ->
-                    topicName.startsWith("$tenantName/")
-                }
+                consumer.topics.keys.any { topicId -> topicId in tenantTopicIds }
             }
 
         // Count users associated with this tenant

@@ -22,7 +22,7 @@ data class PermissionGrantedEvent(
     val resourceId: String? = null,       // UUID of specific resource, or null for all resources of this type
     val tenantResourceId: String,         // UUID of tenant (for context and inheritance)
     val namespaceResourceId: String? = null, // UUID of namespace (for context and inheritance)
-    val topicResourceId: String? = null,   // UUID of topic (for context and inheritance)
+    val topicId: String? = null,   // UUID of topic (for context and inheritance)
     val permissions: Set<Permission>,
     val grantedBy: String,                // UUID of user who granted permission
     val grantedAt: Instant,
@@ -42,7 +42,7 @@ data class PermissionGrantedEvent(
         )
         resourceId?.let { payload["resourceId"] = it }
         namespaceResourceId?.let { payload["namespaceResourceId"] = it }
-        topicResourceId?.let { payload["topicResourceId"] = it }
+        topicId?.let { payload["topicId"] = it }
         expiresAt?.let { payload["expiresAt"] = it.toString() }
         return payload
     }
@@ -59,7 +59,7 @@ data class PermissionGrantedEvent(
             val resourceId = payload["resourceId"] as? String
             val tenantResourceId = payload["tenantResourceId"] as? String ?: error("tenantResourceId missing")
             val namespaceResourceId = payload["namespaceResourceId"] as? String
-            val topicResourceId = payload["topicResourceId"] as? String
+            val topicId = payload["topicId"] as? String
             val permissions = (payload["permissions"] as? List<*>)?.map {
                 Permission.valueOf(it as String)
             }?.toSet() ?: error("permissions missing")
@@ -74,7 +74,7 @@ data class PermissionGrantedEvent(
                 resourceId = resourceId,
                 tenantResourceId = tenantResourceId,
                 namespaceResourceId = namespaceResourceId,
-                topicResourceId = topicResourceId,
+                topicId = topicId,
                 permissions = permissions,
                 grantedBy = grantedBy,
                 grantedAt = grantedAt,
@@ -91,7 +91,7 @@ data class PermissionRevokedEvent(
     val resourceId: String? = null,       // UUID of specific resource, or null for all resources
     val tenantResourceId: String,
     val namespaceResourceId: String? = null,
-    val topicResourceId: String? = null,
+    val topicId: String? = null,
     val permissions: Set<Permission>,
     val revokedBy: String,                // UUID of user who revoked permission
     val revokedAt: Instant,
@@ -111,7 +111,7 @@ data class PermissionRevokedEvent(
         )
         resourceId?.let { payload["resourceId"] = it }
         namespaceResourceId?.let { payload["namespaceResourceId"] = it }
-        topicResourceId?.let { payload["topicResourceId"] = it }
+        topicId?.let { payload["topicId"] = it }
         reason?.let { payload["reason"] = it }
         return payload
     }
@@ -128,7 +128,7 @@ data class PermissionRevokedEvent(
             val resourceId = payload["resourceId"] as? String
             val tenantResourceId = payload["tenantResourceId"] as? String ?: error("tenantResourceId missing")
             val namespaceResourceId = payload["namespaceResourceId"] as? String
-            val topicResourceId = payload["topicResourceId"] as? String
+            val topicId = payload["topicId"] as? String
             val permissions = (payload["permissions"] as? List<*>)?.map {
                 Permission.valueOf(it as String)
             }?.toSet() ?: error("permissions missing")
@@ -143,7 +143,7 @@ data class PermissionRevokedEvent(
                 resourceId = resourceId,
                 tenantResourceId = tenantResourceId,
                 namespaceResourceId = namespaceResourceId,
-                topicResourceId = topicResourceId,
+                topicId = topicId,
                 permissions = permissions,
                 revokedBy = revokedBy,
                 revokedAt = revokedAt,

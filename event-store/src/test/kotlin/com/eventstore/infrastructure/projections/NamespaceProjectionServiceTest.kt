@@ -40,10 +40,8 @@ class NamespaceProjectionServiceTest {
         createdPayload["tenantName"] = "acme" // Include tenantName for projection service
         val created = Event(
             id = EventId.create(
-                SystemTopics.NAMESPACES_TOPIC_NAME,
-                1,
-                SystemTopics.SYSTEM_TENANT_NAME,
-                SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.NAMESPACES_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = createdAt,
             type = NamespaceEventType.CREATED,
@@ -52,10 +50,8 @@ class NamespaceProjectionServiceTest {
         val updatedAt = createdAt.plusSeconds(10)
         val updated = Event(
             id = EventId.create(
-                SystemTopics.NAMESPACES_TOPIC_NAME,
-                2,
-                SystemTopics.SYSTEM_TENANT_NAME,
-                SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.NAMESPACES_TOPIC_ID,
+                sequence = 2
             ),
             timestamp = updatedAt,
             type = NamespaceEventType.UPDATED,
@@ -92,10 +88,8 @@ class NamespaceProjectionServiceTest {
         createdPayload["tenantName"] = "acme" // Include tenantName for projection service
         val created = Event(
             id = EventId.create(
-                SystemTopics.NAMESPACES_TOPIC_NAME,
-                1,
-                SystemTopics.SYSTEM_TENANT_NAME,
-                SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.NAMESPACES_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = createdAt,
             type = NamespaceEventType.CREATED,
@@ -104,10 +98,8 @@ class NamespaceProjectionServiceTest {
         val deletedAt = createdAt.plusSeconds(5)
         val deleted = Event(
             id = EventId.create(
-                SystemTopics.NAMESPACES_TOPIC_NAME,
-                2,
-                SystemTopics.SYSTEM_TENANT_NAME,
-                SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.NAMESPACES_TOPIC_ID,
+                sequence = 2
             ),
             timestamp = deletedAt,
             type = NamespaceEventType.DELETED,
@@ -136,10 +128,8 @@ class NamespaceProjectionServiceTest {
         createdPayload["tenantName"] = "acme"
         val created = Event(
             id = EventId.create(
-                SystemTopics.NAMESPACES_TOPIC_NAME,
-                1,
-                SystemTopics.SYSTEM_TENANT_NAME,
-                SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.NAMESPACES_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = createdAt,
             type = NamespaceEventType.CREATED,

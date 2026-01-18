@@ -7,15 +7,16 @@ import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class JsonSchemaValidator(private val objectMapper: ObjectMapper = ObjectMapper()) : SchemaValidator {
     private val validators = ConcurrentHashMap<String, com.networknt.schema.JsonSchema>()
     private val factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7)
 
-    override fun registerSchemas(topic: String, schemas: List<Schema>) {
+    override fun registerSchemas(topicId: UUID, schemas: List<Schema>) {
         schemas.forEach { schema ->
-            val key = "${topic}:${schema.eventType}"
+            val key = "${topicId}:${schema.eventType}"
 
             // Convert Schema to JSON Schema format
             val jsonSchema = buildJsonSchema(schema)
@@ -26,10 +27,10 @@ class JsonSchemaValidator(private val objectMapper: ObjectMapper = ObjectMapper(
         }
     }
 
-    override fun validateEvent(topic: String, eventType: String, payload: Map<String, Any>) {
-        val key = "${topic}:${eventType}"
+    override fun validateEvent(topicId: UUID, eventType: String, payload: Map<String, Any>) {
+        val key = "${topicId}:${eventType}"
         val validator = validators[key]
-            ?: throw SchemaNotFoundException(topic, eventType)
+            ?: throw SchemaNotFoundException(topicId.toString(), eventType)
 
         try {
             val payloadJson = objectMapper.writeValueAsString(payload)
@@ -46,8 +47,8 @@ class JsonSchemaValidator(private val objectMapper: ObjectMapper = ObjectMapper(
         }
     }
 
-    override fun hasSchema(topic: String, eventType: String): Boolean {
-        val key = "${topic}:${eventType}"
+    override fun hasSchema(topicId: UUID, eventType: String): Boolean {
+        val key = "${topicId}:${eventType}"
         return validators.containsKey(key)
     }
 

@@ -40,20 +40,22 @@ class AuthorizationService(
         val namespaceResourceId = namespaceName?.let {
             resourceResolver.resolveNamespaceName(tenantResourceId, it)
         }
-        val topicResourceId = topicName?.let {
+        // If topicName is provided, it should be a UUID string (API uses UUIDs)
+        val topicId = topicName?.let {
             requireNotNull(namespaceResourceId) { "Namespace required for topic" }
-            resourceResolver.resolveTopicName(
-                tenantResourceId,
-                namespaceResourceId,
-                it
-            )
+            // topicName is actually a UUID string when provided from API
+            try {
+                UUID.fromString(it)
+            } catch (e: IllegalArgumentException) {
+                throw com.eventstore.domain.exceptions.TopicNotFoundException(it)
+            }
         }
 
         // Determine target resourceId based on resourceType
         val targetResourceId = when (resourceType) {
             ResourceType.TENANT -> tenantResourceId
             ResourceType.NAMESPACE -> namespaceResourceId
-            ResourceType.TOPIC -> topicResourceId
+            ResourceType.TOPIC -> topicId
             else -> resourceName?.let { UUID.fromString(it) }  // For USER, CONSUMER, etc., resourceId comes from parameter
         }
 
@@ -64,7 +66,7 @@ class AuthorizationService(
             permission = requiredPermission,
             tenantResourceId = tenantResourceId,
             namespaceResourceId = namespaceResourceId,
-            topicResourceId = topicResourceId
+            topicId = topicId
         )
     }
 }

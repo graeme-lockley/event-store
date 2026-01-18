@@ -9,6 +9,7 @@ import com.eventstore.domain.services.createEventStore
 import com.eventstore.infrastructure.factories.ConsumerFactoryImpl
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -19,6 +20,7 @@ class TopicDispatcherTest {
     fun `events are dispatched with the event state being saved after a successful dispatch`() = runTest {
         val topicName = "user-events"
         val helper = createEventStore(topicName)
+        val topicId = helper.topicId ?: UUID.randomUUID()
 
         val deliveredEvents = mutableListOf<List<Event>>()
         val handler: suspend (List<Event>) -> DeliveryResult = { events ->
@@ -29,7 +31,7 @@ class TopicDispatcherTest {
         val consumerFactory = ConsumerFactoryImpl()
         val registrationRequest = InMemoryConsumerRegistrationRequest(
             handler = handler,
-            topics = mapOf(topicName to null)
+            topics = mapOf(topicId to null)
         )
 
         val consumerId = RegisterConsumerService(
@@ -37,15 +39,12 @@ class TopicDispatcherTest {
             helper.topicRepository,
             consumerFactory,
             stubEventDispatcher
-        ).execute(registrationRequest, "default", "default")
-
-        // After registration, topics are stored as qualified names (tenant/namespace/topic)
-        val qualifiedTopicName = "default/default/$topicName"
+        ).execute(registrationRequest)
 
         val dispatcher = TopicDispatcher(
-            qualifiedTopicName,
-            helper.consumerRepository,
-            helper.eventRepository
+            topicId = topicId,
+            consumerRepository = helper.consumerRepository,
+            eventRepository = helper.eventRepository
         )
 
         dispatcher.triggerDelivery()
@@ -57,8 +56,8 @@ class TopicDispatcherTest {
         // Verify consumer was updated with last event ID
         val consumer = helper.findConsumer(consumerId)
         assertNotNull(consumer)
-        // Consumer stores topics as qualified names
-        val lastEventId = consumer.topics[qualifiedTopicName]
+        // Consumer stores topics as Map<UUID, String?>
+        val lastEventId = consumer.topics[topicId]
         assertNotNull(lastEventId)
         assertEquals(lastEventId, deliveredEvents[0].last().id.value)
     }

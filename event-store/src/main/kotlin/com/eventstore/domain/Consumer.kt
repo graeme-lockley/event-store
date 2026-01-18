@@ -1,13 +1,14 @@
 package com.eventstore.domain
 
 import com.eventstore.domain.ports.outbound.DeliveryResult
+import java.util.*
 
 /**
  * Abstract base class for consumers that receive events via different protocols.
  */
 abstract class Consumer(
     val id: String,
-    val topics: Map<String, String?> // topic -> lastEventId (null if starting from beginning)
+    val topics: Map<UUID, String?> // topicId -> lastEventId (null if starting from beginning)
 ) {
     init {
         require(id.isNotBlank()) { "Consumer ID is required" }
@@ -33,5 +34,5 @@ abstract class Consumer(
      * Creates a copy with updated last event ID.
      * Subclasses must implement this to return their specific type.
      */
-    abstract fun withUpdatedLastEventId(topic: String, eventId: String): Consumer
+    abstract fun withUpdatedLastEventId(topicId: UUID, eventId: String): Consumer
 }

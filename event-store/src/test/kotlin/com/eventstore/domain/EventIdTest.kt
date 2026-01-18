@@ -2,83 +2,110 @@ package com.eventstore.domain
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.util.*
 import kotlin.test.assertEquals
 
 class EventIdTest {
 
     @Test
     fun `should create valid EventId`() {
-        val eventId = EventId.create("user-events", 42L, "default", "default")
-        assertEquals("default/default/user-events/42", eventId.value)
-        assertEquals("user-events", eventId.topicId)
+        val topicId = UUID.randomUUID()
+        val eventId = EventId.create(topicId, 42L)
+        assertEquals("$topicId/42", eventId.value)
+        assertEquals(topicId, eventId.topicId)
         assertEquals(42L, eventId.sequence)
     }
 
     @Test
-    fun `should parse topic with multiple hyphens`() {
-        val eventId = EventId.fromString("default/default/my-topic-name/123")
-        assertEquals("my-topic-name", eventId.topicId)
+    fun `should parse EventId from string`() {
+        val topicId = UUID.randomUUID()
+        val eventId = EventId.fromString("$topicId/123")
+        assertEquals(topicId, eventId.topicId)
         assertEquals(123L, eventId.sequence)
-        assertEquals("default", eventId.tenantId)
-        assertEquals("default", eventId.namespaceId)
     }
 
     @Test
-    fun `should extract topic correctly`() {
-        val eventId = EventId.fromString("default/default/user-events/1")
-        assertEquals("user-events", eventId.topicId)
-        assertEquals("default", eventId.tenantId)
-        assertEquals("default", eventId.namespaceId)
+    fun `should extract topicId correctly`() {
+        val topicId = UUID.randomUUID()
+        val eventId = EventId.fromString("$topicId/1")
+        assertEquals(topicId, eventId.topicId)
     }
 
     @Test
     fun `should extract sequence correctly`() {
-        val eventId = EventId.fromString("default/default/user-events/999")
+        val topicId = UUID.randomUUID()
+        val eventId = EventId.fromString("$topicId/999")
         assertEquals(999L, eventId.sequence)
-        assertEquals("default", eventId.tenantId)
-        assertEquals("default", eventId.namespaceId)
     }
 
     @Test
-    fun `should throw exception for invalid format - no tenant namespace`() {
+    fun `should throw exception for invalid format - no separator`() {
         assertThrows<IllegalArgumentException> {
-            EventId.fromString("userevents123")
+            EventId.fromString("invalid")
         }
     }
 
     @Test
-    fun `should throw exception for invalid format - missing namespace`() {
+    fun `should throw exception for invalid format - missing sequence`() {
+        val topicId = UUID.randomUUID()
         assertThrows<IllegalArgumentException> {
-            EventId.fromString("tenant/user-events/")
+            EventId.fromString("$topicId/")
         }
     }
 
     @Test
     fun `should throw exception for invalid format - non-numeric sequence`() {
+        val topicId = UUID.randomUUID()
         assertThrows<IllegalArgumentException> {
-            EventId.fromString("default/default/user-events/abc")
+            EventId.fromString("$topicId/abc")
         }
     }
 
     @Test
-    fun `should handle different tenant and namespace`() {
-        val eventId = EventId.fromString("acme/production/users/42")
-        assertEquals("users", eventId.topicId)
-        assertEquals(42L, eventId.sequence)
-        assertEquals("acme", eventId.tenantId)
-        assertEquals("production", eventId.namespaceId)
+    fun `should throw exception for invalid UUID format`() {
+        assertThrows<IllegalArgumentException> {
+            EventId.fromString("invalid-uuid/42")
+        }
+    }
+
+    @Test
+    fun `should handle different topic IDs`() {
+        val topicId1 = UUID.randomUUID()
+        val topicId2 = UUID.randomUUID()
+        val eventId1 = EventId.fromString("$topicId1/42")
+        val eventId2 = EventId.fromString("$topicId2/42")
+        assertEquals(topicId1, eventId1.topicId)
+        assertEquals(topicId2, eventId2.topicId)
+        assertEquals(42L, eventId1.sequence)
+        assertEquals(42L, eventId2.sequence)
     }
 
     @Test
     fun `should handle large sequence numbers`() {
-        val eventId = EventId.create("topic", Long.MAX_VALUE, "default", "default")
+        val topicId = UUID.randomUUID()
+        val eventId = EventId.create(topicId, Long.MAX_VALUE)
         assertEquals(Long.MAX_VALUE, eventId.sequence)
     }
 
     @Test
     fun `should handle zero sequence`() {
-        val eventId = EventId.create("topic", 0L, "default", "default")
+        val topicId = UUID.randomUUID()
+        val eventId = EventId.create(topicId, 0L)
         assertEquals(0L, eventId.sequence)
     }
-}
 
+    @Test
+    fun `should throw exception for negative sequence`() {
+        val topicId = UUID.randomUUID()
+        assertThrows<IllegalArgumentException> {
+            EventId.create(topicId, -1L)
+        }
+    }
+
+    @Test
+    fun `should format value correctly`() {
+        val topicId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
+        val eventId = EventId.create(topicId, 42L)
+        assertEquals("550e8400-e29b-41d4-a716-446655440000/42", eventId.value)
+    }
+}

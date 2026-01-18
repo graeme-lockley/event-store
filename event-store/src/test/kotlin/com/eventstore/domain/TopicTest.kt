@@ -10,11 +10,15 @@ class TopicTest {
 
     @Test
     fun `should create valid topic`() {
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         val schemas = listOf(
             Schema(eventType = "user.created", properties = mapOf("id" to "string"))
         )
-        val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "user-events", 0L, schemas)
+        val topic = Topic(topicId, namespaceId, "user-events", 0L, schemas)
 
+        assertEquals(topicId, topic.topicId)
+        assertEquals(namespaceId, topic.namespaceId)
         assertEquals("user-events", topic.name)
         assertEquals(0L, topic.sequence)
         assertEquals(schemas, topic.schemas)
@@ -25,7 +29,7 @@ class TopicTest {
         val schemas = listOf(Schema(eventType = "user.created"))
 
         assertThrows<IllegalArgumentException> {
-            Topic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "", 0L, schemas)
+            Topic(UUID.randomUUID(), UUID.randomUUID(), "", 0L, schemas)
         }
     }
 
@@ -34,19 +38,19 @@ class TopicTest {
         val schemas = listOf(Schema(eventType = "user.created"))
 
         assertThrows<IllegalArgumentException> {
-            Topic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "user-events", -1L, schemas)
+            Topic(UUID.randomUUID(), UUID.randomUUID(), "user-events", -1L, schemas)
         }
     }
 
     @Test
     fun `should calculate next sequence`() {
-        val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "user-events", 5L, emptyList())
+        val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), "user-events", 5L, emptyList())
         assertEquals(6L, topic.nextSequence())
     }
 
     @Test
     fun `should update sequence`() {
-        val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "user-events", 5L, emptyList())
+        val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), "user-events", 5L, emptyList())
         val updated = topic.updateSequence(10L)
 
         assertEquals(10L, updated.sequence)
@@ -62,7 +66,7 @@ class TopicTest {
             Schema(eventType = "user.updated")
         )
 
-        val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "user-events", 0L, originalSchemas)
+        val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), "user-events", 0L, originalSchemas)
         val updated = topic.updateSchemas(newSchemas)
 
         assertEquals(newSchemas, updated.schemas)
@@ -72,14 +76,13 @@ class TopicTest {
 
     @Test
     fun `should accept empty schemas list`() {
-        val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "user-events", 0L, emptyList())
+        val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), "user-events", 0L, emptyList())
         assertTrue(topic.schemas.isEmpty())
     }
 
     @Test
     fun `should accept zero sequence`() {
-        val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "user-events", 0L, emptyList())
+        val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), "user-events", 0L, emptyList())
         assertEquals(0L, topic.sequence)
     }
 }
-

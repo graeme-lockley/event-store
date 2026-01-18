@@ -1,11 +1,13 @@
 package com.eventstore.domain.services.consumer
 
+import java.util.*
+
 /**
  * Sealed interface for consumer registration requests.
  * Each consumer type has its own request subclass with type-specific parameters.
  */
 sealed interface ConsumerRegistrationRequest {
-    val topics: Map<String, String?> // topic -> lastEventId (null if starting from beginning)
+    val topics: Map<UUID, String?> // topicId -> lastEventId (null if starting from beginning)
 }
 
 /**
@@ -13,7 +15,7 @@ sealed interface ConsumerRegistrationRequest {
  */
 data class HttpConsumerRegistrationRequest(
     val callbackUrl: String,
-    override val topics: Map<String, String?>
+    override val topics: Map<UUID, String?>
 ) : ConsumerRegistrationRequest
 
 /**
@@ -22,7 +24,7 @@ data class HttpConsumerRegistrationRequest(
  */
 data class InMemoryConsumerRegistrationRequest(
     val handler: suspend (List<com.eventstore.domain.Event>) -> com.eventstore.domain.ports.outbound.DeliveryResult,
-    override val topics: Map<String, String?>
+    override val topics: Map<UUID, String?>
 ) : ConsumerRegistrationRequest
 
 /**
@@ -31,6 +33,6 @@ data class InMemoryConsumerRegistrationRequest(
 data class AzureEventGridConsumerRegistrationRequest(
     val endpointUrl: String,
     val accessKey: String,
-    override val topics: Map<String, String?>
+    override val topics: Map<UUID, String?>
 ) : ConsumerRegistrationRequest
 

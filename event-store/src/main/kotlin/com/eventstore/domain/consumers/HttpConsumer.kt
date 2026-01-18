@@ -13,6 +13,7 @@ import io.ktor.serialization.jackson.*
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import java.net.URL
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 data class DeliveryPayload(
@@ -30,7 +31,7 @@ data class EventDto(
 class HttpConsumer(
     id: String,
     val callbackUrl: URL,
-    topics: Map<String, String?>,
+    topics: Map<UUID, String?>,
     private val httpClient: HttpClient = createDefaultHttpClient(),
     private val timeoutSeconds: Long = 30
 ) : Consumer(id, topics) {
@@ -89,11 +90,11 @@ class HttpConsumer(
         return "HttpConsumer(id=$id, callbackUrl=$callbackUrl, topics=$topics)"
     }
 
-    override fun withUpdatedLastEventId(topic: String, eventId: String): Consumer {
+    override fun withUpdatedLastEventId(topicId: UUID, eventId: String): Consumer {
         return HttpConsumer(
             id = id,
             callbackUrl = callbackUrl,
-            topics = topics + (topic to eventId),
+            topics = topics + (topicId to eventId),
             httpClient = httpClient,
             timeoutSeconds = timeoutSeconds
         )

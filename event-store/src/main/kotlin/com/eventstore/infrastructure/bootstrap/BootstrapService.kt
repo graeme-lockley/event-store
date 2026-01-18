@@ -22,7 +22,6 @@ class BootstrapServiceImpl(
 ) : BootstrapService {
     private val logger = LoggerFactory.getLogger(BootstrapServiceImpl::class.java)
 
-    private val usersTopicName = SystemTopics.USERS_TOPIC_NAME
     private val systemTopics = listOf(
         Pair(SystemTopics.TENANTS_TOPIC_NAME, SystemTopics.TENANTS_TOPIC_ID),
         Pair(SystemTopics.NAMESPACES_TOPIC_NAME, SystemTopics.NAMESPACES_TOPIC_ID),
@@ -37,10 +36,8 @@ class BootstrapServiceImpl(
         ensureSystemTopics()
 
         val systemTenantExists = eventRepository.getEvents(
-            topic = SystemTopics.TENANTS_TOPIC_NAME,
-            limit = 1,
-            tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+            topicId = SystemTopics.TENANTS_TOPIC_ID,
+            limit = 1
         ).isNotEmpty()
         if (systemTenantExists) {
             logger.info("Bootstrap skipped: system tenant already initialized")
@@ -54,28 +51,20 @@ class BootstrapServiceImpl(
 
     private suspend fun ensureSystemTopics() {
         for (topic in systemTopics) {
-            if (!topicRepository.topicExists(topic.first, SystemTopics.SYSTEM_TENANT_NAME,
-                    SystemTopics.MANAGEMENT_NAMESPACE_NAME
-                )) {
-                logger.info("Creating system topic: $topic")
-                // Generate resourceIds for system topics (they're in system tenant/namespace)
-                // Note: These are temporary UUIDs - the actual resourceIds will be set when tenant/namespace are created
-                val systemTenantResourceId = UUID.randomUUID() // Temporary - will be replaced when tenant is created
-                val managementNamespaceResourceId =
-                    UUID.randomUUID() // Temporary - will be replaced when namespace is created
-                val schemas = getSchemasForTopic(topic.first)
+            val (topicName, topicId) = topic
+            if (!topicRepository.topicExists(topicId)) {
+                logger.info("Creating system topic: $topicName (ID: $topicId)")
+                // System topics use the MANAGEMENT_NAMESPACE_ID
+                val schemas = getSchemasForTopic(topicName)
                 topicRepository.createTopic(
-                    resourceId = topic.second,
-                    tenantResourceId = systemTenantResourceId,
-                    namespaceResourceId = managementNamespaceResourceId,
-                    name = topic.first,
-                    schemas = schemas,
-                    tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = topicId,
+                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_ID,
+                    name = topicName,
+                    schemas = schemas
                 )
                 // Register schemas with validator
-                schemaValidator.registerSchemas(topic.first, schemas)
-                logger.info("Registered ${schemas.size} schemas for topic: $topic")
+                schemaValidator.registerSchemas(topicId, schemas)
+                logger.info("Registered ${schemas.size} schemas for topic: $topicName")
             }
         }
     }
@@ -84,7 +73,7 @@ class BootstrapServiceImpl(
         val resourcePath = when (topic) {
             SystemTopics.TENANTS_TOPIC_NAME -> "/schemas/system/tenants.json"
             SystemTopics.NAMESPACES_TOPIC_NAME -> "/schemas/system/namespaces.json"
-            usersTopicName -> "/schemas/system/users.json"
+            SystemTopics.USERS_TOPIC_NAME -> "/schemas/system/users.json"
             SystemTopics.PERMISSIONS_TOPIC_NAME -> "/schemas/system/permissions.json"
             SystemTopics.API_KEYS_TOPIC_NAME -> "/schemas/system/api-keys.json"
             else -> null
@@ -131,14 +120,8 @@ class BootstrapServiceImpl(
         val events = mutableListOf(
             Event(
                 id = EventId.create(
-                    topic = SystemTopics.TENANTS_TOPIC_NAME,
-                    sequence = topicRepository.getAndIncrementSequence(
-                        topicName = SystemTopics.TENANTS_TOPIC_NAME,
-                        tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-                        namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
-                    ),
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.TENANTS_TOPIC_ID,
+                    sequence = topicRepository.getAndIncrementSequence(SystemTopics.TENANTS_TOPIC_ID)
                 ),
                 timestamp = timestamp,
                 type = TenantEventType.CREATED,
@@ -146,14 +129,8 @@ class BootstrapServiceImpl(
             ),
             Event(
                 id = EventId.create(
-                    topic = SystemTopics.NAMESPACES_TOPIC_NAME,
-                    sequence = topicRepository.getAndIncrementSequence(
-                        topicName = SystemTopics.NAMESPACES_TOPIC_NAME,
-                        tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-                        namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
-                    ),
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.NAMESPACES_TOPIC_ID,
+                    sequence = topicRepository.getAndIncrementSequence(SystemTopics.NAMESPACES_TOPIC_ID)
                 ),
                 timestamp = timestamp,
                 type = NamespaceEventType.CREATED,
@@ -177,14 +154,8 @@ class BootstrapServiceImpl(
         events.add(
             Event(
                 id = EventId.create(
-                    topic = usersTopicName,
-                    sequence = topicRepository.getAndIncrementSequence(
-                        topicName = usersTopicName,
-                        tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-                        namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
-                    ),
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.USERS_TOPIC_ID,
+                    sequence = topicRepository.getAndIncrementSequence(SystemTopics.USERS_TOPIC_ID)
                 ),
                 timestamp = timestamp,
                 type = UserEventType.CREATED,
@@ -194,14 +165,8 @@ class BootstrapServiceImpl(
         events.add(
             Event(
                 id = EventId.create(
-                    topic = usersTopicName,
-                    sequence = topicRepository.getAndIncrementSequence(
-                        topicName = usersTopicName,
-                        tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-                        namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
-                    ),
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.USERS_TOPIC_ID,
+                    sequence = topicRepository.getAndIncrementSequence(SystemTopics.USERS_TOPIC_ID)
                 ),
                 timestamp = timestamp,
                 type = UserEventType.TENANT_ASSIGNED,
@@ -232,7 +197,7 @@ class BootstrapServiceImpl(
             resourceId = null,  // null = all tenants (global admin)
             tenantResourceId = SystemTopics.SYSTEM_TENANT_ID.toString(),
             namespaceResourceId = null,
-            topicResourceId = null,
+            topicId = null,
             permissions = allPermissions,
             grantedBy = "bootstrap",
             grantedAt = timestamp,
@@ -242,14 +207,8 @@ class BootstrapServiceImpl(
         events.add(
             Event(
                 id = EventId.create(
-                    topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                    sequence = topicRepository.getAndIncrementSequence(
-                        SystemTopics.PERMISSIONS_TOPIC_NAME,
-                        SystemTopics.SYSTEM_TENANT_NAME,
-                        SystemTopics.MANAGEMENT_NAMESPACE_NAME
-                    ),
-                    tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                    namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                    sequence = topicRepository.getAndIncrementSequence(SystemTopics.PERMISSIONS_TOPIC_ID)
                 ),
                 timestamp = timestamp,
                 type = PermissionEventType.GRANTED,

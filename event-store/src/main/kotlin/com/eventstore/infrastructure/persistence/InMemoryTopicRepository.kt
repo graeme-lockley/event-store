@@ -8,86 +8,74 @@ import kotlinx.coroutines.sync.withLock
 import java.util.*
 
 class InMemoryTopicRepository : TopicRepository {
-    private val topics = mutableMapOf<String, Topic>()
+    private val topics = mutableMapOf<UUID, Topic>()
     private val mutex = Mutex()
 
     override suspend fun createTopic(
-        resourceId: UUID,
-        tenantResourceId: UUID,
-        namespaceResourceId: UUID,
+        topicId: UUID,
+        namespaceId: UUID,
         name: String,
-        schemas: List<Schema>,
-        tenantName: String,
-        namespaceName: String
+        schemas: List<Schema>
     ): Topic {
         return mutex.withLock {
-            val key = key(name, tenantName, namespaceName)
-            if (topics.containsKey(key)) {
+            if (topics.containsKey(topicId)) {
                 throw com.eventstore.domain.exceptions.TopicAlreadyExistsException(name)
             }
 
             val topic = Topic(
-                resourceId = resourceId,
-                tenantResourceId = tenantResourceId,
-                namespaceResourceId = namespaceResourceId,
+                topicId = topicId,
+                namespaceId = namespaceId,
                 name = name,
                 sequence = 0,
-                schemas = schemas,
-                tenantName = tenantName,
-                namespaceName = namespaceName
+                schemas = schemas
             )
-            topics[key] = topic
+            topics[topicId] = topic
             topic
         }
     }
 
-    override suspend fun getTopic(name: String, tenantName: String, namespaceName: String): Topic? {
+    override suspend fun getTopic(topicId: UUID): Topic? {
         return mutex.withLock {
-            topics[key(name, tenantName, namespaceName)]
+            topics[topicId]
         }
     }
 
-    override suspend fun topicExists(name: String, tenantName: String, namespaceName: String): Boolean {
+    override suspend fun topicExists(topicId: UUID): Boolean {
         return mutex.withLock {
-            topics.containsKey(key(name, tenantName, namespaceName))
+            topics.containsKey(topicId)
         }
     }
 
-    override suspend fun updateSequence(name: String, sequence: Long, tenantName: String, namespaceName: String) {
+    override suspend fun updateSequence(topicId: UUID, sequence: Long) {
         mutex.withLock {
-            val key = key(name, tenantName, namespaceName)
-            val current = topics[key]
-                ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(name)
+            val current = topics[topicId]
+                ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicId.toString())
 
-            topics[key] = current.copy(sequence = sequence)
+            topics[topicId] = current.copy(sequence = sequence)
         }
     }
 
-    override suspend fun getAndIncrementSequence(topicName: String, tenantName: String, namespaceName: String): Long {
+    override suspend fun getAndIncrementSequence(topicId: UUID): Long {
         return mutex.withLock {
-            val key = key(topicName, tenantName, namespaceName)
-            val current = topics[key]
-                ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(key)
+            val current = topics[topicId]
+                ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicId.toString())
 
             val nextSequence = current.sequence + 1
-            topics[key] = current.copy(sequence = nextSequence)
+            topics[topicId] = current.copy(sequence = nextSequence)
             nextSequence
         }
     }
 
     override suspend fun updateSchemas(
-        name: String,
-        schemas: List<Schema>,
-        tenantName: String,
-        namespaceName: String
+        topicId: UUID,
+        schemas: List<Schema>
     ): Topic {
         return mutex.withLock {
-            val key = key(name, tenantName, namespaceName)
-            val current = topics[key]
-                ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(name)
+            val current = topics[topicId]
+                ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicId.toString())
 
             val updated = current.copy(schemas = schemas)
-            topics[key] = updated
+            topics[topicId] = updated
             updated
         }
     }
@@ -97,8 +85,5 @@ class InMemoryTopicRepository : TopicRepository {
             topics.values.toList()
         }
     }
-
-    private fun key(name: String, tenantName: String, namespaceName: String): String =
-        "$tenantName/$namespaceName/$name"
 }
 

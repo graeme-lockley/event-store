@@ -6,6 +6,7 @@ import com.eventstore.domain.ports.outbound.ConsumerFactory
 import com.eventstore.domain.ports.outbound.ConsumerRepository
 import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.ports.outbound.TopicRepository
+import java.util.*
 
 class RegisterConsumerService(
     private val consumerRepository: ConsumerRepository,
@@ -13,49 +14,19 @@ class RegisterConsumerService(
     private val consumerFactory: ConsumerFactory,
     private val eventDispatcher: EventDispatcher
 ) {
-    suspend fun execute(request: ConsumerRegistrationRequest, tenantName: String, namespaceName: String): String {
-        val topics = request.topics.keys.toSet()
+    suspend fun execute(request: ConsumerRegistrationRequest): String {
+        val topicIds = request.topics.keys.toSet()
 
-        // Validate topics exist in the tenant/namespace context
-        for (topic in topics) {
-            if (!topicRepository.topicExists(topic, tenantName, namespaceName)) {
-                throw TopicNotFoundException(topic)
+        // Validate topics exist
+        for (topicId in topicIds) {
+            if (!topicRepository.topicExists(topicId)) {
+                throw TopicNotFoundException(topicId.toString())
             }
         }
 
-        // Convert topic names to qualified names (tenant/namespace/topic)
-        val qualifiedTopics = request.topics.mapKeys { (topicName, _) ->
-            "$tenantName/$namespaceName/$topicName"
-        }
-
-        // Create a new request with qualified topic names
-        val qualifiedRequest = when (request) {
-            is HttpConsumerRegistrationRequest -> {
-                HttpConsumerRegistrationRequest(
-                    callbackUrl = request.callbackUrl,
-                    topics = qualifiedTopics
-                )
-            }
-
-            is InMemoryConsumerRegistrationRequest -> {
-                InMemoryConsumerRegistrationRequest(
-                    handler = request.handler,
-                    topics = qualifiedTopics
-                )
-            }
-
-            is AzureEventGridConsumerRegistrationRequest -> {
-                AzureEventGridConsumerRegistrationRequest(
-                    endpointUrl = request.endpointUrl,
-                    accessKey = request.accessKey,
-                    topics = qualifiedTopics
-                )
-            }
-        }
-
-        // Use factory to create consumer with qualified topic names
+        // Use factory to create consumer with topicIds
         val consumer = try {
-            consumerFactory.create(qualifiedRequest)
+            consumerFactory.create(request)
         } catch (e: IllegalArgumentException) {
             throw InvalidConsumerRegistrationException(e.message ?: "Invalid consumer configuration")
         } catch (e: UnsupportedOperationException) {
@@ -65,9 +36,9 @@ class RegisterConsumerService(
         // Save consumer
         consumerRepository.save(consumer)
 
-        // Ensure dispatchers are running for the consumer's topics (using qualified names)
+        // Ensure dispatchers are running for the consumer's topics (using topicIds)
         // This will also trigger immediate delivery check for catchup scenarios
-        eventDispatcher.ensureDispatchersRunning(qualifiedTopics.keys.toSet())
+        eventDispatcher.ensureDispatchersRunning(topicIds)
 
         return consumer.id
     }

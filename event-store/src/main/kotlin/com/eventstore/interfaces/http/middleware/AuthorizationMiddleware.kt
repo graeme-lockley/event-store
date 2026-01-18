@@ -107,15 +107,16 @@ class AuthorizationMiddleware(
         path: String,
         method: HttpMethod
     ): Pair<Triple<String?, String?, String?>, Pair<ResourceType?, Permission?>> {
-        // Extract tenant/namespace/topic names from URL patterns
+        // Extract tenant/namespace names from URL patterns
         val tenantMatch = Regex("/tenants/([^/]+)").find(path)
         val tenantName = tenantMatch?.groupValues?.get(1)
 
         val namespaceMatch = Regex("/tenants/[^/]+/namespaces/([^/]+)").find(path)
         val namespaceName = namespaceMatch?.groupValues?.get(1)
 
-        val topicMatch = Regex("/tenants/[^/]+/namespaces/[^/]+/topics/([^/]+)").find(path)
-        val topicName = topicMatch?.groupValues?.get(1)
+        // Extract topicId from /topics/{topicId} or /topics/{topicId}/... patterns
+        val topicMatch = Regex("/topics/([^/]+)").find(path)
+        val topicName = topicMatch?.groupValues?.get(1) // topicName is now a UUID string
 
         // Determine resource type and required permission from path and method
         val (resourceType, requiredPermission) = when {
@@ -153,7 +154,7 @@ class AuthorizationMiddleware(
                 }
             }
 
-            path.matches(Regex("/tenants/[^/]+/namespaces/[^/]+/topics/?$")) -> {
+            path.matches(Regex("/topics/?$")) -> {
                 when (method) {
                     HttpMethod.Post -> ResourceType.TOPIC to Permission.CREATE
                     HttpMethod.Get -> ResourceType.TOPIC to Permission.LIST
@@ -161,23 +162,21 @@ class AuthorizationMiddleware(
                 }
             }
 
-            path.matches(Regex("/tenants/[^/]+/namespaces/[^/]+/topics/[^/]+/?$")) -> {
+            path.matches(Regex("/topics/[^/]+/?$")) -> {
                 when (method) {
                     HttpMethod.Get -> ResourceType.TOPIC to Permission.READ
-                    HttpMethod.Put -> ResourceType.TOPIC to Permission.UPDATE
-                    HttpMethod.Delete -> ResourceType.TOPIC to Permission.DELETE
                     else -> null to null
                 }
             }
 
-            path.matches(Regex("/tenants/[^/]+/namespaces/[^/]+/topics/[^/]+/schemas")) -> {
+            path.matches(Regex("/topics/[^/]+/schemas/?$")) -> {
                 when (method) {
                     HttpMethod.Put -> ResourceType.TOPIC to Permission.SCHEMA_MANAGE
                     else -> null to null
                 }
             }
 
-            path.matches(Regex("/tenants/[^/]+/namespaces/[^/]+/events")) -> {
+            path.matches(Regex("/topics/[^/]+/events/?$")) -> {
                 when (method) {
                     HttpMethod.Post -> ResourceType.EVENT to Permission.CREATE
                     HttpMethod.Get -> ResourceType.EVENT to Permission.READ
@@ -228,7 +227,7 @@ class AuthorizationMiddleware(
         return when (resourceType) {
             ResourceType.TENANT -> Regex("/tenants/([^/]+)").find(path)?.groupValues?.get(1)
             ResourceType.NAMESPACE -> Regex("/tenants/[^/]+/namespaces/([^/]+)").find(path)?.groupValues?.get(1)
-            ResourceType.TOPIC -> Regex("/tenants/[^/]+/namespaces/[^/]+/topics/([^/]+)").find(path)?.groupValues?.get(1)
+            ResourceType.TOPIC -> Regex("/topics/([^/]+)").find(path)?.groupValues?.get(1) // topicId UUID string
             ResourceType.USER -> Regex("/tenants/[^/]+/users/([^/]+)").find(path)?.groupValues?.get(1)
             else -> null
         }

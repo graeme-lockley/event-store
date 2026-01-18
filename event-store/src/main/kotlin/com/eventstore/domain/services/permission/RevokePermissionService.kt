@@ -40,17 +40,22 @@ class RevokePermissionService(
             resourceResolver.resolveNamespaceName(tenantResourceId, it)
         }
 
-        // Resolve topic resourceId if provided
-        val topicResourceId = request.topicName?.let {
+        // If topicName is provided, it should be a UUID string (API uses UUIDs)
+        val topicId = request.topicName?.let {
             requireNotNull(namespaceResourceId) { "Namespace required when revoking topic permissions" }
-            resourceResolver.resolveTopicName(tenantResourceId, namespaceResourceId, it)
+            // topicName is actually a UUID string when provided from API
+            try {
+                UUID.fromString(it)
+            } catch (e: IllegalArgumentException) {
+                throw com.eventstore.domain.exceptions.TopicNotFoundException(it)
+            }
         }
 
         // Resolve target resourceId based on resourceType
         val targetResourceId = when (request.resourceType) {
             ResourceType.TENANT -> tenantResourceId
             ResourceType.NAMESPACE -> namespaceResourceId
-            ResourceType.TOPIC -> topicResourceId
+            ResourceType.TOPIC -> topicId
             else -> request.resourceName?.let { UUID.fromString(it) }
         }
 
@@ -62,7 +67,7 @@ class RevokePermissionService(
             resourceId = targetResourceId?.toString(),
             tenantResourceId = tenantResourceId.toString(),
             namespaceResourceId = namespaceResourceId?.toString(),
-            topicResourceId = topicResourceId?.toString(),
+            topicId = topicId?.toString(),
             permissions = request.permissions,
             revokedBy = request.revokedBy,
             revokedAt = now,
@@ -72,7 +77,7 @@ class RevokePermissionService(
         val eventPayload = event.toPayload()
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
+            topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
             eventType = PermissionEventType.REVOKED,
             payload = eventPayload,
             timestamp = now

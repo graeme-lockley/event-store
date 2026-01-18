@@ -34,10 +34,8 @@ class PermissionInheritanceTest {
         // Grant ADMIN permission at tenant level
         val event = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = grantedAt,
             type = PermissionEventType.GRANTED,
@@ -95,10 +93,8 @@ class PermissionInheritanceTest {
         // Grant permission for all tenants (resourceId = null)
         val event = Event(
             id = EventId.create(
-                topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-                sequence = 1,
-                tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-                namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                sequence = 1
             ),
             timestamp = grantedAt,
             type = PermissionEventType.GRANTED,

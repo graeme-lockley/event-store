@@ -258,8 +258,7 @@ class UpdateNamespaceServiceTest {
         application.updateNamespace(namespaceId, name = "updated-billing")
 
         val event = getEvents().last { it.type == NamespaceEventType.UPDATED }
-        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, event.id.tenantId)
-        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_NAME, event.id.namespaceId)
+        assertEquals(SystemTopics.NAMESPACES_TOPIC_ID, event.id.topicId)
     }
 
     @Test
@@ -438,9 +437,7 @@ class UpdateNamespaceServiceTest {
 
     private suspend fun getEvents(): List<com.eventstore.domain.Event> =
         application.eventRepository.getEvents(
-            SystemTopics.NAMESPACES_TOPIC_NAME,
-            tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+            topicId = SystemTopics.NAMESPACES_TOPIC_ID
         )
 }
 

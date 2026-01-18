@@ -40,9 +40,7 @@ class UpdateUserServiceTest {
         assertEquals("alice.updated@example.com", updated.email)
 
         val storedEvents = application.getEvents(
-            topic = SystemTopics.USERS_TOPIC_NAME,
-            tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+            topicId = SystemTopics.USERS_TOPIC_ID
         )
         val updatedEvents = storedEvents.filter { it.type == UserEventType.UPDATED }
         assertTrue(updatedEvents.isNotEmpty())

@@ -8,23 +8,29 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.util.*
 
 fun Route.topicRoutes(
     application: Application,
     dispatcherManager: com.eventstore.infrastructure.background.AsyncDispatcherManager
 ) {
-    route("/tenants/{tenantName}/namespaces/{namespaceName}/topics") {
+    route("/topics") {
         post {
             try {
-                val tenantName =
-                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName =
-                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
                 val request = call.receive<TopicCreationRequest>()
                 if (request.name.isBlank() || request.schemas.isEmpty()) {
                     call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse("Invalid request body. Required: name, schemas array", "INVALID_REQUEST")
+                        ErrorResponse("Invalid request body. Required: namespaceId, name, schemas array", "INVALID_REQUEST")
+                    )
+                    return@post
+                }
+                val namespaceId = try {
+                    UUID.fromString(request.namespaceId)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid namespaceId format. Expected UUID.", "INVALID_NAMESPACE_ID")
                     )
                     return@post
                 }
@@ -37,10 +43,10 @@ fun Route.topicRoutes(
                         required = dto.required
                     )
                 }
-                val topic = application.createTopic(request.name, schemas, tenantName, namespaceName)
+                val topic = application.createTopic(request.name, schemas, namespaceId)
                 call.respond(
                     HttpStatusCode.Created,
-                    mapOf("message" to "Topic '${request.name}' created in $tenantName/$namespaceName")
+                    mapOf("message" to "Topic '${request.name}' created", "topicId" to topic.topicId.toString())
                 )
             } catch (e: com.eventstore.domain.exceptions.TopicAlreadyExistsException) {
                 call.respond(
@@ -57,14 +63,20 @@ fun Route.topicRoutes(
 
         get {
             try {
-                val tenantName =
-                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName =
-                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
-                val topics = application.listTopics(tenantName, namespaceName)
+                val namespaceIdStr = call.request.queryParameters["namespaceId"]
+                val namespaceId = namespaceIdStr?.let { 
+                    try {
+                        UUID.fromString(it)
+                    } catch (e: IllegalArgumentException) {
+                        null
+                    }
+                }
+                val topics = application.listTopics(namespaceId)
                 val response = TopicsResponse(
                     topics = topics.map { topic: com.eventstore.domain.Topic ->
                         TopicResponse(
+                            topicId = topic.topicId.toString(),
+                            namespaceId = topic.namespaceId.toString(),
                             name = topic.name,
                             sequence = topic.sequence,
                             schemas = topic.schemas.map { schema ->
@@ -88,16 +100,22 @@ fun Route.topicRoutes(
             }
         }
 
-        get("{topic}") {
+        get("{topicId}") {
             try {
-                val tenantName =
-                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName =
-                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
-                val topicName =
-                    call.parameters["topic"] ?: throw IllegalArgumentException("Topic parameter is required")
-                val topic = application.getTopic(topicName, tenantName, namespaceName)
+                val topicIdStr = call.parameters["topicId"] ?: throw IllegalArgumentException("topicId is required")
+                val topicId = try {
+                    UUID.fromString(topicIdStr)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid topicId format. Expected UUID.", "INVALID_TOPIC_ID")
+                    )
+                    return@get
+                }
+                val topic = application.getTopic(topicId)
                 val response = TopicResponse(
+                    topicId = topic.topicId.toString(),
+                    namespaceId = topic.namespaceId.toString(),
                     name = topic.name,
                     sequence = topic.sequence,
                     schemas = topic.schemas.map { schema ->
@@ -121,14 +139,18 @@ fun Route.topicRoutes(
             }
         }
 
-        put("{topic}") {
+        put("{topicId}/schemas") {
             try {
-                val tenantName =
-                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName =
-                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
-                val topicName =
-                    call.parameters["topic"] ?: throw IllegalArgumentException("Topic parameter is required")
+                val topicIdStr = call.parameters["topicId"] ?: throw IllegalArgumentException("topicId is required")
+                val topicId = try {
+                    UUID.fromString(topicIdStr)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid topicId format. Expected UUID.", "INVALID_TOPIC_ID")
+                    )
+                    return@put
+                }
                 val request = call.receive<TopicUpdateRequest>()
                 if (request.schemas.isEmpty()) {
                     call.respond(
@@ -146,8 +168,8 @@ fun Route.topicRoutes(
                         required = dto.required
                     )
                 }
-                application.updateTopicSchemas(topicName, schemas, tenantName, namespaceName)
-                call.respond(HttpStatusCode.OK, mapOf("message" to "Topic '$topicName' schemas updated successfully"))
+                application.updateTopicSchemas(topicId, schemas)
+                call.respond(HttpStatusCode.OK, mapOf("message" to "Topic schemas updated successfully"))
             } catch (e: com.eventstore.domain.exceptions.TopicNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "Topic not found", "TOPIC_NOT_FOUND"))
             } catch (e: IllegalArgumentException) {

@@ -24,17 +24,20 @@ data class PopulateEventStoreState(
     val consumerRepository: ConsumerRepository = InMemoryConsumerRepository(),
     val schemaValidator: SchemaValidator = JsonSchemaValidator()
 ) {
-    suspend fun findTopic(topicName: String) =
-        topicRepository.getTopic(topicName)
+    var topicId: UUID? = null
+    var namespaceId: UUID? = null
 
-    fun hasSchema(topicName: String, eventType: String) =
-        schemaValidator.hasSchema(topicName, eventType)
+    suspend fun findTopic(topicId: UUID) =
+        topicRepository.getTopic(topicId)
 
-    suspend fun getEvents(topicName: String) =
-        eventRepository.getEvents(topicName)
+    fun hasSchema(topicId: UUID, eventType: String) =
+        schemaValidator.hasSchema(topicId, eventType)
 
-    suspend fun topicExists(topicName: String): Boolean =
-        topicRepository.topicExists(topicName)
+    suspend fun getEvents(topicId: UUID) =
+        eventRepository.getEvents(topicId)
+
+    suspend fun topicExists(topicId: UUID): Boolean =
+        topicRepository.topicExists(topicId)
 
     suspend fun findConsumer(consumerId: String) =
         consumerRepository.findById(consumerId)
@@ -53,46 +56,44 @@ suspend fun populateEventStore(state: PopulateEventStoreState) {
         Schema(eventType = "user.updated", properties = mapOf("id" to "string", "name" to "string")),
     )
 
-    val tenantResourceId = UUID.randomUUID()
-    val namespaceResourceId = UUID.randomUUID()
-    state.topicRepository.createTopic(
-        UUID.randomUUID(),
-        tenantResourceId,
-        namespaceResourceId,
-        state.topicName,
-        topicSchemas,
-        "default",
-        "default"
-    )
-    state.schemaValidator.registerSchemas(state.topicName, topicSchemas)
+    val namespaceId = UUID.randomUUID()
+    val topicId = UUID.randomUUID()
+    state.topicId = topicId
+    state.namespaceId = namespaceId
 
     state.topicRepository.createTopic(
-        UUID.randomUUID(),
-        tenantResourceId,
-        namespaceResourceId,
-        "other-user-events",
-        topicSchemas,
-        "default",
-        "default"
+        topicId,
+        namespaceId,
+        state.topicName,
+        topicSchemas
     )
-    state.schemaValidator.registerSchemas("other-user-events", topicSchemas)
+    state.schemaValidator.registerSchemas(topicId, topicSchemas)
+
+    val otherTopicId = UUID.randomUUID()
+    state.topicRepository.createTopic(
+        otherTopicId,
+        namespaceId,
+        "other-user-events",
+        topicSchemas
+    )
+    state.schemaValidator.registerSchemas(otherTopicId, topicSchemas)
 
     val requests = listOf(
-        EventRequest(state.topicName, "user.created", mapOf("id" to "1", "name" to "Alice"), "tenant1", "namespaceA"),
-        EventRequest(state.topicName, "user.created", mapOf("id" to "2", "name" to "Bob"), "tenant1", "namespaceA"),
-        EventRequest(state.topicName, "user.updated", mapOf("id" to "1", "name" to "Alice Smith"), "tenant1", "namespaceA"),
+        EventRequest(topicId, "user.created", mapOf("id" to "1", "name" to "Alice")),
+        EventRequest(topicId, "user.created", mapOf("id" to "2", "name" to "Bob")),
+        EventRequest(topicId, "user.updated", mapOf("id" to "1", "name" to "Alice Smith")),
     )
 
     val timestamp = Instant.now()
     for (request in requests) {
-        val topic = state.topicRepository.getTopic(request.topic)
-            ?: throw TopicNotFoundException(request.topic)
+        val topic = state.topicRepository.getTopic(request.topicId)
+            ?: throw TopicNotFoundException(request.topicId.toString())
 
         val nextSequence = topic.nextSequence()
-        val eventId = EventId.create(request.topic, nextSequence, topic.tenantName, topic.namespaceName)
+        val eventId = EventId.create(request.topicId, nextSequence)
 
         state.eventRepository.storeEvent(
-            topic = request.topic,
+            topicId = request.topicId,
             type = request.type,
             payload = request.payload,
             eventId = eventId,
@@ -100,7 +101,7 @@ suspend fun populateEventStore(state: PopulateEventStoreState) {
         )
 
         // Update topic sequence
-        state.topicRepository.updateSequence(request.topic, nextSequence)
+        state.topicRepository.updateSequence(request.topicId, nextSequence)
     }
 }
 
@@ -127,18 +128,18 @@ fun createApplication(): Application {
 }
 
 class InMemoryEventDispatcher : com.eventstore.domain.ports.outbound.EventDispatcher {
-    val events = mutableListOf<Set<String>>()
-    val ensuredTopics = mutableListOf<Set<String>>()
+    val events = mutableListOf<Set<UUID>>()
+    val ensuredTopics = mutableListOf<Set<UUID>>()
 
-    override suspend fun notifyEventPublished(topic: String) {
-        events.add(setOf(topic))
+    override suspend fun notifyEventPublished(topicId: UUID) {
+        events.add(setOf(topicId))
     }
 
-    override suspend fun notifyEventsPublished(topics: Set<String>) {
-        events.add(topics)
+    override suspend fun notifyEventsPublished(topicIds: Set<UUID>) {
+        events.add(topicIds)
     }
 
-    override suspend fun ensureDispatchersRunning(topics: Set<String>) {
-        ensuredTopics.add(topics)
+    override suspend fun ensureDispatchersRunning(topicIds: Set<UUID>) {
+        ensuredTopics.add(topicIds)
     }
 }

@@ -9,13 +9,12 @@ import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
 import java.time.Instant
+import java.util.*
 
 data class EventRequest(
-    val topic: String,
+    val topicId: UUID,
     val type: String,
-    val payload: Map<String, Any>,
-    val tenantId: String,
-    val namespaceId: String
+    val payload: Map<String, Any>
 )
 
 class PublishEventsService(
@@ -30,10 +29,8 @@ class PublishEventsService(
         // Validate all events first
         for (request in requests) {
             // Validate topic exists
-            val tenantId = request.tenantId
-            val namespaceId = request.namespaceId
-            if (!topicRepository.topicExists(request.topic, tenantId, namespaceId)) {
-                throw TopicNotFoundException(request.topic)
+            if (!topicRepository.topicExists(request.topicId)) {
+                throw TopicNotFoundException(request.topicId.toString())
             }
 
             // Validate payload is a JSON object (Map)
@@ -42,7 +39,7 @@ class PublishEventsService(
             }
 
             // Validate event against schema
-            schemaValidator.validateEvent(request.topic, request.type, request.payload)
+            schemaValidator.validateEvent(request.topicId, request.type, request.payload)
         }
 
         // Generate all event IDs first (atomic sequence increments)
@@ -51,14 +48,8 @@ class PublishEventsService(
 
         for (request in requests) {
             // Atomically get and increment sequence to prevent race conditions
-            val tenantId = request.tenantId
-            val namespaceId = request.namespaceId
-            val nextSequence = topicRepository.getAndIncrementSequence(
-                topicName = request.topic,
-                tenantName = tenantId,
-                namespaceName = namespaceId
-            )
-            val eventId = EventId.create(request.topic, nextSequence, tenantId, namespaceId)
+            val nextSequence = topicRepository.getAndIncrementSequence(request.topicId)
+            val eventId = EventId.create(request.topicId, nextSequence)
             val event = Event(eventId, timestamp, request.type, request.payload)
             events.add(event)
         }
@@ -67,8 +58,8 @@ class PublishEventsService(
         val storedEvents = eventRepository.storeEvents(events)
 
         // Notify dispatcher that events have been published
-        val topicsWithEvents = requests.map { it.topic }.toSet()
-        eventDispatcher.notifyEventsPublished(topicsWithEvents)
+        val topicIdsWithEvents = requests.map { it.topicId }.toSet()
+        eventDispatcher.notifyEventsPublished(topicIdsWithEvents)
 
         return storedEvents.map { it.id.value }
     }

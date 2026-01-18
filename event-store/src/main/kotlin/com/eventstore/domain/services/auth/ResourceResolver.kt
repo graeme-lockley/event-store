@@ -37,13 +37,17 @@ class ResourceResolverImpl(
         namespaceId: UUID,
         topicName: String
     ): UUID {
-        val tenant = tenantProjectionService.getTenantById(tenantId)
+        tenantProjectionService.getTenantById(tenantId)
             ?: throw TenantNameNotFoundException("tenantId: $tenantId")
-        val namespace = namespaceProjectionService.getNamespaceById(tenantId, namespaceId)
+        namespaceProjectionService.getNamespaceById(tenantId, namespaceId)
             ?: throw NamespaceNotFoundException("namespaceId: $namespaceId")
-        val topic = topicRepository.getTopic(topicName, tenant.name, namespace.name)
-            ?: throw TopicNotFoundException(topicName)
-        return topic.resourceId
+
+        // Note: This method may be deprecated in the future if API only uses UUIDs
+        // For now, we need to find topic by name within the namespace
+        // Since we don't have a name-based lookup anymore, we'd need to list topics by namespace and filter by name
+        // However, for backward compatibility, keeping this method but it may not work with new architecture
+        // If topics are only looked up by UUID, this method should be removed or throw UnsupportedOperationException
+        throw UnsupportedOperationException("Topic lookup by name is no longer supported. Use topicId UUID instead.")
     }
 }
 

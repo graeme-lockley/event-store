@@ -5,34 +5,30 @@ import com.eventstore.domain.EventId
 import com.eventstore.domain.exceptions.TopicNotFoundException
 import com.eventstore.domain.ports.outbound.EventRepository
 import com.eventstore.domain.ports.outbound.TopicRepository
+import java.util.*
 
 class GetEventsService(
     private val eventRepository: EventRepository,
     private val topicRepository: TopicRepository
 ) {
     suspend fun execute(
-        topic: String,
+        topicId: UUID,
         sinceEventId: String? = null,
         date: String? = null,
-        limit: Int? = null,
-        tenantName: String,
-        namespaceName: String
+        limit: Int? = null
     ): List<Event> {
         // Validate topic exists
-        if (!topicRepository.topicExists(topic, tenantName, namespaceName)) {
-            throw TopicNotFoundException(topic)
+        if (!topicRepository.topicExists(topicId)) {
+            throw TopicNotFoundException(topicId.toString())
         }
 
         val sinceId = sinceEventId?.let { EventId.fromString(it) }
         
-        // Always pass tenant/namespace since legacy format is no longer supported
         return eventRepository.getEvents(
-            topic = topic,
+            topicId = topicId,
             sinceEventId = sinceId,
             date = date,
-            limit = limit,
-            tenantId = tenantName,
-            namespaceId = namespaceName
+            limit = limit
         )
     }
 }

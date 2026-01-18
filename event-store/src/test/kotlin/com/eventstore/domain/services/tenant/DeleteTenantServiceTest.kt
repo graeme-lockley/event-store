@@ -158,9 +158,7 @@ class DeleteTenantServiceTest {
 
     private suspend fun getEvents(): List<com.eventstore.domain.Event> =
         application.eventRepository.getEvents(
-            SystemTopics.TENANTS_TOPIC_NAME,
-            tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+            topicId = SystemTopics.TENANTS_TOPIC_ID
         )
 }
 

@@ -4,6 +4,7 @@ import com.eventstore.domain.Application
 import com.eventstore.domain.Permission
 import com.eventstore.domain.PrincipalType
 import com.eventstore.domain.ResourceType
+import com.eventstore.domain.Schema
 import com.eventstore.domain.events.PermissionEventType
 import com.eventstore.domain.services.createApplication
 import com.eventstore.domain.tenants.SystemTopics
@@ -67,9 +68,7 @@ class RevokePermissionServiceTest {
 
         // Verify event was stored
         val storedEvents = application.getEvents(
-            topic = SystemTopics.PERMISSIONS_TOPIC_NAME,
-            tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+            topicId = SystemTopics.PERMISSIONS_TOPIC_ID
         )
         val revokedEvents = storedEvents.filter { it.type == PermissionEventType.REVOKED }
         assertTrue(revokedEvents.isNotEmpty())
@@ -127,12 +126,11 @@ class RevokePermissionServiceTest {
 
         // Create namespace and topic
         val tenant = application.getTenant(tenantName)!!
-        application.createNamespace(tenant.tenantId, namespaceName)
-        application.createTopic(
+        val namespace = application.createNamespace(tenant.tenantId, namespaceName)
+        val topic = application.createTopic(
             name = topicName,
-            schemas = emptyList(),
-            tenantName = tenantName,
-            namespaceName = namespaceName
+            schemas = listOf(Schema(eventType = "test.event")),
+            namespaceId = namespace.namespaceId
         )
 
         val event = application.revokePermission(
@@ -142,14 +140,14 @@ class RevokePermissionServiceTest {
                 resourceType = ResourceType.TOPIC,
                 tenantName = tenantName,
                 namespaceName = namespaceName,
-                topicName = topicName,
+                topicName = topic.topicId.toString(), // topicName is now expected to be UUID string
                 permissions = setOf(Permission.READ),
                 revokedBy = "admin"
             )
         )
 
         assertEquals(ResourceType.TOPIC, event.resourceType)
-        assertNotNull(event.topicResourceId)
+        assertNotNull(event.topicId)
     }
 
     @Test

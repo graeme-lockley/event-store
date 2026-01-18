@@ -8,37 +8,38 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.*
 
 class AsyncDispatcherManager(
     private val consumerRepository: ConsumerRepository,
     private val eventRepository: EventRepository
 ) : EventDispatcher {
-    private val dispatchers = mutableMapOf<String, TopicDispatcher>()
+    private val dispatchers = mutableMapOf<UUID, TopicDispatcher>()
     private val mutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    suspend fun startDispatcher(topic: String): Boolean {
+    suspend fun startDispatcher(topicId: UUID): Boolean {
         return mutex.withLock {
-            if (dispatchers.containsKey(topic)) {
+            if (dispatchers.containsKey(topicId)) {
                 return false // Dispatcher already existed
             }
 
             val dispatcher = TopicDispatcher(
-                topic = topic,
+                topicId = topicId,
                 consumerRepository = consumerRepository,
                 eventRepository = eventRepository
             )
 
             dispatcher.start(scope)
-            dispatchers[topic] = dispatcher
+            dispatchers[topicId] = dispatcher
             true // New dispatcher was started
         }
     }
 
-    suspend fun stopDispatcher(topic: String) {
+    suspend fun stopDispatcher(topicId: UUID) {
         mutex.withLock {
-            dispatchers[topic]?.stop()
-            dispatchers.remove(topic)
+            dispatchers[topicId]?.stop()
+            dispatchers.remove(topicId)
         }
     }
 
@@ -49,42 +50,42 @@ class AsyncDispatcherManager(
         }
     }
 
-    suspend fun isDispatcherRunning(topic: String): Boolean {
+    suspend fun isDispatcherRunning(topicId: UUID): Boolean {
         return mutex.withLock {
-            dispatchers[topic]?.isRunning?.value == true
+            dispatchers[topicId]?.isRunning?.value == true
         }
     }
 
-    suspend fun triggerDelivery(topic: String) {
+    suspend fun triggerDelivery(topicId: UUID) {
         mutex.withLock {
-            dispatchers[topic]?.triggerDelivery()
+            dispatchers[topicId]?.triggerDelivery()
         }
     }
 
-    suspend fun getRunningDispatchers(): List<String> {
+    suspend fun getRunningDispatchers(): List<UUID> {
         return mutex.withLock {
             dispatchers.filter { it.value.isRunning.value }.keys.toList()
         }
     }
 
-    override suspend fun notifyEventPublished(topic: String) {
-        triggerDelivery(topic)
+    override suspend fun notifyEventPublished(topicId: UUID) {
+        triggerDelivery(topicId)
     }
 
-    override suspend fun notifyEventsPublished(topics: Set<String>) {
-        for (topic in topics) {
-            triggerDelivery(topic)
+    override suspend fun notifyEventsPublished(topicIds: Set<UUID>) {
+        for (topicId in topicIds) {
+            triggerDelivery(topicId)
         }
     }
 
-    override suspend fun ensureDispatchersRunning(topics: Set<String>) {
-        for (topic in topics) {
-            val wasNew = startDispatcher(topic)
+    override suspend fun ensureDispatchersRunning(topicIds: Set<UUID>) {
+        for (topicId in topicIds) {
+            val wasNew = startDispatcher(topicId)
 
             // If we just started a new dispatcher, trigger immediate delivery check
             // This ensures catchup happens immediately when a consumer is registered
             if (wasNew) {
-                triggerDelivery(topic)
+                triggerDelivery(topicId)
             }
         }
     }

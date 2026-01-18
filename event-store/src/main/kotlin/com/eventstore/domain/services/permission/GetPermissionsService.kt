@@ -3,6 +3,7 @@ package com.eventstore.domain.services.permission
 import com.eventstore.domain.PermissionGrant
 import com.eventstore.domain.ports.outbound.ResourceResolver
 import com.eventstore.infrastructure.projections.PermissionProjectionService
+import java.util.*
 
 data class GetPermissionsRequest(
     val principalId: String,
@@ -24,17 +25,22 @@ class GetPermissionsService(
             resourceResolver.resolveNamespaceName(tenantResourceId, it)
         }
 
-        // Resolve topic resourceId if provided
-        val topicResourceId = request.topicName?.let {
+        // If topicName is provided, it should be a UUID string (API uses UUIDs)
+        val topicId = request.topicName?.let {
             requireNotNull(namespaceResourceId) { "Namespace required when getting topic permissions" }
-            resourceResolver.resolveTopicName(tenantResourceId, namespaceResourceId, it)
+            // topicName is actually a UUID string when provided from API
+            try {
+                UUID.fromString(it)
+            } catch (e: IllegalArgumentException) {
+                throw com.eventstore.domain.exceptions.TopicNotFoundException(it)
+            }
         }
 
         return permissionProjectionService.getPermissionGrants(
             principalId = request.principalId,
             tenantResourceId = tenantResourceId,
             namespaceResourceId = namespaceResourceId,
-            topicResourceId = topicResourceId
+            topicId = topicId
         )
     }
 }

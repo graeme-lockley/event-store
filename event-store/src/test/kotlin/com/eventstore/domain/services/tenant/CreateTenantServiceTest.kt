@@ -41,9 +41,8 @@ class CreateTenantServiceTest {
 
         assertEquals(numberOfEvents + 1, events.size)
         assertEquals(TenantEventType.CREATED, events.last().type)
-        // All EventIds are now tenant-scoped
-        assertEquals(SystemTopics.SYSTEM_TENANT_NAME, events.last().id.tenantId)
-        assertEquals(SystemTopics.MANAGEMENT_NAMESPACE_NAME, events.last().id.namespaceId)
+        // EventIds are now topic-scoped (topicId/sequence)
+        assertEquals(SystemTopics.TENANTS_TOPIC_ID, events.last().id.topicId)
     }
 
     @Test
@@ -287,8 +286,6 @@ class CreateTenantServiceTest {
 
     private suspend fun getEvents(): List<com.eventstore.domain.Event> =
         application.eventRepository.getEvents(
-            SystemTopics.TENANTS_TOPIC_NAME,
-            tenantId = SystemTopics.SYSTEM_TENANT_NAME,
-            namespaceId = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+            topicId = SystemTopics.TENANTS_TOPIC_ID
         )
 }

@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.util.*
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -15,6 +16,8 @@ class JsonSchemaValidatorTest {
 
     private val objectMapper = jacksonObjectMapper()
     private lateinit var validator: JsonSchemaValidator
+    private val topicId = UUID.randomUUID()
+    private val orderTopicId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
@@ -32,21 +35,21 @@ class JsonSchemaValidatorTest {
             required = listOf("id", "name")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         val payload = mapOf("id" to "123", "name" to "Alice")
-        validator.validateEvent("user-events", "user.created", payload)
+        validator.validateEvent(topicId, "user.created", payload)
 
-        assertTrue(validator.hasSchema("user-events", "user.created"))
+        assertTrue(validator.hasSchema(topicId, "user.created"))
     }
 
     @Test
     fun `should throw exception when schema not found`() = runTest {
         assertThrows<SchemaNotFoundException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "123"))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "123"))
         }
 
-        assertFalse(validator.hasSchema("user-events", "user.created"))
+        assertFalse(validator.hasSchema(topicId, "user.created"))
     }
 
     @Test
@@ -60,11 +63,11 @@ class JsonSchemaValidatorTest {
             required = listOf("id", "name")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Missing required field "name"
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "123"))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "123"))
         }
     }
 
@@ -79,11 +82,11 @@ class JsonSchemaValidatorTest {
             required = listOf("id")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // age should be integer, not string
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "age" to "25"))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "age" to "25"))
         }
     }
 
@@ -98,12 +101,12 @@ class JsonSchemaValidatorTest {
             required = listOf("id", "name")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Payload contains extra field "email" not in schema
         assertThrows<SchemaValidationException> {
             validator.validateEvent(
-                "user-events",
+                topicId,
                 "user.created",
                 mapOf("id" to "123", "name" to "Alice", "email" to "alice@example.com")
             )
@@ -122,14 +125,14 @@ class JsonSchemaValidatorTest {
             required = listOf("id", "name")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Payload with only defined fields (email is optional)
-        validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "name" to "Alice"))
+        validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "name" to "Alice"))
 
         // Payload with all fields
         validator.validateEvent(
-            "user-events",
+            topicId,
             "user.created",
             mapOf("id" to "123", "name" to "Alice", "email" to "alice@example.com")
         )
@@ -147,11 +150,11 @@ class JsonSchemaValidatorTest {
             additionalProperties = mapOf("additionalProperties" to true)
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Should accept extra fields when additionalProperties is true
         validator.validateEvent(
-            "user-events",
+            topicId,
             "user.created",
             mapOf("id" to "123", "name" to "Alice", "email" to "alice@example.com")
         )
@@ -177,7 +180,7 @@ class JsonSchemaValidatorTest {
             required = listOf("id")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Valid nested object
         val validPayload = mapOf(
@@ -188,7 +191,7 @@ class JsonSchemaValidatorTest {
                 "zipCode" to "10001"
             )
         )
-        validator.validateEvent("user-events", "user.created", validPayload)
+        validator.validateEvent(topicId, "user.created", validPayload)
 
         // Nested object missing required field
         val invalidPayload = mapOf(
@@ -199,7 +202,7 @@ class JsonSchemaValidatorTest {
             )
         )
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", invalidPayload)
+            validator.validateEvent(topicId, "user.created", invalidPayload)
         }
 
         // Nested object with extra field
@@ -212,7 +215,7 @@ class JsonSchemaValidatorTest {
             )
         )
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", extraFieldPayload)
+            validator.validateEvent(topicId, "user.created", extraFieldPayload)
         }
     }
 
@@ -230,14 +233,14 @@ class JsonSchemaValidatorTest {
             required = listOf("id")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Valid array
-        validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "tags" to listOf("admin", "user")))
+        validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "tags" to listOf("admin", "user")))
 
         // Array with wrong item type
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "tags" to listOf(1, 2, 3)))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "tags" to listOf(1, 2, 3)))
         }
     }
 
@@ -253,14 +256,14 @@ class JsonSchemaValidatorTest {
             required = listOf("id")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Valid numbers
-        validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "age" to 25, "score" to 95.5))
+        validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "age" to 25, "score" to 95.5))
 
         // Wrong type for integer
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "age" to "25"))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "age" to "25"))
         }
     }
 
@@ -275,15 +278,15 @@ class JsonSchemaValidatorTest {
             required = listOf("id")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Valid boolean
-        validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "active" to true))
-        validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "active" to false))
+        validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "active" to true))
+        validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "active" to false))
 
         // Wrong type
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "active" to "true"))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "active" to "true"))
         }
     }
 
@@ -298,19 +301,19 @@ class JsonSchemaValidatorTest {
             required = listOf("id")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Valid string length
-        validator.validateEvent("user-events", "user.created", mapOf("id" to "12345"))
+        validator.validateEvent(topicId, "user.created", mapOf("id" to "12345"))
 
         // Too short
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "12"))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "12"))
         }
 
         // Too long
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "12345678901"))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "12345678901"))
         }
     }
 
@@ -321,10 +324,10 @@ class JsonSchemaValidatorTest {
             Schema(eventType = "user.updated", properties = mapOf("id" to mapOf("type" to "string")))
         )
 
-        validator.registerSchemas("user-events", schemas)
+        validator.registerSchemas(topicId, schemas)
 
-        assertTrue(validator.hasSchema("user-events", "user.created"))
-        assertTrue(validator.hasSchema("user-events", "user.updated"))
+        assertTrue(validator.hasSchema(topicId, "user.created"))
+        assertTrue(validator.hasSchema(topicId, "user.updated"))
     }
 
     @Test
@@ -332,12 +335,12 @@ class JsonSchemaValidatorTest {
         val schema1 = Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string")))
         val schema2 = Schema(eventType = "order.created", properties = mapOf("id" to mapOf("type" to "string")))
 
-        validator.registerSchemas("user-events", listOf(schema1))
-        validator.registerSchemas("order-events", listOf(schema2))
+        validator.registerSchemas(topicId, listOf(schema1))
+        validator.registerSchemas(orderTopicId, listOf(schema2))
 
-        assertTrue(validator.hasSchema("user-events", "user.created"))
-        assertTrue(validator.hasSchema("order-events", "order.created"))
-        assertFalse(validator.hasSchema("user-events", "order.created"))
+        assertTrue(validator.hasSchema(topicId, "user.created"))
+        assertTrue(validator.hasSchema(orderTopicId, "order.created"))
+        assertFalse(validator.hasSchema(topicId, "order.created"))
     }
 
     @Test
@@ -351,10 +354,10 @@ class JsonSchemaValidatorTest {
             required = emptyList()
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Empty payload should be valid if no fields are required
-        validator.validateEvent("user-events", "user.created", emptyMap())
+        validator.validateEvent(topicId, "user.created", emptyMap())
     }
 
     @Test
@@ -368,12 +371,12 @@ class JsonSchemaValidatorTest {
             required = listOf("id")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Null for optional nullable field should be valid
         @Suppress("UNCHECKED_CAST")
         val payload = mapOf("id" to "123", "name" to null) as Map<String, Any>
-        validator.validateEvent("user-events", "user.created", payload)
+        validator.validateEvent(topicId, "user.created", payload)
     }
 
     @Test
@@ -387,14 +390,14 @@ class JsonSchemaValidatorTest {
             required = listOf("id")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Valid enum value
-        validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "status" to "active"))
+        validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "status" to "active"))
 
         // Invalid enum value
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "status" to "unknown"))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "status" to "unknown"))
         }
     }
 
@@ -409,19 +412,19 @@ class JsonSchemaValidatorTest {
             required = listOf("id")
         )
 
-        validator.registerSchemas("user-events", listOf(schema))
+        validator.registerSchemas(topicId, listOf(schema))
 
         // Valid age
-        validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "age" to 25))
+        validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "age" to 25))
 
         // Too low
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "age" to -1))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "age" to -1))
         }
 
         // Too high
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "age" to 150))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "age" to 150))
         }
     }
 
@@ -448,7 +451,7 @@ class JsonSchemaValidatorTest {
             required = listOf("orderId")
         )
 
-        validator.registerSchemas("order-events", listOf(schema))
+        validator.registerSchemas(orderTopicId, listOf(schema))
 
         // Valid complex structure
         val validPayload = mapOf(
@@ -458,7 +461,7 @@ class JsonSchemaValidatorTest {
                 mapOf("productId" to "prod-2", "quantity" to 1, "price" to 29.99)
             )
         )
-        validator.validateEvent("order-events", "order.created", validPayload)
+        validator.validateEvent(orderTopicId, "order.created", validPayload)
 
         // Invalid: missing required field in nested object
         val invalidPayload = mapOf(
@@ -468,7 +471,7 @@ class JsonSchemaValidatorTest {
             )
         )
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("order-events", "order.created", invalidPayload)
+            validator.validateEvent(orderTopicId, "order.created", invalidPayload)
         }
 
         // Invalid: extra field in nested object
@@ -479,7 +482,7 @@ class JsonSchemaValidatorTest {
             )
         )
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("order-events", "order.created", extraFieldPayload)
+            validator.validateEvent(orderTopicId, "order.created", extraFieldPayload)
         }
     }
 
@@ -500,15 +503,15 @@ class JsonSchemaValidatorTest {
             required = listOf("id", "name")
         )
 
-        validator.registerSchemas("user-events", listOf(schema1))
-        validator.registerSchemas("user-events", listOf(schema2))
+        validator.registerSchemas(topicId, listOf(schema1))
+        validator.registerSchemas(topicId, listOf(schema2))
 
         // New schema requires name
         assertThrows<SchemaValidationException> {
-            validator.validateEvent("user-events", "user.created", mapOf("id" to "123"))
+            validator.validateEvent(topicId, "user.created", mapOf("id" to "123"))
         }
 
         // Should validate with new schema
-        validator.validateEvent("user-events", "user.created", mapOf("id" to "123", "name" to "Alice"))
+        validator.validateEvent(topicId, "user.created", mapOf("id" to "123", "name" to "Alice"))
     }
 }

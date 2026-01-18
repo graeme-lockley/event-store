@@ -43,7 +43,7 @@ class DeleteTenantService(
         val eventPayload = payload.toPayload()
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.TENANTS_TOPIC_NAME,
+            topicId = SystemTopics.TENANTS_TOPIC_ID,
             eventType = TenantEventType.DELETED,
             payload = eventPayload,
             timestamp = now

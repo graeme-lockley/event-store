@@ -59,7 +59,7 @@ class CreateUserService(
         )
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.USERS_TOPIC_NAME,
+            topicId = SystemTopics.USERS_TOPIC_ID,
             eventType = UserEventType.CREATED,
             payload = payload.toPayload(),
             timestamp = now

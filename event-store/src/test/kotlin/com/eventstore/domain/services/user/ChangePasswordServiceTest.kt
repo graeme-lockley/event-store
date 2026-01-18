@@ -39,9 +39,7 @@ class ChangePasswordServiceTest {
         assertEquals(true, result)
 
         val storedEvents = application.getEvents(
-            topic = SystemTopics.USERS_TOPIC_NAME,
-            tenantName = SystemTopics.SYSTEM_TENANT_NAME,
-            namespaceName = SystemTopics.MANAGEMENT_NAMESPACE_NAME
+            topicId = SystemTopics.USERS_TOPIC_ID
         )
         val passwordChangedEvents = storedEvents.filter { it.type == UserEventType.PASSWORD_CHANGED }
         assertTrue(passwordChangedEvents.isNotEmpty())

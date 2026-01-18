@@ -9,12 +9,14 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GetTopicsServiceTest {
     private lateinit var application: Application
+    private lateinit var namespaceId: UUID
 
     @BeforeEach
     fun setup() = runTest {
@@ -22,7 +24,8 @@ class GetTopicsServiceTest {
         // Create tenant and namespace
         val tenant = application.createTenant("default")
         val tenantId = tenant.tenantId
-        application.createNamespace(tenantId, "default")
+        val namespace = application.createNamespace(tenantId, "default")
+        namespaceId = namespace.namespaceId
     }
 
     @Test
@@ -30,77 +33,80 @@ class GetTopicsServiceTest {
         val topic1 = "user-events"
         val topic2 = "order-events"
 
-        application.createTopic(topic1, listOf(Schema(eventType = "user.created")))
-        application.createTopic(topic2, listOf(Schema(eventType = "order.created")))
+        val topic1Obj = application.createTopic(topic1, listOf(Schema(eventType = "user.created")), namespaceId)
+        val topic2Obj = application.createTopic(topic2, listOf(Schema(eventType = "order.created")), namespaceId)
 
-        val result = application.listTopics()
+        val result = application.listTopics(namespaceId)
 
         assertTrue(result.size >= 2)
-        assertTrue(result.any { it.name == topic1 })
-        assertTrue(result.any { it.name == topic2 })
+        assertTrue(result.any { it.topicId == topic1Obj.topicId })
+        assertTrue(result.any { it.topicId == topic2Obj.topicId })
     }
 
     @Test
-    fun `should get single topic by name`() = runTest {
+    fun `should get single topic by topicId`() = runTest {
         val topicName = "user-events"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        application.createTopic(topicName, schemas)
+        val topic = application.createTopic(topicName, schemas, namespaceId)
 
-        val result = application.getTopic(topicName)
+        val result = application.getTopic(topic.topicId)
 
         assertEquals(topicName, result.name)
+        assertEquals(topic.topicId, result.topicId)
+        assertEquals(namespaceId, result.namespaceId)
         assertEquals(schemas, result.schemas)
     }
 
     @Test
     fun `should throw exception when topic not found`() = runTest {
-        val topicName = "unknown-topic"
+        val nonExistentTopicId = UUID.randomUUID()
 
         assertThrows<TopicNotFoundException> {
-            application.getTopic(topicName)
+            application.getTopic(nonExistentTopicId)
         }
     }
 
     @Test
-    fun `should get topics scoped by tenant and namespace`() = runTest {
+    fun `should get topics scoped by namespace`() = runTest {
         val tenant1 = "acme"
-        val namespace1 = "production"
+        val namespace1Name = "production"
         val tenant2 = "corp"
-        val namespace2 = "staging"
+        val namespace2Name = "staging"
         val topicName = "events"
 
         val t1 = application.createTenant(tenant1)
-        application.createNamespace(t1.tenantId, namespace1)
+        val namespace1 = application.createNamespace(t1.tenantId, namespace1Name)
         val t2 = application.createTenant(tenant2)
-        application.createNamespace(t2.tenantId, namespace2)
+        val namespace2 = application.createNamespace(t2.tenantId, namespace2Name)
 
-        application.createTopic(topicName, listOf(Schema(eventType = "event.created")), tenant1, namespace1)
-        application.createTopic(topicName, listOf(Schema(eventType = "event.created")), tenant2, namespace2)
+        val topic1 = application.createTopic(topicName, listOf(Schema(eventType = "event.created")), namespace1.namespaceId)
+        val topic2 = application.createTopic(topicName, listOf(Schema(eventType = "event.created")), namespace2.namespaceId)
 
-        val tenant1Topics = application.listTopics(tenant1, namespace1)
-        val tenant2Topics = application.listTopics(tenant2, namespace2)
-        val defaultTopics = application.listTopics()
+        val namespace1Topics = application.listTopics(namespace1.namespaceId)
+        val namespace2Topics = application.listTopics(namespace2.namespaceId)
+        val allTopics = application.listTopics()
 
-        assertTrue(tenant1Topics.any { it.name == topicName && it.tenantName == tenant1 })
-        assertTrue(tenant2Topics.any { it.name == topicName && it.tenantName == tenant2 })
-        assertTrue(!defaultTopics.any { it.name == topicName })
+        assertTrue(namespace1Topics.any { it.topicId == topic1.topicId && it.namespaceId == namespace1.namespaceId })
+        assertTrue(namespace2Topics.any { it.topicId == topic2.topicId && it.namespaceId == namespace2.namespaceId })
+        assertTrue(allTopics.any { it.topicId == topic1.topicId })
+        assertTrue(allTopics.any { it.topicId == topic2.topicId })
     }
 
     @Test
-    fun `should get topic from specific tenant and namespace`() = runTest {
+    fun `should get topic from specific namespace`() = runTest {
         val tenantName = "acme"
         val namespaceName = "production"
         val topicName = "order-events"
 
         val tenant = application.createTenant(tenantName)
-        application.createNamespace(tenant.tenantId, namespaceName)
-        application.createTopic(topicName, listOf(Schema(eventType = "order.created")), tenantName, namespaceName)
+        val namespace = application.createNamespace(tenant.tenantId, namespaceName)
+        val topic = application.createTopic(topicName, listOf(Schema(eventType = "order.created")), namespace.namespaceId)
 
-        val result = application.getTopic(topicName, tenantName, namespaceName)
+        val result = application.getTopic(topic.topicId)
 
         assertEquals(topicName, result.name)
-        assertEquals(tenantName, result.tenantName)
-        assertEquals(namespaceName, result.namespaceName)
+        assertEquals(namespace.namespaceId, result.namespaceId)
+        assertEquals(topic.topicId, result.topicId)
     }
 }

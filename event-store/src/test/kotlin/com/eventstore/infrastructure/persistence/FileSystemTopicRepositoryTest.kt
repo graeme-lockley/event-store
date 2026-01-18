@@ -36,46 +36,35 @@ class FileSystemTopicRepositoryTest {
 
     @Test
     fun `should persist topics to file system`() = runTest {
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         val name = "persisted-topic"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            name,
-            schemas,
-            "default",
-            "default"
-        )
+        repository.createTopic(topicId, namespaceId, name, schemas)
 
-        val configPath = tempDir.resolve("default").resolve("default").resolve("$name.json")
+        val configPath = tempDir.resolve("$topicId.json")
         assertTrue(Files.exists(configPath))
         assertTrue(Files.isRegularFile(configPath))
     }
 
     @Test
     fun `should read topics from file system`() = runTest {
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         val name = "file-read-topic"
         val schemas = listOf(
             Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string")))
         )
 
-        repository.createTopic(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            name,
-            schemas,
-            "default",
-            "default"
-        )
+        repository.createTopic(topicId, namespaceId, name, schemas)
 
         // Create a new repository instance to verify it reads from disk
         val newRepository = FileSystemTopicRepository(tempDir, objectMapper)
-        val topic = newRepository.getTopic(name)
+        val topic = newRepository.getTopic(topicId)
 
         assertNotNull(topic)
+        assertEquals(topicId, topic.topicId)
         assertEquals(name, topic.name)
         assertEquals(0L, topic.sequence)
         assertEquals(schemas, topic.schemas)
@@ -83,23 +72,17 @@ class FileSystemTopicRepositoryTest {
 
     @Test
     fun `should persist sequence updates to file system`() = runTest {
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         val name = "sequence-persist-topic"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            name,
-            schemas,
-            "default",
-            "default"
-        )
-        repository.updateSequence(name, 42L)
+        repository.createTopic(topicId, namespaceId, name, schemas)
+        repository.updateSequence(topicId, 42L)
 
         // Create a new repository instance to verify persistence
         val newRepository = FileSystemTopicRepository(tempDir, objectMapper)
-        val topic = newRepository.getTopic(name)
+        val topic = newRepository.getTopic(topicId)
 
         assertNotNull(topic)
         assertEquals(42L, topic.sequence)
@@ -107,6 +90,8 @@ class FileSystemTopicRepositoryTest {
 
     @Test
     fun `should persist schema updates to file system`() = runTest {
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         val name = "schema-persist-topic"
         val initialSchemas = listOf(Schema(eventType = "user.created"))
         val updatedSchemas = listOf(
@@ -114,20 +99,12 @@ class FileSystemTopicRepositoryTest {
             Schema(eventType = "user.updated")
         )
 
-        repository.createTopic(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            name,
-            initialSchemas,
-            "default",
-            "default"
-        )
-        repository.updateSchemas(name, updatedSchemas)
+        repository.createTopic(topicId, namespaceId, name, initialSchemas)
+        repository.updateSchemas(topicId, updatedSchemas)
 
         // Create a new repository instance to verify persistence
         val newRepository = FileSystemTopicRepository(tempDir, objectMapper)
-        val topic = newRepository.getTopic(name)
+        val topic = newRepository.getTopic(topicId)
 
         assertNotNull(topic)
         assertEquals(updatedSchemas, topic.schemas)
@@ -149,61 +126,46 @@ class FileSystemTopicRepositoryTest {
         Files.writeString(textFile, "This is not a topic config")
 
         // Create a valid topic
-        repository.createTopic(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            "valid-topic",
-            listOf(Schema(eventType = "user.created")),
-            "default",
-            "default"
-        )
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
+        repository.createTopic(topicId, namespaceId, "valid-topic", listOf(Schema(eventType = "user.created")))
 
         val topics = repository.getAllTopics()
         assertEquals(1, topics.size)
-        assertEquals("valid-topic", topics.first().name)
+        assertEquals(topicId, topics.first().topicId)
     }
 
     @Test
     fun `should ignore invalid JSON files in config directory`() = runTest {
-        // Create an invalid JSON file
-        val invalidJsonFile = tempDir.resolve("invalid-topic.json")
+        // Create an invalid JSON file with valid UUID name
+        val invalidTopicId = UUID.randomUUID()
+        val invalidJsonFile = tempDir.resolve("$invalidTopicId.json")
         Files.writeString(invalidJsonFile, "{ invalid json }")
 
         // Create a valid topic
-        repository.createTopic(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            "valid-topic",
-            listOf(Schema(eventType = "user.created")),
-            "default",
-            "default"
-        )
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
+        repository.createTopic(topicId, namespaceId, "valid-topic", listOf(Schema(eventType = "user.created")))
 
         val topics = repository.getAllTopics()
         assertEquals(1, topics.size)
-        assertEquals("valid-topic", topics.first().name)
+        assertEquals(topicId, topics.first().topicId)
     }
 
     @Test
     fun `should handle corrupted topic config files gracefully`() = runTest {
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         // Create a valid topic first
-        repository.createTopic(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            "valid-topic",
-            listOf(Schema(eventType = "user.created")), "default", "default"
-        )
+        repository.createTopic(topicId, namespaceId, "valid-topic", listOf(Schema(eventType = "user.created")))
 
         // Corrupt the file
-        val configPath = tempDir.resolve("default").resolve("default").resolve("valid-topic.json")
+        val configPath = tempDir.resolve("$topicId.json")
         Files.writeString(configPath, "corrupted content")
 
         // getAllTopics should skip the corrupted file
         val topics = repository.getAllTopics()
-        assertTrue(topics.isEmpty() || !topics.any { it.name == "valid-topic" })
+        assertTrue(topics.isEmpty() || !topics.any { it.topicId == topicId })
     }
 
     @Test
@@ -212,13 +174,9 @@ class FileSystemTopicRepositoryTest {
         assertFalse(Files.exists(newDir))
 
         val newRepository = FileSystemTopicRepository(newDir, objectMapper)
-        newRepository.createTopic(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            "test-topic",
-            listOf(Schema(eventType = "user.created")), "default", "default"
-        )
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
+        newRepository.createTopic(topicId, namespaceId, "test-topic", listOf(Schema(eventType = "user.created")))
 
         assertTrue(Files.exists(newDir))
         assertTrue(Files.isDirectory(newDir))
@@ -226,93 +184,63 @@ class FileSystemTopicRepositoryTest {
 
     @Test
     fun `should handle file system operations atomically`() = runTest {
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         val name = "atomic-topic"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            name,
-            schemas,
-            "default",
-            "default"
-        )
+        repository.createTopic(topicId, namespaceId, name, schemas)
 
         // Verify file exists and is readable
-        val configPath = tempDir.resolve("default").resolve("default").resolve("$name.json")
+        val configPath = tempDir.resolve("$topicId.json")
         assertTrue(Files.exists(configPath))
         val content = Files.readString(configPath)
         assertTrue(content.contains(name))
     }
 
     @Test
-    fun `should maintain separate topics in different directories`() = runTest {
+    fun `should maintain separate topics in different repositories`() = runTest {
         val dir1 = tempDir.resolve("dir1")
         val dir2 = tempDir.resolve("dir2")
         val repo1 = FileSystemTopicRepository(dir1, objectMapper)
         val repo2 = FileSystemTopicRepository(dir2, objectMapper)
-        val tenantResourceId = UUID.randomUUID()
-        val namespaceResourceId = UUID.randomUUID()
 
-        repo1.createTopic(
-            UUID.randomUUID(),
-            tenantResourceId,
-            namespaceResourceId,
-            "topic-1",
-            listOf(Schema(eventType = "event1")),
-            "default",
-            "default"
-        )
-        repo2.createTopic(
-            UUID.randomUUID(),
-            tenantResourceId,
-            namespaceResourceId,
-            "topic-2",
-            listOf(Schema(eventType = "event2")),
-            "default",
-            "default"
-        )
+        val topicId1 = UUID.randomUUID()
+        val topicId2 = UUID.randomUUID()
+        val namespaceId1 = UUID.randomUUID()
+        val namespaceId2 = UUID.randomUUID()
+
+        repo1.createTopic(topicId1, namespaceId1, "topic-1", listOf(Schema(eventType = "event1")))
+        repo2.createTopic(topicId2, namespaceId2, "topic-2", listOf(Schema(eventType = "event2")))
 
         assertEquals(1, repo1.getAllTopics().size)
         assertEquals(1, repo2.getAllTopics().size)
-        assertEquals("topic-1", repo1.getAllTopics().first().name)
-        assertEquals("topic-2", repo2.getAllTopics().first().name)
+        assertEquals(topicId1, repo1.getAllTopics().first().topicId)
+        assertEquals(topicId2, repo2.getAllTopics().first().topicId)
     }
 
     @Test
-    fun `should handle topic names with special characters in filename`() = runTest {
-        // Topic names should be safe for use in filenames
+    fun `should handle topic names with special characters`() = runTest {
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         val name = "topic-with-special-chars"
         val schemas = listOf(Schema(eventType = "user.created"))
 
-        repository.createTopic(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            name,
-            schemas,
-            "default",
-            "default"
-        )
+        repository.createTopic(topicId, namespaceId, name, schemas)
 
-        val configPath = tempDir.resolve("default").resolve("default").resolve("$name.json")
+        val configPath = tempDir.resolve("$topicId.json")
         assertTrue(Files.exists(configPath))
     }
 
     @Test
     fun `should persist all topics across repository instances`() = runTest {
-        val tenantResourceId = UUID.randomUUID()
-        val namespaceResourceId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         val topics = (1..5).map { i ->
             repository.createTopic(
                 UUID.randomUUID(),
-                tenantResourceId,
-                namespaceResourceId,
+                namespaceId,
                 "topic-$i",
-                listOf(Schema(eventType = "event$i")),
-                "default",
-                "default"
+                listOf(Schema(eventType = "event$i"))
             )
         }
 
@@ -322,7 +250,7 @@ class FileSystemTopicRepositoryTest {
 
         assertEquals(5, allTopics.size)
         topics.forEach { topic ->
-            val found = allTopics.find { it.name == topic.name }
+            val found = allTopics.find { it.topicId == topic.topicId }
             assertNotNull(found)
             assertEquals(topic, found)
         }
@@ -330,32 +258,25 @@ class FileSystemTopicRepositoryTest {
 
     @Test
     fun `should handle concurrent file operations`() = runTest {
+        val topicId = UUID.randomUUID()
+        val namespaceId = UUID.randomUUID()
         val name = "concurrent-file-topic"
-        repository.createTopic(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            name,
-            listOf(Schema(eventType = "user.created")),
-            "default",
-            "default"
-        )
+        repository.createTopic(topicId, namespaceId, name, listOf(Schema(eventType = "user.created")))
 
         // Simulate concurrent updates
         coroutineScope {
             val operations = (1..50).map { i ->
                 async {
-                    repository.updateSequence(name, i.toLong())
+                    repository.updateSequence(topicId, i.toLong())
                 }
             }
             operations.awaitAll()
         }
 
         // Verify final state
-        val topic = repository.getTopic(name)
+        val topic = repository.getTopic(topicId)
         assertNotNull(topic)
         // The final sequence should be one of the values (last write wins)
         assertTrue(topic.sequence >= 1 && topic.sequence <= 50)
     }
 }
-

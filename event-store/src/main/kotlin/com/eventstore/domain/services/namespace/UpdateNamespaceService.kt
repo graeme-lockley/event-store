@@ -42,7 +42,7 @@ class UpdateNamespaceService(
         val eventPayload = payload.toPayload()
 
         eventPublisher.publishEvent(
-            topic = SystemTopics.NAMESPACES_TOPIC_NAME,
+            topicId = SystemTopics.NAMESPACES_TOPIC_ID,
             eventType = NamespaceEventType.UPDATED,
             payload = eventPayload,
             timestamp = now
