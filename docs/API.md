@@ -4,7 +4,7 @@
 
 The Event Store provides a RESTful API for managing tenants, namespaces, topics, publishing events, and registering consumers. The API follows RESTful principles and returns JSON responses.
 
-All endpoints are scoped by tenant and namespace, providing multi-tenant isolation.
+**Resource Identification**: Most resources are identified by UUIDs (`tenantId`, `namespaceId`, `topicId`), which are globally unique. Some endpoints still use names for backward compatibility (e.g., `GET /tenants/{tenantName}`), but UUID-based endpoints are preferred for create, update, and delete operations.
 
 ## Base URL
 
@@ -82,7 +82,10 @@ List all tenants.
 
 #### `GET /tenants/{tenantName}`
 
-Get tenant details.
+Get tenant details by name.
+
+**Path Parameters:**
+- `tenantName` (string): The tenant name
 
 **Response (200 OK):**
 ```json
@@ -97,6 +100,8 @@ Get tenant details.
 }
 ```
 
+**Note**: The `id` field contains the tenant name, not the `tenantId` UUID. For PUT/DELETE operations and namespace creation, you need the `tenantId` UUID, which must be tracked separately or obtained from the system during tenant creation.
+
 **Error Response (404 Not Found):**
 ```json
 {
@@ -105,9 +110,12 @@ Get tenant details.
 }
 ```
 
-#### `PUT /tenants/{tenantName}`
+#### `PUT /tenants/{tenantId}`
 
 Update tenant.
+
+**Path Parameters:**
+- `tenantId` (UUID): The tenant UUID
 
 **Request Body:**
 ```json
@@ -118,9 +126,16 @@ Update tenant.
 }
 ```
 
-#### `DELETE /tenants/{tenantName}`
+**Error Responses:**
+- `400 Bad Request` - Invalid tenantId format (`INVALID_REQUEST`)
+- `404 Not Found` - Tenant not found (`TENANT_NOT_FOUND`)
+
+#### `DELETE /tenants/{tenantId}`
 
 Delete tenant (soft delete).
+
+**Path Parameters:**
+- `tenantId` (UUID): The tenant UUID
 
 **Request Body (optional):**
 ```json
@@ -131,13 +146,14 @@ Delete tenant (soft delete).
 
 ### Namespace Management
 
-#### `POST /tenants/{tenantName}/namespaces`
+#### `POST /namespaces`
 
 Create a namespace within a tenant.
 
 **Request Body:**
 ```json
 {
+  "tenantId": "123e4567-e89b-12d3-a456-426614174000",
   "name": "production",
   "description": "Production namespace",
   "metadata": {
@@ -146,11 +162,13 @@ Create a namespace within a tenant.
 }
 ```
 
+**Note**: `tenantId` must be a valid UUID. Namespaces are globally identified by `namespaceId` (UUID), not by tenant/namespace names.
+
 **Response (201 Created):**
 ```json
 {
-  "tenantId": "acme-corp",
-  "id": "production",
+  "tenantId": "123e4567-e89b-12d3-a456-426614174000",
+  "id": "223e4567-e89b-12d3-a456-426614174001",
   "name": "production",
   "description": "Production namespace",
   "createdAt": "2025-01-15T10:30:00.000Z",
@@ -160,19 +178,24 @@ Create a namespace within a tenant.
 
 **Error Responses:**
 - `400 Bad Request` - Tenant not found (`TENANT_NOT_FOUND`)
+- `400 Bad Request` - Invalid tenantId format (`INVALID_REQUEST`)
 - `400 Bad Request` - Namespace already exists (`NAMESPACE_EXISTS`)
+- `400 Bad Request` - Quota exceeded (`QUOTA_EXCEEDED`)
 
-#### `GET /tenants/{tenantName}/namespaces`
+#### `GET /namespaces`
 
-List all namespaces in a tenant.
+List all namespaces. Optionally filter by tenant.
+
+**Query Parameters:**
+- `tenantId` (optional, UUID): Filter namespaces by tenant UUID
 
 **Response (200 OK):**
 ```json
 {
   "namespaces": [
     {
-      "tenantId": "acme-corp",
-      "id": "production",
+      "tenantId": "123e4567-e89b-12d3-a456-426614174000",
+      "id": "223e4567-e89b-12d3-a456-426614174001",
       "name": "production",
       ...
     }
@@ -180,15 +203,18 @@ List all namespaces in a tenant.
 }
 ```
 
-#### `GET /tenants/{tenantName}/namespaces/{namespaceName}`
+#### `GET /namespaces/{namespaceId}`
 
 Get namespace details.
+
+**Path Parameters:**
+- `namespaceId` (UUID): The namespace UUID
 
 **Response (200 OK):**
 ```json
 {
-  "tenantId": "acme-corp",
-  "id": "production",
+  "tenantId": "123e4567-e89b-12d3-a456-426614174000",
+  "id": "223e4567-e89b-12d3-a456-426614174001",
   "name": "production",
   "description": "Production namespace",
   "createdAt": "2025-01-15T10:30:00.000Z",
@@ -198,9 +224,16 @@ Get namespace details.
 }
 ```
 
-#### `PUT /tenants/{tenantName}/namespaces/{namespaceName}`
+**Error Responses:**
+- `400 Bad Request` - Invalid namespaceId format (`INVALID_REQUEST`)
+- `404 Not Found` - Namespace not found (`NAMESPACE_NOT_FOUND`)
+
+#### `PUT /namespaces/{namespaceId}`
 
 Update namespace.
+
+**Path Parameters:**
+- `namespaceId` (UUID): The namespace UUID
 
 **Request Body:**
 ```json
@@ -211,9 +244,16 @@ Update namespace.
 }
 ```
 
-#### `DELETE /tenants/{tenantName}/namespaces/{namespaceName}`
+**Error Responses:**
+- `400 Bad Request` - Invalid namespaceId format (`INVALID_REQUEST`)
+- `404 Not Found` - Namespace not found (`NAMESPACE_NOT_FOUND`)
+
+#### `DELETE /namespaces/{namespaceId}`
 
 Delete namespace.
+
+**Path Parameters:**
+- `namespaceId` (UUID): The namespace UUID
 
 **Request Body (optional):**
 ```json
@@ -224,13 +264,14 @@ Delete namespace.
 
 ### Topic Management
 
-#### `POST /tenants/{tenantName}/namespaces/{namespaceName}/topics`
+#### `POST /topics`
 
 Create a new topic with schemas.
 
 **Request Body:**
 ```json
 {
+  "namespaceId": "223e4567-e89b-12d3-a456-426614174001",
   "name": "user-events",
   "schemas": [
     {
@@ -258,26 +299,35 @@ Create a new topic with schemas.
 }
 ```
 
+**Note**: `namespaceId` must be a valid UUID. Topics are globally identified by `topicId` (UUID), not by tenant/namespace/topic names.
+
 **Response (201 Created):**
 ```json
 {
-  "message": "Topic 'user-events' created in acme-corp/production"
+  "message": "Topic 'user-events' created",
+  "topicId": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
 }
 ```
 
 **Error Responses:**
 - `400 Bad Request` - Invalid request body (`INVALID_REQUEST`)
+- `400 Bad Request` - Invalid namespaceId format (`INVALID_NAMESPACE_ID`)
 - `400 Bad Request` - Topic already exists (`TOPIC_CREATION_FAILED`)
 
-#### `GET /tenants/{tenantName}/namespaces/{namespaceName}/topics`
+#### `GET /topics`
 
-List all topics in a namespace.
+List all topics. Optionally filter by namespace.
+
+**Query Parameters:**
+- `namespaceId` (optional, UUID): Filter topics by namespace UUID
 
 **Response (200 OK):**
 ```json
 {
   "topics": [
     {
+      "topicId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "namespaceId": "223e4567-e89b-12d3-a456-426614174001",
       "name": "user-events",
       "sequence": 42,
       "schemas": [ ... ]
@@ -286,13 +336,18 @@ List all topics in a namespace.
 }
 ```
 
-#### `GET /tenants/{tenantName}/namespaces/{namespaceName}/topics/{topic}`
+#### `GET /topics/{topicId}`
 
 Get topic details.
+
+**Path Parameters:**
+- `topicId` (UUID): The topic UUID
 
 **Response (200 OK):**
 ```json
 {
+  "topicId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "namespaceId": "223e4567-e89b-12d3-a456-426614174001",
   "name": "user-events",
   "sequence": 42,
   "schemas": [
@@ -307,17 +362,16 @@ Get topic details.
 }
 ```
 
-**Error Response (404 Not Found):**
-```json
-{
-  "error": "Topic not found",
-  "code": "TOPIC_NOT_FOUND"
-}
-```
+**Error Responses:**
+- `400 Bad Request` - Invalid topicId format (`INVALID_TOPIC_ID`)
+- `404 Not Found` - Topic not found (`TOPIC_NOT_FOUND`)
 
-#### `PUT /tenants/{tenantName}/namespaces/{namespaceName}/topics/{topic}`
+#### `PUT /topics/{topicId}/schemas`
 
 Update schemas for an existing topic. Schema updates are **additive only** - you can add new schemas or update existing ones (by `eventType`), but you cannot remove schemas.
+
+**Path Parameters:**
+- `topicId` (UUID): The topic UUID
 
 **Request Body:**
 ```json
@@ -351,12 +405,13 @@ Update schemas for an existing topic. Schema updates are **additive only** - you
 **Response (200 OK):**
 ```json
 {
-  "message": "Topic 'user-events' schemas updated successfully"
+  "message": "Topic schemas updated successfully"
 }
 ```
 
 **Error Responses:**
 - `400 Bad Request` - Invalid request body (`INVALID_REQUEST`)
+- `400 Bad Request` - Invalid topicId format (`INVALID_TOPIC_ID`)
 - `400 Bad Request` - Cannot remove schemas (`SCHEMA_REMOVAL_NOT_ALLOWED`)
 - `404 Not Found` - Topic not found (`TOPIC_NOT_FOUND`)
 
@@ -369,15 +424,17 @@ Update schemas for an existing topic. Schema updates are **additive only** - you
 
 ### Event Operations
 
-#### `POST /tenants/{tenantName}/namespaces/{namespaceName}/events`
+#### `POST /topics/{topicId}/events`
 
-Publish one or more events.
+Publish one or more events to a topic.
+
+**Path Parameters:**
+- `topicId` (UUID): The topic UUID
 
 **Request Body:**
 ```json
 [
   {
-    "topic": "user-events",
     "type": "user.created",
     "payload": {
       "id": "123",
@@ -386,7 +443,6 @@ Publish one or more events.
     }
   },
   {
-    "topic": "user-events",
     "type": "user.updated",
     "payload": {
       "id": "123",
@@ -396,22 +452,38 @@ Publish one or more events.
 ]
 ```
 
+**Note**: Each event in the array must specify `type` (event type) and `payload` (event data). The `topicId` is taken from the path parameter, so all events in a batch are published to the same topic.
+
 **Response (201 Created):**
 ```json
 {
-  "eventIds": ["user-events-1", "user-events-2"]
+  "eventIds": ["7c9e6679-7425-40de-944b-e07fc1f90ae7-1", "7c9e6679-7425-40de-944b-e07fc1f90ae7-2"]
 }
 ```
 
 **Error Responses:**
 - `400 Bad Request` - Request body must be a non-empty array (`INVALID_REQUEST`)
-- `400 Bad Request` - Each event must have topic, type, and payload (`INVALID_EVENT`)
+- `400 Bad Request` - Invalid topicId format (`INVALID_TOPIC_ID`)
+- `400 Bad Request` - Each event must have type and payload (`INVALID_EVENT`)
 - `400 Bad Request` - Topic not found (`EVENT_PUBLISH_FAILED`)
 - `400 Bad Request` - Schema validation failed (`EVENT_PUBLISH_FAILED`)
 
-#### `GET /tenants/{tenantName}/namespaces/{namespaceName}/topics/{topic}/events`
+**Response (201 Created):**
+```json
+{
+  "eventIds": [
+    "7c9e6679-7425-40de-944b-e07fc1f90ae7/1",
+    "7c9e6679-7425-40de-944b-e07fc1f90ae7/2"
+  ]
+}
+```
+
+#### `GET /topics/{topicId}/events`
 
 Retrieve events from a topic.
+
+**Path Parameters:**
+- `topicId` (UUID): The topic UUID
 
 **Query Parameters:**
 - `sinceEventId` (optional): Get events after this event ID
@@ -423,7 +495,7 @@ Retrieve events from a topic.
 {
   "events": [
     {
-      "id": "user-events-1",
+      "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7/1",
       "timestamp": "2025-01-15T10:30:00.000Z",
       "type": "user.created",
       "payload": {
@@ -436,27 +508,32 @@ Retrieve events from a topic.
 }
 ```
 
+**Note**: The `id` field uses the format `<topicId>/<sequence>` where `topicId` is a UUID.
+
 **Error Responses:**
 - `404 Not Found` - Topic not found (`TOPIC_NOT_FOUND`)
 - `500 Internal Server Error` - Events fetch failed (`EVENTS_FETCH_FAILED`)
 
 ### Consumer Management
 
-#### `POST /tenants/{tenantName}/namespaces/{namespaceName}/consumers/register`
+#### `POST /namespaces/{namespaceId}/consumers/register`
 
 Register a new consumer.
+
+**Path Parameters:**
+- `namespaceId` (UUID): The namespace UUID (for context; consumers register by topicId UUIDs)
 
 **Request Body:**
 ```json
 {
   "callback": "https://your-service.com/webhook",
   "topics": {
-    "user-events": null
+    "7c9e6679-7425-40de-944b-e07fc1f90ae7": null
   }
 }
 ```
 
-The `topics` object maps topic names to the last event ID the consumer has processed. Use `null` to start from the beginning.
+**Note**: The `topics` object maps **topic UUIDs** (not topic names) to the last event ID the consumer has processed. Use `null` to start from the beginning. Since `namespaceId` is globally unique, it's the only path parameter needed (no `tenantId` required).
 
 **Response (201 Created):**
 ```json
@@ -466,13 +543,17 @@ The `topics` object maps topic names to the last event ID the consumer has proce
 ```
 
 **Error Responses:**
+- `400 Bad Request` - Invalid namespaceId format (`INVALID_NAMESPACE_ID`)
 - `400 Bad Request` - Invalid request (`INVALID_REQUEST`)
 - `400 Bad Request` - Topic not found (`TOPIC_NOT_FOUND`)
 - `400 Bad Request` - Invalid registration (`CONSUMER_REGISTRATION_FAILED`)
 
-#### `GET /tenants/{tenantName}/namespaces/{namespaceName}/consumers`
+#### `GET /namespaces/{namespaceId}/consumers`
 
-List all consumers in a namespace.
+List all consumers.
+
+**Path Parameters:**
+- `namespaceId` (UUID): The namespace UUID (for context)
 
 **Response (200 OK):**
 ```json
@@ -482,16 +563,22 @@ List all consumers in a namespace.
       "id": "550e8400-e29b-41d4-a716-446655440000",
       "callback": "https://your-service.com/webhook",
       "topics": {
-        "user-events": "user-events-42"
+        "7c9e6679-7425-40de-944b-e07fc1f90ae7": "7c9e6679-7425-40de-944b-e07fc1f90ae7-42"
       }
     }
   ]
 }
 ```
 
-#### `DELETE /tenants/{tenantName}/namespaces/{namespaceName}/consumers/{id}`
+**Note**: The `topics` object uses topic UUIDs as keys. The `namespaceId` parameter is validated but not used for filtering (consumers are identified by topicId UUIDs).
+
+#### `DELETE /namespaces/{namespaceId}/consumers/{id}`
 
 Unregister a consumer.
+
+**Path Parameters:**
+- `namespaceId` (UUID): The namespace UUID (for context)
+- `id` (string): The consumer ID
 
 **Response (200 OK):**
 ```json
@@ -506,7 +593,7 @@ Unregister a consumer.
 
 ### User Management
 
-#### `POST /tenants/{tenantId}/users`
+#### `POST /users`
 
 Create a user.
 
@@ -516,12 +603,14 @@ Create a user.
   "email": "alice@example.com",
   "name": "Alice Johnson",
   "password": "secure-password",
-  "primaryTenantId": "acme-corp",
+  "primaryTenantId": "123e4567-e89b-12d3-a456-426614174000",
   "metadata": {
     "department": "Engineering"
   }
 }
 ```
+
+**Note**: Users are managed globally, not scoped to tenants. The `primaryTenantId` is optional and must be a valid UUID if provided.
 
 **Response (201 Created):**
 ```json
@@ -529,7 +618,8 @@ Create a user.
   "id": "user-123",
   "email": "alice@example.com",
   "name": "Alice Johnson",
-  "primaryTenantId": "acme-corp",
+  "primaryTenantId": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "ACTIVE",
   "createdAt": "2025-01-15T10:30:00.000Z",
   "metadata": { ... }
 }
@@ -543,7 +633,7 @@ Create a user.
 }
 ```
 
-#### `GET /tenants/{tenantId}/users`
+#### `GET /users`
 
 List all users.
 
@@ -561,9 +651,12 @@ List all users.
 }
 ```
 
-#### `GET /tenants/{tenantId}/users/{userId}`
+#### `GET /users/{userId}`
 
 Get user details.
+
+**Path Parameters:**
+- `userId` (string): The user ID
 
 **Response (200 OK):**
 ```json
@@ -571,16 +664,20 @@ Get user details.
   "id": "user-123",
   "email": "alice@example.com",
   "name": "Alice Johnson",
-  "primaryTenantId": "acme-corp",
+  "primaryTenantId": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "ACTIVE",
   "createdAt": "2025-01-15T10:30:00.000Z",
   "updatedAt": "2025-01-15T11:00:00.000Z",
   "metadata": { ... }
 }
 ```
 
-#### `PUT /tenants/{tenantId}/users/{userId}`
+#### `PUT /users/{userId}`
 
 Update user.
+
+**Path Parameters:**
+- `userId` (string): The user ID
 
 **Request Body:**
 ```json
@@ -591,9 +688,12 @@ Update user.
 }
 ```
 
-#### `DELETE /tenants/{tenantId}/users/{userId}`
+#### `DELETE /users/{userId}`
 
 Delete user.
+
+**Path Parameters:**
+- `userId` (string): The user ID
 
 **Response (200 OK):**
 ```json
@@ -602,22 +702,29 @@ Delete user.
 }
 ```
 
-#### `POST /tenants/{tenantId}/users/{userId}/tenants`
+#### `POST /users/{userId}/tenants/{tenantId}`
 
 Assign user to tenant.
 
-**Request Body:**
+**Path Parameters:**
+- `userId` (string): The user ID
+- `tenantId` (UUID): The tenant UUID
+
+**Request Body (optional):**
 ```json
 {
-  "tenantId": "another-tenant",
   "role": "member",
   "isPrimary": false
 }
 ```
 
-#### `DELETE /tenants/{tenantId}/users/{userId}/tenants/{tenantId}`
+#### `DELETE /users/{userId}/tenants/{tenantId}`
 
 Remove user from tenant.
+
+**Path Parameters:**
+- `userId` (string): The user ID
+- `tenantId` (UUID): The tenant UUID
 
 **Response (200 OK):**
 ```json
@@ -779,9 +886,13 @@ Change user password (requires authentication).
 
 ### Permission Management
 
-#### `GET /tenants/{tenantName}/users/{userId}/permissions`
+#### `GET /tenants/{tenantId}/users/{userId}/permissions`
 
 Get permissions for a user.
+
+**Path Parameters:**
+- `tenantId` (UUID): The tenant UUID
+- `userId` (string): The user ID
 
 **Response (200 OK):**
 ```json
@@ -790,7 +901,7 @@ Get permissions for a user.
     "principalId": "user-123",
     "principalType": "USER",
     "resourceType": "TOPIC",
-    "resourceId": "user-events",
+    "resourceId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
     "permissions": ["READ", "WRITE"],
     "grantedAt": "2025-01-15T10:30:00.000Z",
     "grantedBy": "admin-user"
@@ -798,9 +909,16 @@ Get permissions for a user.
 ]
 ```
 
-#### `POST /tenants/{tenantName}/users/{userId}/permissions`
+**Error Responses:**
+- `400 Bad Request` - Invalid tenantId format (`INVALID_TENANT_ID`)
+
+#### `POST /tenants/{tenantId}/users/{userId}/permissions`
 
 Grant permissions (requires authentication).
+
+**Path Parameters:**
+- `tenantId` (UUID): The tenant UUID
+- `userId` (string): The user ID
 
 **Request Body:**
 ```json
@@ -808,13 +926,15 @@ Grant permissions (requires authentication).
   "principalId": "user-123",
   "principalType": "USER",
   "resourceType": "TOPIC",
-  "resourceName": "user-events",
+  "resourceName": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   "namespaceName": "production",
-  "topicName": "user-events",
+  "topicName": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   "permissions": ["READ", "WRITE"],
   "expiresAt": "2026-01-15T10:30:00.000Z"
 }
 ```
+
+**Note**: `resourceName` and `topicName` should be UUIDs for topic-level permissions. `namespaceName` is still a name for backward compatibility.
 
 **Response (201 Created):**
 ```json
@@ -823,9 +943,16 @@ Grant permissions (requires authentication).
 }
 ```
 
-#### `DELETE /tenants/{tenantName}/users/{userId}/permissions`
+**Error Responses:**
+- `400 Bad Request` - Invalid tenantId format (`INVALID_TENANT_ID`)
+
+#### `DELETE /tenants/{tenantId}/users/{userId}/permissions`
 
 Revoke permissions (requires authentication).
+
+**Path Parameters:**
+- `tenantId` (UUID): The tenant UUID
+- `userId` (string): The user ID
 
 **Request Body:**
 ```json
@@ -833,9 +960,9 @@ Revoke permissions (requires authentication).
   "principalId": "user-123",
   "principalType": "USER",
   "resourceType": "TOPIC",
-  "resourceName": "user-events",
+  "resourceName": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   "namespaceName": "production",
-  "topicName": "user-events",
+  "topicName": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   "permissions": ["READ"],
   "reason": "Access revoked"
 }
@@ -847,6 +974,9 @@ Revoke permissions (requires authentication).
   "message": "Permission revoked"
 }
 ```
+
+**Error Responses:**
+- `400 Bad Request` - Invalid tenantId format (`INVALID_TENANT_ID`)
 
 ### Health
 
@@ -899,75 +1029,92 @@ curl -X POST http://localhost:8000/tenants \
     }
   }'
 
-# Create namespace
-curl -X POST http://localhost:8000/tenants/acme-corp/namespaces \
+# Note: Tenant responses use 'id' which is the name, not the tenantId UUID
+# For PUT/DELETE operations, you need the tenantId UUID
+# You may need to track tenantId separately or store it in metadata
+# For this example, assume you have the tenantId UUID from creation
+TENANT_ID="123e4567-e89b-12d3-a456-426614174000"  # UUID from tenant creation
+
+# Create namespace (requires tenantId UUID in body)
+curl -X POST http://localhost:8000/namespaces \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "production",
-    "description": "Production namespace"
-  }'
+  -d "{
+    \"tenantId\": \"$TENANT_ID\",
+    \"name\": \"production\",
+    \"description\": \"Production namespace\"
+  }"
+
+# Get namespace to retrieve namespaceId (UUID)
+# Response will include namespaceId in the response
+NAMESPACE_ID=$(curl -s "http://localhost:8000/namespaces?tenantId=$TENANT_ID" | jq -r '.namespaces[0].id')
 ```
 
 ### Create Topic
 
 ```bash
-curl -X POST http://localhost:8000/tenants/acme-corp/namespaces/production/topics \
+# Create topic (requires namespaceId UUID in body)
+curl -X POST http://localhost:8000/topics \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "user-events",
-    "schemas": [
+  -d "{
+    \"namespaceId\": \"$NAMESPACE_ID\",
+    \"name\": \"user-events\",
+    \"schemas\": [
       {
-        "eventType": "user.created",
-        "type": "object",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "properties": {
-          "id": {"type": "string"},
-          "name": {"type": "string"}
+        \"eventType\": \"user.created\",
+        \"type\": \"object\",
+        \"\$schema\": \"https://json-schema.org/draft/2020-12/schema\",
+        \"properties\": {
+          \"id\": {\"type\": \"string\"},
+          \"name\": {\"type\": \"string\"}
         },
-        "required": ["id", "name"]
+        \"required\": [\"id\", \"name\"]
       }
     ]
-  }'
+  }"
+
+# Get topic to retrieve topicId (UUID)
+TOPIC_ID=$(curl -s "http://localhost:8000/topics?namespaceId=$NAMESPACE_ID" | jq -r '.topics[0].topicId')
 ```
 
 ### Publish Events
 
 ```bash
-curl -X POST http://localhost:8000/tenants/acme-corp/namespaces/production/events \
+# Publish events (topicId is in path, not in event body)
+curl -X POST "http://localhost:8000/topics/$TOPIC_ID/events" \
   -H "Content-Type: application/json" \
-  -d '[
+  -d "[
     {
-      "topic": "user-events",
-      "type": "user.created",
-      "payload": {
-        "id": "123",
-        "name": "John Doe"
+      \"type\": \"user.created\",
+      \"payload\": {
+        \"id\": \"123\",
+        \"name\": \"John Doe\"
       }
     }
-  ]'
+  ]"
 ```
 
 ### Register Consumer
 
 ```bash
-curl -X POST http://localhost:8000/tenants/acme-corp/namespaces/production/consumers/register \
+# Register consumer (topics map uses topic UUIDs as keys)
+curl -X POST "http://localhost:8000/namespaces/$NAMESPACE_ID/consumers/register" \
   -H "Content-Type: application/json" \
-  -d '{
-    "callback": "http://localhost:3000/webhook",
-    "topics": {
-      "user-events": null
+  -d "{
+    \"callback\": \"http://localhost:3000/webhook\",
+    \"topics\": {
+      \"$TOPIC_ID\": null
     }
-  }'
+  }"
 ```
 
 ### Get Events
 
 ```bash
-# Get all events
-curl "http://localhost:8000/tenants/acme-corp/namespaces/production/topics/user-events/events"
+# Get all events (uses topicId UUID in path)
+curl "http://localhost:8000/topics/$TOPIC_ID/events"
 
-# Get events with filters
-curl "http://localhost:8000/tenants/acme-corp/namespaces/production/topics/user-events/events?limit=10&sinceEventId=user-events-5"
+# Get events with filters (eventId format: topicId/sequence)
+curl "http://localhost:8000/topics/$TOPIC_ID/events?limit=10&sinceEventId=$TOPIC_ID/5"
 ```
 
 ### Authentication
@@ -983,11 +1130,11 @@ curl -X POST http://localhost:8000/auth/login \
   -c cookies.txt
 
 # Use session cookie for authenticated requests
-curl http://localhost:8000/tenants/acme-corp/namespaces/production/topics \
+curl "http://localhost:8000/topics?namespaceId=$NAMESPACE_ID" \
   -b cookies.txt
 
 # Or use API key
-curl http://localhost:8000/tenants/acme-corp/namespaces/production/topics \
+curl "http://localhost:8000/topics?namespaceId=$NAMESPACE_ID" \
   -H "Authorization: Bearer es_live_abc123..."
 ```
 
@@ -1000,7 +1147,7 @@ When events are delivered to consumers, the webhook receives:
   "consumerId": "550e8400-e29b-41d4-a716-446655440000",
   "events": [
     {
-      "id": "user-events-1",
+      "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7/1",
       "timestamp": "2025-01-15T10:30:00.000Z",
       "type": "user.created",
       "payload": {
@@ -1012,6 +1159,8 @@ When events are delivered to consumers, the webhook receives:
 }
 ```
 
+**Note**: The `id` field uses the format `<topicId>/<sequence>` where `topicId` is a UUID.
+
 ## Consumer Removal
 
 Consumers are automatically removed if:
@@ -1021,12 +1170,14 @@ Consumers are automatically removed if:
 
 ## Event ID Format
 
-Event IDs follow the pattern: `<topic>-<sequence>`
+Event IDs follow the pattern: `<topicId>/<sequence>`
 
 Examples:
-- `user-events-1`
-- `audit-events-42`
-- `notifications-1001`
+- `7c9e6679-7425-40de-944b-e07fc1f90ae7/1`
+- `8d0f7780-8536-51ef-a55c-f18gd2g01bf8/42`
+- `9e1g8891-9647-62fg-b66d-g29he3h12cg9/1001`
+
+Note: Event IDs use the topic UUID separated by a forward slash, not the topic name. The format is `{topicId}/{sequence}`.
 
 ## Related Documentation
 
