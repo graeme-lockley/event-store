@@ -84,7 +84,7 @@ class ApiKeyRoutesTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.USER,
-                resourceName = userId,
+                resourceId = userId,  // For USER resource type, resourceId is the userId
                 tenantId = tenant.tenantId,
                 permissions = setOf(Permission.READ, Permission.UPDATE),
                 grantedBy = "admin"

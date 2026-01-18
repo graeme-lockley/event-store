@@ -74,7 +74,7 @@ class GrantPermissionServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
-                resourceName = resourceId.toString(),
+                resourceId = resourceId.toString(),
                 tenantId = tenant.tenantId,
                 permissions = setOf(Permission.READ),
                 grantedBy = "admin"
@@ -90,7 +90,7 @@ class GrantPermissionServiceTest {
 
         // Create namespace
         val tenant = application.getTenant(tenantName)!!
-        application.createNamespace(tenant.tenantId, namespaceName)
+        val namespace = application.createNamespace(tenant.tenantId, namespaceName)
 
         val event = application.grantPermission(
             GrantPermissionRequest(
@@ -98,7 +98,7 @@ class GrantPermissionServiceTest {
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.NAMESPACE,
                 tenantId = tenant.tenantId,
-                namespaceName = namespaceName,
+                resourceId = namespace.namespaceId.toString(),
                 permissions = setOf(Permission.READ),
                 grantedBy = "admin"
             )
@@ -106,6 +106,7 @@ class GrantPermissionServiceTest {
 
         assertEquals(ResourceType.NAMESPACE, event.resourceType)
         assertNotNull(event.namespaceResourceId)
+        assertEquals(namespace.namespaceId.toString(), event.namespaceResourceId)
     }
 
     @Test
@@ -128,8 +129,7 @@ class GrantPermissionServiceTest {
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TOPIC,
                 tenantId = tenant.tenantId,
-                namespaceName = namespaceName,
-                topicName = topic.topicId.toString(), // topicName is now expected to be UUID string
+                resourceId = topic.topicId.toString(),
                 permissions = setOf(Permission.READ),
                 grantedBy = "admin"
             )
@@ -137,6 +137,7 @@ class GrantPermissionServiceTest {
 
         assertEquals(ResourceType.TOPIC, event.resourceType)
         assertNotNull(event.topicId)
+        assertEquals(topic.topicId.toString(), event.topicId)
     }
 
     @Test

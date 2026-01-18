@@ -17,9 +17,7 @@ data class GrantPermissionRequestDto(
     val principalId: String,
     val principalType: String,
     val resourceType: String,
-    val resourceName: String? = null,
-    val namespaceName: String? = null,
-    val topicName: String? = null,
+    val resourceId: String? = null,  // UUID string for the target resource (namespaceId, topicId, etc.)
     val permissions: List<String>,
     val expiresAt: String? = null
 )
@@ -28,9 +26,7 @@ data class RevokePermissionRequestDto(
     val principalId: String,
     val principalType: String,
     val resourceType: String,
-    val resourceName: String? = null,
-    val namespaceName: String? = null,
-    val topicName: String? = null,
+    val resourceId: String? = null,  // UUID string for the target resource (namespaceId, topicId, etc.)
     val permissions: List<String>,
     val reason: String? = null
 )
@@ -154,10 +150,8 @@ fun Route.permissionRoutes(application: com.eventstore.domain.Application) {
                         principalId = body.principalId,
                         principalType = principalType,
                         resourceType = resourceType,
-                        resourceName = body.resourceName,
+                        resourceId = body.resourceId,
                         tenantId = tenantId,
-                        namespaceName = body.namespaceName,
-                        topicName = body.topicName,
                         permissions = permissions.toSet(),
                         expiresAt = expiresAt,
                         grantedBy = currentUserId
@@ -234,10 +228,8 @@ fun Route.permissionRoutes(application: com.eventstore.domain.Application) {
                         principalId = body.principalId,
                         principalType = principalType,
                         resourceType = resourceType,
-                        resourceName = body.resourceName,
+                        resourceId = body.resourceId,
                         tenantId = tenantId,
-                        namespaceName = body.namespaceName,
-                        topicName = body.topicName,
                         permissions = permissions.toSet(),
                         revokedBy = currentUserId,
                         reason = body.reason

@@ -161,16 +161,15 @@ class Application(
 
     private val grantPermissionService: GrantPermissionService =
         GrantPermissionService(
-            resourceResolver,
             config,
             systemEventPublisher
         )
 
     private val revokePermissionService: RevokePermissionService =
-        RevokePermissionService(resourceResolver, config, systemEventPublisher)
+        RevokePermissionService(config, systemEventPublisher)
 
     private val getPermissionsService: GetPermissionsService =
-        GetPermissionsService(permissionProjectionService, resourceResolver)
+        GetPermissionsService(permissionProjectionService)
 
     init {
         runBlocking {

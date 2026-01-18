@@ -104,7 +104,7 @@ class RevokePermissionServiceTest {
 
         // Create namespace
         val tenant = application.getTenant(tenantName)!!
-        application.createNamespace(tenant.tenantId, namespaceName)
+        val namespace = application.createNamespace(tenant.tenantId, namespaceName)
 
         val event = application.revokePermission(
             RevokePermissionRequest(
@@ -112,7 +112,7 @@ class RevokePermissionServiceTest {
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.NAMESPACE,
                 tenantId = tenant.tenantId,
-                namespaceName = namespaceName,
+                resourceId = namespace.namespaceId.toString(),
                 permissions = setOf(Permission.READ),
                 revokedBy = "admin"
             )
@@ -120,6 +120,7 @@ class RevokePermissionServiceTest {
 
         assertEquals(ResourceType.NAMESPACE, event.resourceType)
         assertNotNull(event.namespaceResourceId)
+        assertEquals(namespace.namespaceId.toString(), event.namespaceResourceId)
     }
 
     @Test
@@ -142,8 +143,7 @@ class RevokePermissionServiceTest {
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TOPIC,
                 tenantId = tenant.tenantId,
-                namespaceName = namespaceName,
-                topicName = topic.topicId.toString(), // topicName is now expected to be UUID string
+                resourceId = topic.topicId.toString(),
                 permissions = setOf(Permission.READ),
                 revokedBy = "admin"
             )
@@ -151,6 +151,7 @@ class RevokePermissionServiceTest {
 
         assertEquals(ResourceType.TOPIC, event.resourceType)
         assertNotNull(event.topicId)
+        assertEquals(topic.topicId.toString(), event.topicId)
     }
 
     @Test

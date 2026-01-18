@@ -6,7 +6,6 @@ import com.eventstore.domain.PrincipalType
 import com.eventstore.domain.ResourceType
 import com.eventstore.domain.events.PermissionEventType
 import com.eventstore.domain.events.PermissionRevokedEvent
-import com.eventstore.domain.ports.outbound.ResourceResolver
 import com.eventstore.domain.services.BaseSystemService
 import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.tenants.SystemTopics
@@ -17,17 +16,14 @@ data class RevokePermissionRequest(
     val principalId: String,
     val principalType: PrincipalType,
     val resourceType: ResourceType,
-    val resourceName: String? = null,  // Human-readable name, will be resolved to UUID
+    val resourceId: String? = null,  // UUID string for the target resource (namespaceId, topicId, etc.)
     val tenantId: UUID,
-    val namespaceName: String? = null,
-    val topicName: String? = null,
     val permissions: Set<Permission>,
     val revokedBy: String,
     val reason: String? = null
 )
 
 class RevokePermissionService(
-    private val resourceResolver: ResourceResolver,
     config: Config,
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
@@ -35,28 +31,21 @@ class RevokePermissionService(
         // Use tenantId directly (no resolution needed)
         val tenantResourceId = request.tenantId
 
-        // Resolve namespace resourceId if provided
-        val namespaceResourceId = request.namespaceName?.let {
-            resourceResolver.resolveNamespaceName(tenantResourceId, it)
-        }
-
-        // If topicName is provided, it should be a UUID string (API uses UUIDs)
-        val topicId = request.topicName?.let {
-            requireNotNull(namespaceResourceId) { "Namespace required when revoking topic permissions" }
-            // topicName is actually a UUID string when provided from API
+        // Resolve target resourceId based on resourceType
+        // If resourceId is provided, use it directly (must be UUID string)
+        // Otherwise, use tenantId for TENANT resource type
+        val targetResourceId = request.resourceId?.let {
+            // Resource ID provided - use it as the specific resourceId (must be UUID)
             try {
                 UUID.fromString(it)
             } catch (e: IllegalArgumentException) {
-                throw com.eventstore.domain.exceptions.TopicNotFoundException(it)
+                throw IllegalArgumentException("resourceId must be a valid UUID: $it")
             }
-        }
-
-        // Resolve target resourceId based on resourceType
-        val targetResourceId = when (request.resourceType) {
+        } ?: when (request.resourceType) {
             ResourceType.TENANT -> tenantResourceId
-            ResourceType.NAMESPACE -> namespaceResourceId
-            ResourceType.TOPIC -> topicId
-            else -> request.resourceName?.let { UUID.fromString(it) }
+            ResourceType.NAMESPACE -> throw IllegalArgumentException("resourceId is required for NAMESPACE resource type")
+            ResourceType.TOPIC -> throw IllegalArgumentException("resourceId is required for TOPIC resource type")
+            else -> null
         }
 
         val now = Instant.now()
@@ -66,8 +55,19 @@ class RevokePermissionService(
             resourceType = request.resourceType,
             resourceId = targetResourceId?.toString(),
             tenantResourceId = tenantResourceId.toString(),
-            namespaceResourceId = namespaceResourceId?.toString(),
-            topicId = topicId?.toString(),
+            namespaceResourceId = when (request.resourceType) {
+                ResourceType.NAMESPACE -> targetResourceId?.toString()
+                ResourceType.TOPIC -> {
+                    // For TOPIC, we'd need to get namespaceId from the topic - but we don't have that context
+                    // For now, we'll leave it null and let the event store handle it
+                    null
+                }
+                else -> null
+            },
+            topicId = when (request.resourceType) {
+                ResourceType.TOPIC -> targetResourceId?.toString()
+                else -> null
+            },
             permissions = request.permissions,
             revokedBy = request.revokedBy,
             revokedAt = now,

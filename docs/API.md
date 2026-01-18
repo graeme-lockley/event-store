@@ -80,12 +80,12 @@ List all tenants.
 }
 ```
 
-#### `GET /tenants/{tenantName}`
+#### `GET /tenants/{tenantId}`
 
-Get tenant details by name.
+Get tenant by UUID.
 
 **Path Parameters:**
-- `tenantName` (string): The tenant name
+- `tenantId` (UUID): The tenant UUID
 
 **Response (200 OK):**
 ```json
@@ -100,15 +100,11 @@ Get tenant details by name.
 }
 ```
 
-**Note**: The `id` field contains the tenant name, not the `tenantId` UUID. For PUT/DELETE operations and namespace creation, you need the `tenantId` UUID, which must be tracked separately or obtained from the system during tenant creation.
+**Note**: The `id` field in the response contains the tenant name (for backward compatibility), not the `tenantId` UUID used in the path parameter.
 
-**Error Response (404 Not Found):**
-```json
-{
-  "error": "Tenant not found",
-  "code": "TENANT_NOT_FOUND"
-}
-```
+**Error Responses:**
+- `400 Bad Request` - Invalid tenantId format (`INVALID_TENANT_ID`)
+- `404 Not Found` - Tenant not found (`TENANT_NOT_FOUND`)
 
 #### `PUT /tenants/{tenantId}`
 
@@ -894,6 +890,9 @@ Get permissions for a user.
 - `tenantId` (UUID): The tenant UUID
 - `userId` (string): The user ID
 
+**Query Parameters:**
+- `resourceId` (optional, UUID string): Filter permissions by specific resource (namespaceId, topicId, etc.)
+
 **Response (200 OK):**
 ```json
 [
@@ -909,8 +908,11 @@ Get permissions for a user.
 ]
 ```
 
+**Note**: If `resourceId` is provided as a query parameter, results are filtered to only include permissions for that specific resource (UUID).
+
 **Error Responses:**
 - `400 Bad Request` - Invalid tenantId format (`INVALID_TENANT_ID`)
+- `400 Bad Request` - Invalid resourceId format (must be UUID)
 
 #### `POST /tenants/{tenantId}/users/{userId}/permissions`
 
@@ -926,15 +928,16 @@ Grant permissions (requires authentication).
   "principalId": "user-123",
   "principalType": "USER",
   "resourceType": "TOPIC",
-  "resourceName": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-  "namespaceName": "production",
-  "topicName": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "resourceId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   "permissions": ["READ", "WRITE"],
   "expiresAt": "2026-01-15T10:30:00.000Z"
 }
 ```
 
-**Note**: `resourceName` and `topicName` should be UUIDs for topic-level permissions. `namespaceName` is still a name for backward compatibility.
+**Note**: 
+- `resourceId` (UUID string) is required for `NAMESPACE` and `TOPIC` resource types. For `NAMESPACE`, use the `namespaceId` UUID. For `TOPIC`, use the `topicId` UUID.
+- For `TENANT` resource type, `resourceId` is optional and defaults to `tenantId`.
+- `resourceId` must be a valid UUID format.
 
 **Response (201 Created):**
 ```json
@@ -945,6 +948,8 @@ Grant permissions (requires authentication).
 
 **Error Responses:**
 - `400 Bad Request` - Invalid tenantId format (`INVALID_TENANT_ID`)
+- `400 Bad Request` - resourceId is required for NAMESPACE/TOPIC resource types
+- `400 Bad Request` - Invalid resourceId format (must be UUID)
 
 #### `DELETE /tenants/{tenantId}/users/{userId}/permissions`
 
@@ -960,13 +965,16 @@ Revoke permissions (requires authentication).
   "principalId": "user-123",
   "principalType": "USER",
   "resourceType": "TOPIC",
-  "resourceName": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-  "namespaceName": "production",
-  "topicName": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "resourceId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   "permissions": ["READ"],
   "reason": "Access revoked"
 }
 ```
+
+**Note**: 
+- `resourceId` (UUID string) is required for `NAMESPACE` and `TOPIC` resource types. For `NAMESPACE`, use the `namespaceId` UUID. For `TOPIC`, use the `topicId` UUID.
+- For `TENANT` resource type, `resourceId` is optional and defaults to `tenantId`.
+- `resourceId` must be a valid UUID format.
 
 **Response (200 OK):**
 ```json

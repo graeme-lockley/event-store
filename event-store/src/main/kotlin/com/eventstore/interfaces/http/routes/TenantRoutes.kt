@@ -65,11 +65,21 @@ fun Route.tenantRoutes(application: Application) {
             }
         }
 
-        get("{tenantName}") {
+        get("{tenantId}") {
             try {
-                val tenantName =
-                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val tenant = application.getTenant(tenantName) ?: throw TenantNameNotFoundException(tenantName)
+                val tenantIdStr =
+                    call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
+                val tenantId = try {
+                    UUID.fromString(tenantIdStr)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid tenantId format. Expected UUID.", "INVALID_TENANT_ID")
+                    )
+                    return@get
+                }
+                val tenant = application.getTenantService.getTenant(tenantId)
+                    ?: throw TenantNameNotFoundException(tenantIdStr)
                 call.respond(HttpStatusCode.OK, tenant.toResponse())
             } catch (e: TenantNameNotFoundException) {
                 call.respond(

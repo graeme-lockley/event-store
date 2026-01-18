@@ -272,7 +272,7 @@ fun Application.configureApplication(config: Config) {
     println("   Tenant Management:")
     println("     POST   /tenants - Create tenant")
     println("     GET    /tenants - List all tenants")
-    println("     GET    /tenants/{tenantName} - Get tenant by name")
+    println("     GET    /tenants/{tenantId} - Get tenant by UUID")
     println("     PUT    /tenants/{tenantId} - Update tenant")
     println("     DELETE /tenants/{tenantId} - Delete tenant")
     println("   Namespace Management:")

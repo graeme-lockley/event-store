@@ -1,46 +1,36 @@
 package com.eventstore.domain.services.permission
 
 import com.eventstore.domain.PermissionGrant
-import com.eventstore.domain.ports.outbound.ResourceResolver
 import com.eventstore.infrastructure.projections.PermissionProjectionService
 import java.util.*
 
 data class GetPermissionsRequest(
     val principalId: String,
     val tenantId: UUID,
-    val namespaceName: String? = null,
-    val topicName: String? = null
+    val resourceId: String? = null  // UUID string for filtering by specific resource (namespaceId, topicId, etc.)
 )
 
 class GetPermissionsService(
-    private val permissionProjectionService: PermissionProjectionService,
-    private val resourceResolver: ResourceResolver
+    private val permissionProjectionService: PermissionProjectionService
 ) {
     suspend fun execute(request: GetPermissionsRequest): List<PermissionGrant> {
         // Use tenantId directly (no resolution needed)
         val tenantResourceId = request.tenantId
 
-        // Resolve namespace resourceId if provided
-        val namespaceResourceId = request.namespaceName?.let {
-            resourceResolver.resolveNamespaceName(tenantResourceId, it)
-        }
-
-        // If topicName is provided, it should be a UUID string (API uses UUIDs)
-        val topicId = request.topicName?.let {
-            requireNotNull(namespaceResourceId) { "Namespace required when getting topic permissions" }
-            // topicName is actually a UUID string when provided from API
+        // Parse resourceId if provided (must be UUID string)
+        val resourceId = request.resourceId?.let {
             try {
                 UUID.fromString(it)
             } catch (e: IllegalArgumentException) {
-                throw com.eventstore.domain.exceptions.TopicNotFoundException(it)
+                throw IllegalArgumentException("resourceId must be a valid UUID: $it")
             }
         }
 
         return permissionProjectionService.getPermissionGrants(
             principalId = request.principalId,
             tenantResourceId = tenantResourceId,
-            namespaceResourceId = namespaceResourceId,
-            topicId = topicId
+            namespaceResourceId = resourceId,  // If resourceId is provided, filter by it
+            topicId = resourceId  // If resourceId is provided, filter by it
         )
     }
 }

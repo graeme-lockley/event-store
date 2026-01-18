@@ -68,7 +68,7 @@ class GetPermissionsServiceTest {
 
         // Create namespace
         val tenant = application.getTenant(tenantName)!!
-        application.createNamespace(tenant.tenantId, namespaceName)
+        val namespace = application.createNamespace(tenant.tenantId, namespaceName)
 
         // Grant permission
         application.grantPermission(
@@ -77,7 +77,7 @@ class GetPermissionsServiceTest {
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.NAMESPACE,
                 tenantId = tenant.tenantId,
-                namespaceName = namespaceName,
+                resourceId = namespace.namespaceId.toString(),
                 permissions = setOf(Permission.READ),
                 grantedBy = "admin"
             )
@@ -88,7 +88,7 @@ class GetPermissionsServiceTest {
             GetPermissionsRequest(
                 principalId = userId,
                 tenantId = tenant.tenantId,
-                namespaceName = namespaceName
+                resourceId = namespace.namespaceId.toString()
             )
         )
 
@@ -118,8 +118,7 @@ class GetPermissionsServiceTest {
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TOPIC,
                 tenantId = tenant.tenantId,
-                namespaceName = namespaceName,
-                topicName = topic.topicId.toString(), // topicName is now expected to be UUID string
+                resourceId = topic.topicId.toString(),
                 permissions = setOf(Permission.READ),
                 grantedBy = "admin"
             )
@@ -130,8 +129,7 @@ class GetPermissionsServiceTest {
             GetPermissionsRequest(
                 principalId = userId,
                 tenantId = tenant.tenantId,
-                namespaceName = namespaceName,
-                topicName = topic.topicId.toString() // topicName is now expected to be UUID string
+                resourceId = topic.topicId.toString()
             )
         )
 
@@ -159,7 +157,7 @@ class GetPermissionsServiceTest {
 
         // Create namespace
         val tenant = application.getTenant(tenantName)!!
-        application.createNamespace(tenant.tenantId, namespaceName)
+        val namespace = application.createNamespace(tenant.tenantId, namespaceName)
 
         // Grant multiple permissions
         application.grantPermission(
@@ -178,7 +176,7 @@ class GetPermissionsServiceTest {
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.NAMESPACE,
                 tenantId = tenant.tenantId,
-                namespaceName = namespaceName,
+                resourceId = namespace.namespaceId.toString(),
                 permissions = setOf(Permission.UPDATE),
                 grantedBy = "admin"
             )
