@@ -11,9 +11,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Route.userRoutes(
-    application: Application
-) {
+fun Route.userRoutes(application: Application) {
     // Global user management routes
     route("/users") {
         post {
@@ -26,7 +24,7 @@ fun Route.userRoutes(
                     metadata = body.metadata,
                     primaryTenantId = body.primaryTenantId
                 )
-                
+
                 // Optionally assign to tenant if provided
                 body.primaryTenantId?.let { tenantId ->
                     application.assignUserToTenant(
@@ -35,7 +33,7 @@ fun Route.userRoutes(
                         isPrimary = true
                     )
                 }
-                
+
                 call.respond(HttpStatusCode.Created, created.toResponse())
             } catch (e: UserAlreadyExistsException) {
                 call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "User exists", "USER_EXISTS"))
@@ -103,14 +101,14 @@ fun Route.userRoutes(
             }
         }
     }
-    
+
     // Tenant assignment routes - separate route blocks
     post("/users/{userId}/tenants/{tenantId}") {
         try {
             val userId = call.parameters["userId"] ?: throw IllegalArgumentException("userId is required")
             val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
             val body = runCatching { call.receive<AssignUserTenantRequest>() }.getOrNull()
-            
+
             application.assignUserToTenant(
                 userId = userId,
                 tenantId = tenantId,

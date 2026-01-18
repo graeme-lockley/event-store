@@ -3,7 +3,6 @@ package com.eventstore.interfaces.http.routes
 import com.eventstore.domain.Permission
 import com.eventstore.domain.PrincipalType
 import com.eventstore.domain.ResourceType
-import com.eventstore.domain.services.permission.*
 import com.eventstore.interfaces.http.dto.ErrorResponse
 import com.eventstore.interfaces.http.middleware.AuthenticationMiddleware
 import io.ktor.http.*
@@ -45,9 +44,7 @@ data class PermissionResponseDto(
     val grantedBy: String
 )
 
-fun Route.permissionRoutes(
-    application: com.eventstore.domain.Application
-) {
+fun Route.permissionRoutes(application: com.eventstore.domain.Application) {
     route("/tenants/{tenantName}/users/{userId}/permissions") {
         get {
             try {

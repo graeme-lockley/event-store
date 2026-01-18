@@ -9,9 +9,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.util.*
 
-fun Route.eventRoutes(
-    application: Application
-) {
+fun Route.eventRoutes(application: Application) {
     route("/topics/{topicId}/events") {
         post {
             try {

@@ -2,8 +2,6 @@ package com.eventstore.interfaces.http.routes
 
 import com.eventstore.domain.exceptions.InvalidCredentialsException
 import com.eventstore.domain.services.auth.AuthenticationService
-import com.eventstore.domain.services.user.ChangePasswordRequest
-import com.eventstore.domain.services.user.ChangePasswordService
 import com.eventstore.interfaces.http.dto.ChangePasswordRequestDto
 import com.eventstore.interfaces.http.dto.ErrorResponse
 import com.eventstore.interfaces.http.dto.LoginRequest
@@ -14,10 +12,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Route.authRoutes(
-    authenticationService: com.eventstore.domain.services.auth.AuthenticationService,
-    application: com.eventstore.domain.Application
-) {
+fun Route.authRoutes(authenticationService: AuthenticationService, application: com.eventstore.domain.Application) {
     route("/auth") {
         post("/login") {
             try {

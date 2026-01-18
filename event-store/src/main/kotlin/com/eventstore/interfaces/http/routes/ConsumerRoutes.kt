@@ -8,9 +8,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Route.consumerRoutes(
-    application: Application
-) {
+fun Route.consumerRoutes(application: Application) {
     route("/tenants/{tenantName}/namespaces/{namespaceName}/consumers") {
         // POST /tenants/{tenantName}/namespaces/{namespaceName}/consumers/register - Register a consumer
         post("register") {

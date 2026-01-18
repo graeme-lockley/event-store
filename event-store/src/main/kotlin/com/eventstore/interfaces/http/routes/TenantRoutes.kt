@@ -11,13 +11,11 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import java.util.UUID
+import java.util.*
 
 private data class TenantDeleteRequestDto(val reason: String? = null)
 
-fun Route.tenantRoutes(
-    application: Application
-) {
+fun Route.tenantRoutes(application: Application) {
     route("/tenants") {
         post {
             try {

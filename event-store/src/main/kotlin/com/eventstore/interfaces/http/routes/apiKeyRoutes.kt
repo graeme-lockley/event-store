@@ -3,7 +3,6 @@ package com.eventstore.interfaces.http.routes
 import com.eventstore.domain.exceptions.ApiKeyAlreadyRevokedException
 import com.eventstore.domain.exceptions.ApiKeyNotFoundException
 import com.eventstore.domain.exceptions.UserNotFoundException
-import com.eventstore.domain.services.apikey.*
 import com.eventstore.interfaces.http.dto.*
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -25,9 +24,7 @@ private fun ApplicationCall.requireParameter(name: String): String {
     return value
 }
 
-fun Route.apiKeyRoutes(
-    application: com.eventstore.domain.Application
-) {
+fun Route.apiKeyRoutes(application: com.eventstore.domain.Application) {
     route("/tenants/{tenantId}/users/{userId}/api-keys") {
         post {
             try {

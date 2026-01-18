@@ -16,9 +16,7 @@ import java.util.*
 
 private data class NamespaceDeleteRequestDto(val reason: String? = null)
 
-fun Route.namespaceRoutes(
-    application: Application
-) {
+fun Route.namespaceRoutes(application: Application) {
     route("/namespaces") {
         post {
             try {

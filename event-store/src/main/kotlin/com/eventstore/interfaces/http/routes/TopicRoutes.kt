@@ -10,10 +10,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.util.*
 
-fun Route.topicRoutes(
-    application: Application,
-    dispatcherManager: com.eventstore.infrastructure.background.AsyncDispatcherManager
-) {
+fun Route.topicRoutes(application: Application) {
     route("/topics") {
         post {
             try {
@@ -21,7 +18,10 @@ fun Route.topicRoutes(
                 if (request.name.isBlank() || request.schemas.isEmpty()) {
                     call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse("Invalid request body. Required: namespaceId, name, schemas array", "INVALID_REQUEST")
+                        ErrorResponse(
+                            "Invalid request body. Required: namespaceId, name, schemas array",
+                            "INVALID_REQUEST"
+                        )
                     )
                     return@post
                 }
@@ -64,7 +64,7 @@ fun Route.topicRoutes(
         get {
             try {
                 val namespaceIdStr = call.request.queryParameters["namespaceId"]
-                val namespaceId = namespaceIdStr?.let { 
+                val namespaceId = namespaceIdStr?.let {
                     try {
                         UUID.fromString(it)
                     } catch (e: IllegalArgumentException) {
