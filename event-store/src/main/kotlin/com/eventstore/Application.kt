@@ -35,7 +35,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
 import kotlinx.coroutines.*
+import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
+import ch.qos.logback.classic.Level as LogbackLevel
+import ch.qos.logback.classic.LoggerContext
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -49,6 +52,14 @@ fun main(args: Array<String>) {
 }
 
 fun Application.configureApplication(config: Config) {
+    // Configure logging levels based on silent mode
+    if (config.silent) {
+        val loggerContext = LoggerFactory.getILoggerFactory() as LoggerContext
+        loggerContext.getLogger("com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl").level = LogbackLevel.ERROR
+        loggerContext.getLogger("ktor.application").level = LogbackLevel.ERROR
+        loggerContext.getLogger("ktor.test").level = LogbackLevel.ERROR
+    }
+
     // Configure Jackson ObjectMapper
     val objectMapper = jacksonObjectMapper().apply {
         registerKotlinModule()
@@ -135,18 +146,21 @@ fun Application.configureApplication(config: Config) {
     val requestStartTimeKey = AttributeKey<Long>("RequestStartTime")
 
     // Interceptor to track request start time - intercept early in the call pipeline
-    intercept(ApplicationCallPipeline.Call) {
-        call.attributes.put(requestStartTimeKey, System.currentTimeMillis())
-    }
+    // Only needed if CallLogging is installed
+    if (!config.silent) {
+        intercept(ApplicationCallPipeline.Call) {
+            call.attributes.put(requestStartTimeKey, System.currentTimeMillis())
+        }
 
-    install(CallLogging) {
-        level = Level.INFO
-        format { call ->
-            val status = call.response.status()
-            val httpMethod = call.request.httpMethod.value
-            val startTime = call.attributes.getOrNull(requestStartTimeKey) ?: System.currentTimeMillis()
-            val duration = System.currentTimeMillis() - startTime
-            "$httpMethod ${call.request.path()} - $status - ${duration}ms"
+        install(CallLogging) {
+            level = Level.INFO
+            format { call ->
+                val status = call.response.status()
+                val httpMethod = call.request.httpMethod.value
+                val startTime = call.attributes.getOrNull(requestStartTimeKey) ?: System.currentTimeMillis()
+                val duration = System.currentTimeMillis() - startTime
+                "$httpMethod ${call.request.path()} - $status - ${duration}ms"
+            }
         }
     }
 
@@ -265,57 +279,59 @@ fun Application.configureApplication(config: Config) {
     }
 
     // Startup logging
-    println("🚀 Event Store starting on port ${config.port}")
-    println("📁 Data directory: ${config.dataDir}")
-    println("📁 Config directory: ${config.configDir}")
-    println("📖 API Endpoints:")
-    println("   Tenant Management:")
-    println("     POST   /tenants - Create tenant")
-    println("     GET    /tenants - List all tenants")
-    println("     GET    /tenants/{tenantId} - Get tenant by UUID")
-    println("     PUT    /tenants/{tenantId} - Update tenant")
-    println("     DELETE /tenants/{tenantId} - Delete tenant")
-    println("   Namespace Management:")
-    println("     POST   /namespaces - Create namespace")
-    println("     GET    /namespaces - List namespaces (optional ?tenantId query param)")
-    println("     GET    /namespaces/{namespaceId} - Get namespace")
-    println("     PUT    /namespaces/{namespaceId} - Update namespace")
-    println("     DELETE /namespaces/{namespaceId} - Delete namespace")
-    println("   Topic Management:")
-    println("     POST   /topics - Create topic")
-    println("     GET    /topics - List topics (optional ?namespaceId query param)")
-    println("     GET    /topics/{topicId} - Get topic")
-    println("     PUT    /topics/{topicId}/schemas - Update topic schemas")
-    println("   Event Operations:")
-    println("     POST   /topics/{topicId}/events - Publish events")
-    println("     GET    /topics/{topicId}/events - Retrieve events")
-    println("   Consumer Management:")
-    println("     POST   /namespaces/{namespaceId}/consumers/register - Register consumer")
-    println("     GET    /namespaces/{namespaceId}/consumers - List consumers")
-    println("     DELETE /namespaces/{namespaceId}/consumers/{id} - Unregister consumer")
-    println("   User Management:")
-    println("     POST   /users - Create user")
-    println("     GET    /users - List all users")
-    println("     GET    /users/{userId} - Get user")
-    println("     PUT    /users/{userId} - Update user")
-    println("     DELETE /users/{userId} - Delete user")
-    println("     POST   /users/{userId}/tenants/{tenantId} - Assign user to tenant")
-    println("     DELETE /users/{userId}/tenants/{tenantId} - Remove user from tenant")
-    println("   API Key Management:")
-    println("     POST   /tenants/{tenantId}/users/{userId}/api-keys - Create API key")
-    println("     GET    /tenants/{tenantId}/users/{userId}/api-keys - List API keys for user")
-    println("     GET    /tenants/{tenantId}/users/{userId}/api-keys/{keyId} - Get API key")
-    println("     DELETE /tenants/{tenantId}/users/{userId}/api-keys/{keyId} - Revoke API key")
-    println("   Authentication:")
-    println("     POST   /auth/login - Login")
-    println("     POST   /auth/logout - Logout")
-    println("     POST   /auth/password/change - Change password")
-    println("   Permission Management:")
-    println("     GET    /tenants/{tenantId}/users/{userId}/permissions - Get permissions")
-    println("     POST   /tenants/{tenantId}/users/{userId}/permissions - Grant permissions")
-    println("     DELETE /tenants/{tenantId}/users/{userId}/permissions - Revoke permissions")
-    println("   Health:")
-    println("     GET    /health - Health check")
+    if (!config.silent) {
+        println("🚀 Event Store starting on port ${config.port}")
+        println("📁 Data directory: ${config.dataDir}")
+        println("📁 Config directory: ${config.configDir}")
+        println("📖 API Endpoints:")
+        println("   Tenant Management:")
+        println("     POST   /tenants - Create tenant")
+        println("     GET    /tenants - List all tenants")
+        println("     GET    /tenants/{tenantId} - Get tenant by UUID")
+        println("     PUT    /tenants/{tenantId} - Update tenant")
+        println("     DELETE /tenants/{tenantId} - Delete tenant")
+        println("   Namespace Management:")
+        println("     POST   /namespaces - Create namespace")
+        println("     GET    /namespaces - List namespaces (optional ?tenantId query param)")
+        println("     GET    /namespaces/{namespaceId} - Get namespace")
+        println("     PUT    /namespaces/{namespaceId} - Update namespace")
+        println("     DELETE /namespaces/{namespaceId} - Delete namespace")
+        println("   Topic Management:")
+        println("     POST   /topics - Create topic")
+        println("     GET    /topics - List topics (optional ?namespaceId query param)")
+        println("     GET    /topics/{topicId} - Get topic")
+        println("     PUT    /topics/{topicId}/schemas - Update topic schemas")
+        println("   Event Operations:")
+        println("     POST   /topics/{topicId}/events - Publish events")
+        println("     GET    /topics/{topicId}/events - Retrieve events")
+        println("   Consumer Management:")
+        println("     POST   /namespaces/{namespaceId}/consumers/register - Register consumer")
+        println("     GET    /namespaces/{namespaceId}/consumers - List consumers")
+        println("     DELETE /namespaces/{namespaceId}/consumers/{id} - Unregister consumer")
+        println("   User Management:")
+        println("     POST   /users - Create user")
+        println("     GET    /users - List all users")
+        println("     GET    /users/{userId} - Get user")
+        println("     PUT    /users/{userId} - Update user")
+        println("     DELETE /users/{userId} - Delete user")
+        println("     POST   /users/{userId}/tenants/{tenantId} - Assign user to tenant")
+        println("     DELETE /users/{userId}/tenants/{tenantId} - Remove user from tenant")
+        println("   API Key Management:")
+        println("     POST   /tenants/{tenantId}/users/{userId}/api-keys - Create API key")
+        println("     GET    /tenants/{tenantId}/users/{userId}/api-keys - List API keys for user")
+        println("     GET    /tenants/{tenantId}/users/{userId}/api-keys/{keyId} - Get API key")
+        println("     DELETE /tenants/{tenantId}/users/{userId}/api-keys/{keyId} - Revoke API key")
+        println("   Authentication:")
+        println("     POST   /auth/login - Login")
+        println("     POST   /auth/logout - Logout")
+        println("     POST   /auth/password/change - Change password")
+        println("   Permission Management:")
+        println("     GET    /tenants/{tenantId}/users/{userId}/permissions - Get permissions")
+        println("     POST   /tenants/{tenantId}/users/{userId}/permissions - Grant permissions")
+        println("     DELETE /tenants/{tenantId}/users/{userId}/permissions - Revoke permissions")
+        println("   Health:")
+        println("     GET    /health - Health check")
+    }
 }
 
 data class RateBucket(

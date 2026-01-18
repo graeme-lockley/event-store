@@ -45,6 +45,11 @@ class TopicDispatcher(
                     delay(checkIntervalMs)
                 }
             } catch (e: Exception) {
+                // JobCancellationException is expected during graceful shutdown - don't log with stack trace
+                if (e is CancellationException) {
+                    // Skip logging for expected cancellation during shutdown
+                    return@launch
+                }
                 logger.error("Dispatcher for topic $topicId encountered an error and will stop", e)
             } finally {
                 _isRunning.value = false

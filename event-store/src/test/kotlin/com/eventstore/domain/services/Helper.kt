@@ -1,5 +1,7 @@
 package com.eventstore.domain.services
 
+import ch.qos.logback.classic.Level as LogbackLevel
+import ch.qos.logback.classic.LoggerContext
 import com.eventstore.Config
 import com.eventstore.domain.Application
 import com.eventstore.domain.EventId
@@ -14,6 +16,7 @@ import com.eventstore.infrastructure.external.JsonSchemaValidator
 import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
 import com.eventstore.infrastructure.persistence.InMemoryEventRepository
 import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
+import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.*
 
@@ -112,16 +115,38 @@ suspend fun createEventStore(topicName: String = "user-events"): PopulateEventSt
 }
 
 fun createApplication(): Application {
+    val config = Config(
+        port = 0,
+        dataDir = "./data",
+        configDir = "./config",
+        maxBodyBytes = 1024,
+        rateLimitPerMinute = 10,
+        authEnabled = false,
+        silent = true
+    )
+
+    // Configure logging levels based on silent mode - must happen BEFORE creating Application
+    // because Application's init block runs bootstrap which logs at INFO level
+    if (config.silent) {
+        try {
+            val loggerFactory = LoggerFactory.getILoggerFactory()
+            if (loggerFactory is LoggerContext) {
+                val bootstrapLogger = loggerFactory.getLogger("com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl")
+                bootstrapLogger.level = LogbackLevel.ERROR
+                val ktorLogger = loggerFactory.getLogger("ktor.application")
+                ktorLogger.level = LogbackLevel.ERROR
+                val ktorTestLogger = loggerFactory.getLogger("ktor.test")
+                ktorTestLogger.level = LogbackLevel.ERROR
+            }
+        } catch (e: Exception) {
+            // If logger configuration fails, silently continue - tests should still work
+            // This might happen if logback is not being used as the SLF4J implementation
+        }
+    }
+
     val application = Application(
         bootstrap = true,
-        config = Config(
-            port = 0,
-            dataDir = "./data",
-            configDir = "./config",
-            maxBodyBytes = 1024,
-            rateLimitPerMinute = 10,
-            authEnabled = false
-        )
+        config = config
     )
 
     return application

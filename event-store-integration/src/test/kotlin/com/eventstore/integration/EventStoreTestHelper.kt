@@ -52,7 +52,8 @@ class EventStoreTestHelper(
             configDir = configDir.toString(),
             maxBodyBytes = 1048576L,
             rateLimitPerMinute = 600,
-            authEnabled = false
+            authEnabled = false,
+            silent = true
         )
         
         server = embeddedServer(Netty, port = config.port) {
