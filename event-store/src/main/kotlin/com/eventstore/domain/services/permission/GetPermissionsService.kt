@@ -7,7 +7,7 @@ import java.util.*
 
 data class GetPermissionsRequest(
     val principalId: String,
-    val tenantName: String,
+    val tenantId: UUID,
     val namespaceName: String? = null,
     val topicName: String? = null
 )
@@ -17,8 +17,8 @@ class GetPermissionsService(
     private val resourceResolver: ResourceResolver
 ) {
     suspend fun execute(request: GetPermissionsRequest): List<PermissionGrant> {
-        // Resolve tenant resourceId
-        val tenantResourceId = resourceResolver.resolveTenantName(request.tenantName)
+        // Use tenantId directly (no resolution needed)
+        val tenantResourceId = request.tenantId
 
         // Resolve namespace resourceId if provided
         val namespaceResourceId = request.namespaceName?.let {

@@ -78,13 +78,14 @@ class ApiKeyRoutesTest {
     }
 
     private suspend fun grantUserPermissions(userId: String, tenantId: String) {
+        val tenant = application.getTenant(tenantId)!!
         application.grantPermission(
             GrantPermissionRequest(
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.USER,
                 resourceName = userId,
-                tenantName = tenantId,
+                tenantId = tenant.tenantId,
                 permissions = setOf(Permission.READ, Permission.UPDATE),
                 grantedBy = "admin"
             )

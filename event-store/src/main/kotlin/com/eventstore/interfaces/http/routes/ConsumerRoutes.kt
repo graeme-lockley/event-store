@@ -7,16 +7,25 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.util.*
 
 fun Route.consumerRoutes(application: Application) {
-    route("/tenants/{tenantName}/namespaces/{namespaceName}/consumers") {
-        // POST /tenants/{tenantName}/namespaces/{namespaceName}/consumers/register - Register a consumer
+    route("/namespaces/{namespaceId}/consumers") {
+        // POST /namespaces/{namespaceId}/consumers/register - Register a consumer
         post("register") {
             try {
-                val tenantName =
-                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName =
-                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val namespaceIdStr =
+                    call.parameters["namespaceId"] ?: throw IllegalArgumentException("namespaceId is required")
+                val namespaceId = try {
+                    UUID.fromString(namespaceIdStr)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid namespaceId format. Expected UUID.", "INVALID_NAMESPACE_ID")
+                    )
+                    return@post
+                }
+                // Note: namespaceId is validated but not used by domain services (consumers register by topicId UUIDs)
                 val requestDto = call.receive<ConsumerRegistrationRequestDto>()
 
                 // Convert DTO to domain request
@@ -51,13 +60,21 @@ fun Route.consumerRoutes(application: Application) {
             }
         }
 
-        // GET /tenants/{tenantName}/namespaces/{namespaceName}/consumers - List consumers in namespace
+        // GET /namespaces/{namespaceId}/consumers - List consumers in namespace
         get {
             try {
-                val tenantName =
-                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName =
-                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val namespaceIdStr =
+                    call.parameters["namespaceId"] ?: throw IllegalArgumentException("namespaceId is required")
+                val namespaceId = try {
+                    UUID.fromString(namespaceIdStr)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid namespaceId format. Expected UUID.", "INVALID_NAMESPACE_ID")
+                    )
+                    return@get
+                }
+                // Note: namespaceId is validated but not used by domain services (listConsumers returns all consumers)
                 val consumers = application.listConsumers()
                 val consumerInfo = consumers.map { consumer ->
                     ConsumerResponseMapper.toDto(consumer)
@@ -71,13 +88,21 @@ fun Route.consumerRoutes(application: Application) {
             }
         }
 
-        // DELETE /tenants/{tenantName}/namespaces/{namespaceName}/consumers/{id} - Unregister a consumer
+        // DELETE /namespaces/{namespaceId}/consumers/{id} - Unregister a consumer
         delete("{id}") {
             try {
-                val tenantName =
-                    call.parameters["tenantName"] ?: throw IllegalArgumentException("tenantName is required")
-                val namespaceName =
-                    call.parameters["namespaceName"] ?: throw IllegalArgumentException("namespaceName is required")
+                val namespaceIdStr =
+                    call.parameters["namespaceId"] ?: throw IllegalArgumentException("namespaceId is required")
+                val namespaceId = try {
+                    UUID.fromString(namespaceIdStr)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid namespaceId format. Expected UUID.", "INVALID_NAMESPACE_ID")
+                    )
+                    return@delete
+                }
+                // Note: namespaceId is validated but not used by domain services
                 val consumerId = call.parameters["id"]
                     ?: throw IllegalArgumentException("Consumer ID is required")
 

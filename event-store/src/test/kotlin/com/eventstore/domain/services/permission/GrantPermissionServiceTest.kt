@@ -36,6 +36,7 @@ class GrantPermissionServiceTest {
 
     @Test
     fun `grants permission and emits event`() = runTest {
+        val tenant = application.getTenant(tenantName)!!
         val permissions = setOf(Permission.READ, Permission.UPDATE)
 
         val event = application.grantPermission(
@@ -43,7 +44,7 @@ class GrantPermissionServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 permissions = permissions,
                 grantedBy = "admin"
             )
@@ -65,6 +66,7 @@ class GrantPermissionServiceTest {
 
     @Test
     fun `grants permission for specific resource`() = runTest {
+        val tenant = application.getTenant(tenantName)!!
         val resourceId = UUID.randomUUID()
 
         val event = application.grantPermission(
@@ -73,7 +75,7 @@ class GrantPermissionServiceTest {
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
                 resourceName = resourceId.toString(),
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 permissions = setOf(Permission.READ),
                 grantedBy = "admin"
             )
@@ -95,7 +97,7 @@ class GrantPermissionServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.NAMESPACE,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 namespaceName = namespaceName,
                 permissions = setOf(Permission.READ),
                 grantedBy = "admin"
@@ -125,7 +127,7 @@ class GrantPermissionServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TOPIC,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 namespaceName = namespaceName,
                 topicName = topic.topicId.toString(), // topicName is now expected to be UUID string
                 permissions = setOf(Permission.READ),
@@ -139,6 +141,7 @@ class GrantPermissionServiceTest {
 
     @Test
     fun `grants permission with expiration`() = runTest {
+        val tenant = application.getTenant(tenantName)!!
         val expiresAt = Instant.now().plusSeconds(3600)
 
         val event = application.grantPermission(
@@ -146,7 +149,7 @@ class GrantPermissionServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 permissions = setOf(Permission.READ),
                 expiresAt = expiresAt,
                 grantedBy = "admin"
@@ -158,6 +161,7 @@ class GrantPermissionServiceTest {
 
     @Test
     fun `grants permission for API key principal`() = runTest {
+        val tenant = application.getTenant(tenantName)!!
         val apiKeyId = UUID.randomUUID().toString()
 
         val event = application.grantPermission(
@@ -165,7 +169,7 @@ class GrantPermissionServiceTest {
                 principalId = apiKeyId,
                 principalType = PrincipalType.API_KEY,
                 resourceType = ResourceType.TENANT,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 permissions = setOf(Permission.READ),
                 grantedBy = "admin"
             )

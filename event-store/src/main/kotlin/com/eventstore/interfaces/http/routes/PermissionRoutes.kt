@@ -11,6 +11,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.time.Instant
+import java.util.*
 
 data class GrantPermissionRequestDto(
     val principalId: String,
@@ -45,18 +46,27 @@ data class PermissionResponseDto(
 )
 
 fun Route.permissionRoutes(application: com.eventstore.domain.Application) {
-    route("/tenants/{tenantName}/users/{userId}/permissions") {
+    route("/tenants/{tenantId}/users/{userId}/permissions") {
         get {
             try {
-                val tenantName = call.parameters["tenantName"]
-                    ?: throw IllegalArgumentException("tenantName is required")
+                val tenantIdStr = call.parameters["tenantId"]
+                    ?: throw IllegalArgumentException("tenantId is required")
+                val tenantId = try {
+                    UUID.fromString(tenantIdStr)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid tenantId format. Expected UUID.", "INVALID_TENANT_ID")
+                    )
+                    return@get
+                }
                 val userId = call.parameters["userId"]
                     ?: throw IllegalArgumentException("userId is required")
 
                 val grants = application.getPermissions(
                     com.eventstore.domain.services.permission.GetPermissionsRequest(
                         principalId = userId,
-                        tenantName = tenantName
+                        tenantId = tenantId
                     )
                 )
 
@@ -83,8 +93,17 @@ fun Route.permissionRoutes(application: com.eventstore.domain.Application) {
 
         post {
             try {
-                val tenantName = call.parameters["tenantName"]
-                    ?: throw IllegalArgumentException("tenantName is required")
+                val tenantIdStr = call.parameters["tenantId"]
+                    ?: throw IllegalArgumentException("tenantId is required")
+                val tenantId = try {
+                    UUID.fromString(tenantIdStr)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid tenantId format. Expected UUID.", "INVALID_TENANT_ID")
+                    )
+                    return@post
+                }
                 call.parameters["userId"]
                     ?: throw IllegalArgumentException("userId is required")
                 val currentUserId = call.attributes.getOrNull(AuthenticationMiddleware.UserIdKey)
@@ -136,7 +155,7 @@ fun Route.permissionRoutes(application: com.eventstore.domain.Application) {
                         principalType = principalType,
                         resourceType = resourceType,
                         resourceName = body.resourceName,
-                        tenantName = tenantName,
+                        tenantId = tenantId,
                         namespaceName = body.namespaceName,
                         topicName = body.topicName,
                         permissions = permissions.toSet(),
@@ -156,8 +175,17 @@ fun Route.permissionRoutes(application: com.eventstore.domain.Application) {
 
         delete {
             try {
-                val tenantName = call.parameters["tenantName"]
-                    ?: throw IllegalArgumentException("tenantName is required")
+                val tenantIdStr = call.parameters["tenantId"]
+                    ?: throw IllegalArgumentException("tenantId is required")
+                val tenantId = try {
+                    UUID.fromString(tenantIdStr)
+                } catch (e: IllegalArgumentException) {
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse("Invalid tenantId format. Expected UUID.", "INVALID_TENANT_ID")
+                    )
+                    return@delete
+                }
                 call.parameters["userId"]
                     ?: throw IllegalArgumentException("userId is required")
                 val currentUserId = call.attributes.getOrNull(AuthenticationMiddleware.UserIdKey)
@@ -207,7 +235,7 @@ fun Route.permissionRoutes(application: com.eventstore.domain.Application) {
                         principalType = principalType,
                         resourceType = resourceType,
                         resourceName = body.resourceName,
-                        tenantName = tenantName,
+                        tenantId = tenantId,
                         namespaceName = body.namespaceName,
                         topicName = body.topicName,
                         permissions = permissions.toSet(),

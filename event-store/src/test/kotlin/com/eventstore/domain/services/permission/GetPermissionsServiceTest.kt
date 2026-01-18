@@ -33,6 +33,7 @@ class GetPermissionsServiceTest {
 
     @Test
     fun `gets permissions for tenant`() = runTest {
+        val tenant = application.getTenant(tenantName)!!
         val permissions = setOf(Permission.READ, Permission.UPDATE)
 
         // Grant permission
@@ -41,7 +42,7 @@ class GetPermissionsServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 permissions = permissions,
                 grantedBy = "admin"
             )
@@ -51,7 +52,7 @@ class GetPermissionsServiceTest {
         val result = application.getPermissions(
             GetPermissionsRequest(
                 principalId = userId,
-                tenantName = tenantName
+                tenantId = tenant.tenantId
             )
         )
 
@@ -75,7 +76,7 @@ class GetPermissionsServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.NAMESPACE,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 namespaceName = namespaceName,
                 permissions = setOf(Permission.READ),
                 grantedBy = "admin"
@@ -86,7 +87,7 @@ class GetPermissionsServiceTest {
         val result = application.getPermissions(
             GetPermissionsRequest(
                 principalId = userId,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 namespaceName = namespaceName
             )
         )
@@ -116,7 +117,7 @@ class GetPermissionsServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TOPIC,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 namespaceName = namespaceName,
                 topicName = topic.topicId.toString(), // topicName is now expected to be UUID string
                 permissions = setOf(Permission.READ),
@@ -128,7 +129,7 @@ class GetPermissionsServiceTest {
         val result = application.getPermissions(
             GetPermissionsRequest(
                 principalId = userId,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 namespaceName = namespaceName,
                 topicName = topic.topicId.toString() // topicName is now expected to be UUID string
             )
@@ -141,10 +142,11 @@ class GetPermissionsServiceTest {
 
     @Test
     fun `returns empty list when no permissions granted`() = runTest {
+        val tenant = application.getTenant(tenantName)!!
         val result = application.getPermissions(
             GetPermissionsRequest(
                 principalId = userId,
-                tenantName = tenantName
+                tenantId = tenant.tenantId
             )
         )
 
@@ -165,7 +167,7 @@ class GetPermissionsServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 permissions = setOf(Permission.READ),
                 grantedBy = "admin"
             )
@@ -175,7 +177,7 @@ class GetPermissionsServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.NAMESPACE,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 namespaceName = namespaceName,
                 permissions = setOf(Permission.UPDATE),
                 grantedBy = "admin"
@@ -186,7 +188,7 @@ class GetPermissionsServiceTest {
         val result = application.getPermissions(
             GetPermissionsRequest(
                 principalId = userId,
-                tenantName = tenantName
+                tenantId = tenant.tenantId
             )
         )
 

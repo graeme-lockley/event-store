@@ -18,7 +18,7 @@ data class RevokePermissionRequest(
     val principalType: PrincipalType,
     val resourceType: ResourceType,
     val resourceName: String? = null,  // Human-readable name, will be resolved to UUID
-    val tenantName: String,
+    val tenantId: UUID,
     val namespaceName: String? = null,
     val topicName: String? = null,
     val permissions: Set<Permission>,
@@ -32,8 +32,8 @@ class RevokePermissionService(
     eventPublisher: SystemEventPublisher
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: RevokePermissionRequest): PermissionRevokedEvent {
-        // Resolve tenant resourceId
-        val tenantResourceId = resourceResolver.resolveTenantName(request.tenantName)
+        // Use tenantId directly (no resolution needed)
+        val tenantResourceId = request.tenantId
 
         // Resolve namespace resourceId if provided
         val namespaceResourceId = request.namespaceName?.let {

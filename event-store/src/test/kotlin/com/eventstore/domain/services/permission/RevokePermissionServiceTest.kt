@@ -37,13 +37,15 @@ class RevokePermissionServiceTest {
     fun `revokes permission and emits event`() = runTest {
         val permissions = setOf(Permission.READ, Permission.UPDATE)
 
+        val tenant = application.getTenant(tenantName)!!
+        
         // First grant permission
         application.grantPermission(
             GrantPermissionRequest(
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 permissions = permissions,
                 grantedBy = "admin"
             )
@@ -55,7 +57,7 @@ class RevokePermissionServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 permissions = permissions,
                 revokedBy = "admin"
             )
@@ -77,6 +79,7 @@ class RevokePermissionServiceTest {
 
     @Test
     fun `revokes permission for specific resource`() = runTest {
+        val tenant = application.getTenant(tenantName)!!
         // RevokePermissionService doesn't use resourceName parameter the same way as GrantPermissionService
         // It resolves resourceId based on resourceType, so we test that it resolves correctly
         val event = application.revokePermission(
@@ -84,7 +87,7 @@ class RevokePermissionServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 permissions = setOf(Permission.READ),
                 revokedBy = "admin"
             )
@@ -108,7 +111,7 @@ class RevokePermissionServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.NAMESPACE,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 namespaceName = namespaceName,
                 permissions = setOf(Permission.READ),
                 revokedBy = "admin"
@@ -138,7 +141,7 @@ class RevokePermissionServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TOPIC,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 namespaceName = namespaceName,
                 topicName = topic.topicId.toString(), // topicName is now expected to be UUID string
                 permissions = setOf(Permission.READ),
@@ -152,6 +155,7 @@ class RevokePermissionServiceTest {
 
     @Test
     fun `revokes permission with reason`() = runTest {
+        val tenant = application.getTenant(tenantName)!!
         val reason = "Access no longer needed"
 
         val event = application.revokePermission(
@@ -159,7 +163,7 @@ class RevokePermissionServiceTest {
                 principalId = userId,
                 principalType = PrincipalType.USER,
                 resourceType = ResourceType.TENANT,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 permissions = setOf(Permission.READ),
                 revokedBy = "admin",
                 reason = reason
@@ -171,6 +175,7 @@ class RevokePermissionServiceTest {
 
     @Test
     fun `revokes permission for API key principal`() = runTest {
+        val tenant = application.getTenant(tenantName)!!
         val apiKeyId = UUID.randomUUID().toString()
 
         val event = application.revokePermission(
@@ -178,7 +183,7 @@ class RevokePermissionServiceTest {
                 principalId = apiKeyId,
                 principalType = PrincipalType.API_KEY,
                 resourceType = ResourceType.TENANT,
-                tenantName = tenantName,
+                tenantId = tenant.tenantId,
                 permissions = setOf(Permission.READ),
                 revokedBy = "admin"
             )

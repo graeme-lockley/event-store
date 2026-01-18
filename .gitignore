@@ -106,6 +106,7 @@ temp/
 *.sw?
 
 # Event Store specific
+config/
 data/
 event-store/config/
 coverage/
