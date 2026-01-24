@@ -109,6 +109,50 @@ cd integration-tests
 ./run.sh
 ```
 
+## Quality Checks
+
+The project uses automated quality gates to ensure progressive code quality improvement. See [docs/engineering/PipelineRequirements.md](docs/engineering/PipelineRequirements.md) for detailed requirements.
+
+### Code Coverage (JaCoCo)
+
+```bash
+# Run tests and generate coverage reports
+./gradlew test jacocoTestReport
+
+# View coverage report (open in browser)
+# event-store module:
+open event-store/build/reports/jacoco/test/html/index.html
+
+# event-store-integration module:
+open event-store-integration/build/reports/jacoco/test/html/index.html
+```
+
+### Code Style (ktlint)
+
+```bash
+# Check code style
+./gradlew ktlintCheck
+
+# Auto-format code to fix style issues
+./gradlew ktlintFormat
+```
+
+### Quality Gate
+
+The CI pipeline enforces progressive quality improvement - coverage can only increase and linting violations can only decrease. You can run the quality gate check locally:
+
+```bash
+# Run quality gate check (requires jq)
+.github/scripts/quality-gate.sh
+```
+
+### Quality Baseline
+
+Quality metrics are tracked in `.quality-baseline.json`. The baseline is automatically updated when metrics improve on the main branch. The baseline includes:
+
+- Line, branch, and instruction coverage per module
+- Total linting violations
+
 ## Development Setup
 
 ### IntelliJ IDEA

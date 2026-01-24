@@ -1,3 +1,13 @@
+# CI Pipeline with Progressive Quality Gates
+#
+# This pipeline implements the requirements from docs/engineering/PipelineRequirements.md
+# Key features:
+# - Test execution with coverage measurement (REQ-1, REQ-2)
+# - Code linting with ktlint (REQ-3)
+# - Progressive quality gates (REQ-5)
+# - Automatic baseline updates on main (REQ-6)
+# - Artifact management (REQ-9)
+
 name: CI
 
 on:
@@ -6,15 +16,141 @@ on:
   pull_request:
     branches: [main]
 
+# Required for baseline updates on main branch (REQ-6.5)
+permissions:
+  contents: write
+
 jobs:
-  test:
+  # Job 1: Linting (REQ-3)
+  # Runs in parallel with tests for efficiency (REQ-8.2)
+  lint:
+    name: Code Linting
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      # Run ktlint check (REQ-3.1, REQ-3.4)
+      - name: Run ktlint
+        id: ktlint
+        run: |
+          chmod +x gradlew
+          ./gradlew ktlintCheck --continue 2>&1 | tee ktlint-output.txt
+        continue-on-error: true
+
+      # Count violations for reporting (REQ-3.6)
+      - name: Count linting violations
+        if: always()
+        run: |
+          VIOLATIONS=$(grep -c "\.kt:" ktlint-output.txt || echo "0")
+          echo "ktlint violations: $VIOLATIONS"
+          echo "KTLINT_VIOLATIONS=$VIOLATIONS" >> $GITHUB_ENV
+
+      - name: Upload linting report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ktlint-reports
+          path: |
+            event-store/build/reports/ktlint/**
+            event-store-integration/build/reports/ktlint/**
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Fail if linting failed
+        if: steps.ktlint.outcome == 'failure'
+        run: |
+          echo "Linting failed. Please fix ktlint violations."
+          echo "Run './gradlew ktlintFormat' locally to auto-fix style issues."
+          exit 1
+
+  # Job 2: Unit Tests with Coverage (REQ-1.1, REQ-2)
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      # Run unit tests with coverage (REQ-1.1, REQ-2.1, REQ-2.3)
+      - name: Run unit tests with coverage
+        id: unit_tests
+        run: |
+          chmod +x gradlew
+          ./gradlew :event-store:test :event-store:jacocoTestReport --info
+        continue-on-error: true
+
+      # Upload test reports (REQ-1.4)
+      - name: Upload unit test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: |
+            event-store/build/test-results/test/**/*.xml
+            event-store/build/reports/tests/test/**
+          retention-days: 30
+          if-no-files-found: ignore
+
+      # Upload coverage reports (REQ-2.8)
+      - name: Upload unit test coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-coverage
+          path: |
+            event-store/build/reports/jacoco/test/**
+          retention-days: 30
+          if-no-files-found: ignore
+
+      # Upload test logs (REQ-1.5)
+      - name: Upload unit test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-logs
+          path: |
+            event-store/build/test-results/test/**/*.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Fail if unit tests failed
+        if: steps.unit_tests.outcome == 'failure'
+        run: |
+          echo "Unit tests failed. Check the test summary and details above."
+          exit 1
+
+  # Job 3: Integration Tests with Coverage (REQ-1.2, REQ-2)
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -29,24 +165,25 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Unit Test Event Store
-        run: |
-          chmod +x gradlew
-          ./gradlew :event-store:test
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
 
-      - name: Integration Test Event Store
-        id: integration_test
+      # Run integration tests with coverage (REQ-1.2, REQ-2.1, REQ-2.3)
+      - name: Run integration tests with coverage
+        id: integration_tests
         run: |
           chmod +x gradlew
-          ./gradlew :event-store-integration:test --info
+          ./gradlew :event-store-integration:test :event-store-integration:jacocoTestReport --info
         continue-on-error: true
 
+      # Display test results (REQ-1.6)
       - name: Display Test Results
         if: always()
         run: |
           ./integration-tests/tasks/display-test-results.sh
 
-      - name: Upload Test Reports
+      # Upload test reports (REQ-1.4)
+      - name: Upload integration test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -55,8 +192,21 @@ jobs:
             event-store-integration/build/test-results/test/**/*.xml
             event-store-integration/build/reports/tests/test/**
           retention-days: 30
+          if-no-files-found: ignore
 
-      - name: Upload Test Logs
+      # Upload coverage reports (REQ-2.8)
+      - name: Upload integration test coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-coverage
+          path: |
+            event-store-integration/build/reports/jacoco/test/**
+          retention-days: 30
+          if-no-files-found: ignore
+
+      # Upload test logs (REQ-1.5)
+      - name: Upload integration test logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -66,8 +216,128 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
 
-      - name: Fail if tests failed
-        if: steps.integration_test.outcome == 'failure'
+      - name: Fail if integration tests failed
+        if: steps.integration_tests.outcome == 'failure'
         run: |
           echo "Integration tests failed. Check the test summary and details above."
           exit 1
+
+  # Job 4: Quality Gate (REQ-5, REQ-11)
+  # Runs after tests complete to check quality metrics
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [lint, test-unit, test-integration]
+    if: always() && needs.lint.result == 'success' && needs.test-unit.result == 'success' && needs.test-integration.result == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      # Re-run tests and coverage to generate reports for quality gate check
+      # This ensures we have fresh coverage data
+      - name: Generate coverage reports
+        run: |
+          chmod +x gradlew
+          ./gradlew test jacocoTestReport --continue || true
+
+      # Run quality gate check (REQ-5.1, REQ-5.5, REQ-11)
+      - name: Run quality gate check
+        id: quality_gate
+        run: |
+          chmod +x .github/scripts/quality-gate.sh
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ github.event_name }}" = "push" ]; then
+            # On main branch push, allow baseline updates (REQ-6.2)
+            .github/scripts/quality-gate.sh --update-baseline | tee quality-gate-output.txt
+          else
+            # On PRs, just check without updating baseline (REQ-6.6)
+            .github/scripts/quality-gate.sh | tee quality-gate-output.txt
+          fi
+        continue-on-error: true
+
+      # Commit baseline updates on main branch (REQ-6.3, REQ-6.5)
+      - name: Commit baseline updates
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.quality_gate.outcome == 'success'
+        run: |
+          # Check if baseline file was modified
+          if git diff --quiet .quality-baseline.json; then
+            echo "No baseline changes to commit"
+            exit 0
+          fi
+          
+          # Extract commit message from quality gate output
+          COMMIT_MSG=$(grep "^BASELINE_COMMIT_MESSAGE=" quality-gate-output.txt | cut -d= -f2- || echo "chore: update quality baseline")
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit and push
+          git add .quality-baseline.json
+          git commit -m "$COMMIT_MSG"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload quality gate output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-report
+          path: quality-gate-output.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+      # Fail if quality gate failed (REQ-5.4)
+      - name: Fail if quality regressed
+        if: steps.quality_gate.outcome == 'failure'
+        run: |
+          echo "Quality gate failed due to regression."
+          echo "See quality gate output above for details."
+          echo ""
+          echo "To fix:"
+          echo "  - Coverage regression: Add more tests to increase coverage"
+          echo "  - Linting violations: Run './gradlew ktlintFormat' to auto-fix"
+          exit 1
+
+  # Final status check - aggregates all job results
+  ci-status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    needs: [lint, test-unit, test-integration, quality-gate]
+    if: always()
+
+    steps:
+      - name: Check CI Status
+        run: |
+          echo "CI Pipeline Summary"
+          echo "==================="
+          echo ""
+          echo "Linting:          ${{ needs.lint.result }}"
+          echo "Unit Tests:       ${{ needs.test-unit.result }}"
+          echo "Integration Tests: ${{ needs.test-integration.result }}"
+          echo "Quality Gate:     ${{ needs.quality-gate.result }}"
+          echo ""
+          
+          # Fail if any required job failed
+          if [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.test-unit.result }}" != "success" ] || \
+             [ "${{ needs.test-integration.result }}" != "success" ] || \
+             [ "${{ needs.quality-gate.result }}" != "success" ]; then
+            echo "CI pipeline failed. See individual job results above."
+            exit 1
+          fi
+          
+          echo "All checks passed!"

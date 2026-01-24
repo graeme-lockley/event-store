@@ -133,10 +133,8 @@ class AuthorizationMiddleware(
                         topicName = topicName
                     )
                 } catch (e: com.eventstore.domain.exceptions.TenantNameNotFoundException) {
-                    // Tenant not found during permission check - let route handler handle it
-                    // This allows route handlers to return 404 for non-existent tenants
-                    proceed()
-                    return@intercept
+                    // Tenant not found - re-throw so StatusPages can return 404
+                    throw e
                 }
             } else {
                 // No specific permission required - allow

@@ -229,7 +229,7 @@ class TenantTestClient(
      * Gets tenant UUID from a TenantResponse by looking up events
      */
     suspend fun getTenantUuid(tenant: TenantResponse): UUID {
-        return getTenantUuidByName(tenant.name) 
+        return getTenantUuidByName(tenant.name)
             ?: throw IllegalStateException("Cannot find UUID for tenant: ${tenant.name}")
     }
 }
