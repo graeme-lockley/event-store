@@ -1,11 +1,11 @@
 package com.eventstore.integration
 
 import com.eventstore.domain.tenants.SystemTopics
-import io.ktor.client.request.contentType
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test

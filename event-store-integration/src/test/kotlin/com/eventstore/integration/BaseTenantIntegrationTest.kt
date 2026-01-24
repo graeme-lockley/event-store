@@ -3,6 +3,7 @@ package com.eventstore.integration
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.cookie
 import io.ktor.client.request.get
 import io.ktor.http.HttpStatusCode
