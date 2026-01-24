@@ -5,7 +5,12 @@ import com.eventstore.domain.Quota
 import com.eventstore.domain.Tenant
 import com.eventstore.domain.exceptions.TenantAlreadyExistsException
 import com.eventstore.domain.exceptions.TenantNameNotFoundException
+import com.eventstore.domain.exceptions.TenantNotFoundException
 import com.eventstore.interfaces.http.dto.*
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.JsonMappingException
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -35,6 +40,26 @@ fun Route.tenantRoutes(application: Application) {
                 )
 
                 call.respond(HttpStatusCode.Created, created.toResponse())
+            } catch (e: com.fasterxml.jackson.databind.exc.MismatchedInputException) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse("Invalid request format: ${e.message ?: "Malformed request body"}", "INVALID_REQUEST")
+                )
+            } catch (e: com.fasterxml.jackson.core.JsonParseException) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse("Invalid JSON syntax: ${e.message ?: "Malformed request body"}", "INVALID_JSON")
+                )
+            } catch (e: com.fasterxml.jackson.databind.JsonMappingException) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse("Invalid JSON mapping: ${e.message ?: "Malformed request body"}", "INVALID_JSON")
+                )
+            } catch (e: com.fasterxml.jackson.core.JsonProcessingException) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse("Invalid JSON: ${e.message ?: "Malformed request body"}", "INVALID_JSON")
+                )
             } catch (e: TenantAlreadyExistsException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
@@ -46,9 +71,12 @@ fun Route.tenantRoutes(application: Application) {
                     ErrorResponse(e.message ?: "Tenant operations disabled", "FEATURE_DISABLED")
                 )
             } catch (e: Exception) {
+                // Log the exception type for debugging
+                val exceptionType = e::class.simpleName
+                val exceptionMessage = e.message ?: "Unknown error"
                 call.respond(
                     HttpStatusCode.InternalServerError,
-                    ErrorResponse(e.message ?: "Failed to create tenant", "TENANT_CREATE_FAILED")
+                    ErrorResponse("Failed to create tenant: $exceptionMessage (type: $exceptionType)", "TENANT_CREATE_FAILED")
                 )
             }
         }

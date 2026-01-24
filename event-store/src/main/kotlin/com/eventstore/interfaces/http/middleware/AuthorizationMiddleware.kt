@@ -9,6 +9,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
+import com.eventstore.domain.tenants.SystemTopics
+import java.util.*
 
 /**
  * Middleware that extracts tenant/namespace/topic context from URLs and checks permissions.
@@ -52,9 +54,61 @@ class AuthorizationMiddleware(
             val requiredPermission = permissionPair.second
 
             if (tenantName == null) {
-                // No tenant context - allow (might be system-level endpoint)
+                // No tenant context - check if this is a tenant creation operation
+                // For POST /tenants, we need to check CREATE permission using system tenant context
+                if (resourceType == ResourceType.TENANT && requiredPermission == Permission.CREATE) {
+                    // Check permission using system tenant context for tenant creation
+                    val hasPermission = try {
+                        authorizationService.checkPermission(
+                            principalId = userId,
+                            resourceType = resourceType,
+                            resourceName = null,
+                            requiredPermission = requiredPermission,
+                            tenantName = com.eventstore.domain.tenants.SystemTopics.SYSTEM_TENANT_NAME,
+                            namespaceName = null,
+                            topicName = null
+                        )
+                    } catch (e: Exception) {
+                        // If permission check fails, deny access
+                        false
+                    }
+                    
+                    if (!hasPermission) {
+                        call.respond(
+                            HttpStatusCode.Forbidden,
+                            com.eventstore.interfaces.http.dto.ErrorResponse("Permission denied", "PERMISSION_DENIED")
+                        )
+                        finish()
+                        return@intercept
+                    }
+                }
+                // For other operations without tenant context, allow (might be system-level endpoint)
                 proceed()
                 return@intercept
+            }
+
+            // For tenant-specific operations (GET/PUT/DELETE on /tenants/{tenantId}),
+            // if tenantName looks like a UUID, skip permission check and let route handler validate
+            // This allows route handlers to return 400 for invalid UUIDs instead of 404
+            if (path.matches(Regex("/tenants/[^/]+/?$")) && 
+                resourceType == ResourceType.TENANT &&
+                (call.request.httpMethod == HttpMethod.Get || 
+                 call.request.httpMethod == HttpMethod.Put || 
+                 call.request.httpMethod == HttpMethod.Delete)) {
+                // Check if it looks like a UUID format
+                val looksLikeUuid = tenantName.matches(Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"))
+                if (looksLikeUuid) {
+                    // Try to parse as UUID - if it fails, it's invalid format, skip permission check
+                    try {
+                        UUID.fromString(tenantName)
+                        // Valid UUID format - continue with permission check (will try to resolve as name, which will fail)
+                        // But we want to let route handler handle non-existent tenants, so catch TenantNameNotFoundException
+                    } catch (e: IllegalArgumentException) {
+                        // Invalid UUID format - skip permission check, let route handler return 400
+                        proceed()
+                        return@intercept
+                    }
+                }
             }
 
             // Store context in call attributes
@@ -68,15 +122,22 @@ class AuthorizationMiddleware(
 
             // Check permission
             val hasPermission = if (resourceType != null && requiredPermission != null) {
-                authorizationService.checkPermission(
-                    principalId = userId,
-                    resourceType = resourceType,
-                    resourceName = extractResourceName(path, resourceType),
-                    requiredPermission = requiredPermission,
-                    tenantName = tenantName,
-                    namespaceName = namespaceName,
-                    topicName = topicName
-                )
+                try {
+                    authorizationService.checkPermission(
+                        principalId = userId,
+                        resourceType = resourceType,
+                        resourceName = extractResourceName(path, resourceType),
+                        requiredPermission = requiredPermission,
+                        tenantName = tenantName,
+                        namespaceName = namespaceName,
+                        topicName = topicName
+                    )
+                } catch (e: com.eventstore.domain.exceptions.TenantNameNotFoundException) {
+                    // Tenant not found during permission check - let route handler handle it
+                    // This allows route handlers to return 404 for non-existent tenants
+                    proceed()
+                    return@intercept
+                }
             } else {
                 // No specific permission required - allow
                 true

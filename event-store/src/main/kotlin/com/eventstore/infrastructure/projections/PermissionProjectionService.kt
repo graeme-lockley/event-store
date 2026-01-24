@@ -9,6 +9,7 @@ import com.eventstore.domain.events.PermissionGrantedEvent
 import com.eventstore.domain.events.PermissionRevokedEvent
 import com.eventstore.domain.ports.outbound.DeliveryResult
 import com.eventstore.domain.ports.outbound.PermissionRepository
+import com.eventstore.domain.tenants.SystemTopics
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
@@ -109,8 +110,14 @@ class PermissionProjectionService(
             // Check tenant match - grant must match the query's tenant context
             // If tenantResourceId is null in query, we don't filter by tenant (return all)
             // Otherwise, grant's tenantResourceId must match the query's tenantResourceId
+            // Special case: If grant has resourceId=null (global admin) and is for system tenant,
+            // treat it as global admin that applies to all tenants
+            val isGlobalAdminGrant = grant.resourceId == null &&
+                    grant.resourceType == ResourceType.TENANT &&
+                    grant.tenantResourceId == com.eventstore.domain.tenants.SystemTopics.SYSTEM_TENANT_ID.toString()
             val tenantMatches = tenantResourceId == null ||
-                    grant.tenantResourceId == tenantResourceId.toString()
+                    grant.tenantResourceId == tenantResourceId.toString() ||
+                    isGlobalAdminGrant
 
             // Check namespace match (if namespace context provided)
             val namespaceMatches = namespaceResourceId == null ||

@@ -52,8 +52,14 @@ class AuthorizationService(
         }
 
         // Determine target resourceId based on resourceType
+        // For CREATE operations, resourceId should be null (creating a new resource)
+        // For other operations, use the resolved resourceId
         val targetResourceId = when (resourceType) {
-            ResourceType.TENANT -> tenantResourceId
+            ResourceType.TENANT -> {
+                // For tenant operations, if resourceName is null, it's a CREATE operation
+                // Otherwise, use the resolved tenantResourceId
+                if (resourceName == null) null else tenantResourceId
+            }
             ResourceType.NAMESPACE -> namespaceResourceId
             ResourceType.TOPIC -> topicId
             else -> resourceName?.let { UUID.fromString(it) }  // For USER, CONSUMER, etc., resourceId comes from parameter

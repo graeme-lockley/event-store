@@ -30,6 +30,10 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.callloging.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.JsonMappingException
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -139,6 +143,8 @@ fun Application.configureApplication(config: Config) {
     install(ContentNegotiation) {
         jackson {
             registerKotlinModule()
+            // Fail on null for non-nullable properties
+            configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES, true)
         }
     }
 
@@ -165,6 +171,61 @@ fun Application.configureApplication(config: Config) {
     }
 
     install(StatusPages) {
+        exception<com.eventstore.domain.exceptions.TenantNameNotFoundException> { call, cause ->
+            call.respond(
+                HttpStatusCode.NotFound,
+                com.eventstore.interfaces.http.dto.ErrorResponse(
+                    error = cause.message ?: "Tenant not found",
+                    code = "TENANT_NOT_FOUND"
+                )
+            )
+        }
+        exception<com.eventstore.domain.exceptions.TenantNotFoundException> { call, cause ->
+            call.respond(
+                HttpStatusCode.NotFound,
+                com.eventstore.interfaces.http.dto.ErrorResponse(
+                    error = cause.message ?: "Tenant not found",
+                    code = "TENANT_NOT_FOUND"
+                )
+            )
+        }
+        // Order matters: more specific exceptions must come before their parent classes
+        exception<com.fasterxml.jackson.databind.exc.MismatchedInputException> { call, cause ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                com.eventstore.interfaces.http.dto.ErrorResponse(
+                    error = "Invalid request format: ${cause.message ?: "Malformed request body"}",
+                    code = "INVALID_REQUEST"
+                )
+            )
+        }
+        exception<com.fasterxml.jackson.core.JsonParseException> { call, cause ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                com.eventstore.interfaces.http.dto.ErrorResponse(
+                    error = "Invalid JSON syntax: ${cause.message ?: "Malformed request body"}",
+                    code = "INVALID_JSON"
+                )
+            )
+        }
+        exception<com.fasterxml.jackson.databind.JsonMappingException> { call, cause ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                com.eventstore.interfaces.http.dto.ErrorResponse(
+                    error = "Invalid JSON mapping: ${cause.message ?: "Malformed request body"}",
+                    code = "INVALID_JSON"
+                )
+            )
+        }
+        exception<com.fasterxml.jackson.core.JsonProcessingException> { call, cause ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                com.eventstore.interfaces.http.dto.ErrorResponse(
+                    error = "Invalid JSON: ${cause.message ?: "Malformed request body"}",
+                    code = "INVALID_JSON"
+                )
+            )
+        }
         exception<Throwable> { call, cause ->
             val status = when (cause) {
                 is com.eventstore.domain.exceptions.TopicNotFoundException -> HttpStatusCode.NotFound
