@@ -49,6 +49,7 @@ class AuthorizationMiddlewareIntegrationTest {
     private val testTopicName = "test-topic"
     private lateinit var testSessionId: String
     private lateinit var testTenantResourceId: UUID
+    private lateinit var systemTenantResourceId: UUID
 
     @BeforeEach
     fun setup() {
@@ -79,13 +80,32 @@ class AuthorizationMiddlewareIntegrationTest {
         val session = sessionManager.createSession(testUserId)
         testSessionId = session.id
 
+        // Create the system tenant (required for tenant creation permission checks)
+        systemTenantResourceId = UUID.randomUUID()
+        runBlocking {
+            val systemTenantEvent = Event(
+                id = EventId.create(
+                    topicId = SystemTopics.TENANTS_TOPIC_ID,
+                    sequence = 1
+                ),
+                timestamp = Instant.now(),
+                type = TenantEventType.CREATED,
+                payload = TenantCreatedEvent(
+                    tenantId = systemTenantResourceId,
+                    name = SystemTopics.SYSTEM_TENANT_NAME,
+                    createdAt = Instant.now()
+                ).toPayload()
+            )
+            tenantProjectionService.handleEvents(listOf(systemTenantEvent))
+        }
+
         // Create a test tenant
         testTenantResourceId = UUID.randomUUID()
         runBlocking {
             val tenantEvent = Event(
                 id = EventId.create(
                     topicId = SystemTopics.TENANTS_TOPIC_ID,
-                    sequence = 1
+                    sequence = 2
                 ),
                 timestamp = Instant.now(),
                 type = TenantEventType.CREATED,
@@ -876,6 +896,8 @@ class AuthorizationMiddlewareIntegrationTest {
     @Test
     fun `handles CREATE permission for collection endpoints`() = testApplication {
         runBlocking {
+            // Grant CREATE permission on TENANT resource at the system tenant level
+            // Tenant creation requires system-level permissions
             val grantEvent = Event(
                 id = EventId.create(
                     topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
@@ -888,7 +910,7 @@ class AuthorizationMiddlewareIntegrationTest {
                     principalType = PrincipalType.USER,
                     resourceType = ResourceType.TENANT,
                     resourceId = null, // All tenants
-                    tenantResourceId = testTenantResourceId.toString(),
+                    tenantResourceId = systemTenantResourceId.toString(), // Use system tenant for tenant creation
                     permissions = setOf(Permission.CREATE),
                     grantedBy = "admin",
                     grantedAt = Instant.now()
