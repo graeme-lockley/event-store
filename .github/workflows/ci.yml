@@ -52,7 +52,12 @@ jobs:
       - name: Count linting violations
         if: always()
         run: |
-          VIOLATIONS=$(grep -c "\.kt:" ktlint-output.txt || echo "0")
+          # Use grep to count violations, handling the case where no matches are found
+          if grep -q "\.kt:" ktlint-output.txt 2>/dev/null; then
+            VIOLATIONS=$(grep -c "\.kt:" ktlint-output.txt)
+          else
+            VIOLATIONS=0
+          fi
           echo "ktlint violations: $VIOLATIONS"
           echo "KTLINT_VIOLATIONS=$VIOLATIONS" >> $GITHUB_ENV
 
