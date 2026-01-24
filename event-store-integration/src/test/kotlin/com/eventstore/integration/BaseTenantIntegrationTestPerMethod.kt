@@ -10,30 +10,26 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.jackson.jackson
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.TestInstance
-import java.nio.file.Files
+import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 
 /**
- * Base class for tenant integration tests with class-level server lifecycle.
- *
- * The server is started once before all tests in the class and stopped after all tests complete.
- * This provides significant performance improvements for tests that don't require a fresh server.
+ * Base class for integration tests that require a fresh server instance for each test.
  *
  * Use this base class for tests that:
- * - Are read-only (don't modify server state)
- * - Can share state with other tests in the same class
- * - Don't test server restart behavior
+ * - Test server restart behavior
+ * - Require completely clean state between tests
+ * - Modify server state in ways that could affect other tests
  *
- * For tests that require a fresh server instance per test (like restart tests),
- * use [BaseTenantIntegrationTestPerMethod] instead.
+ * For most read-only or additive tests, use [BaseTenantIntegrationTest] instead,
+ * which shares a single server instance across all tests in the class for better performance.
  */
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-abstract class BaseTenantIntegrationTest {
-    protected lateinit var tempDir: Path
+abstract class BaseTenantIntegrationTestPerMethod {
+    @TempDir
+    lateinit var tempDir: Path
+
     protected lateinit var eventStoreHelper: EventStoreTestHelper
     protected lateinit var dataDir: Path
     protected lateinit var configDir: Path
@@ -41,12 +37,9 @@ abstract class BaseTenantIntegrationTest {
     protected lateinit var tenantClient: TenantTestClient
     protected var sessionId: String? = null
 
-    @BeforeAll
-    open fun setUpClass() {
-        // Create a temp directory for this test class
-        tempDir = Files.createTempDirectory("event-store-test-")
-
-        // Create separate directories for data and config for this test class
+    @BeforeEach
+    open fun setUp() {
+        // Create separate directories for data and config for this test
         dataDir = tempDir.resolve("data")
         configDir = tempDir.resolve("config")
 
@@ -57,7 +50,7 @@ abstract class BaseTenantIntegrationTest {
                 configDir = configDir,
             )
 
-        // Start the event-store instance once for all tests
+        // Start the event-store instance
         eventStoreHelper.start()
 
         // Create HTTP client with JSON serialization
@@ -74,36 +67,20 @@ abstract class BaseTenantIntegrationTest {
         // Initialize tenant client
         tenantClient = TenantTestClient(httpClient, eventStoreHelper.getBaseUrl(), sessionId)
 
-        // Authenticate with admin credentials
+        // Authenticate with admin credentials (required - middleware is always installed)
         runBlocking {
             authenticate()
         }
     }
 
-    @AfterAll
-    open fun tearDownClass() {
+    @AfterEach
+    open fun tearDown() {
         // Close HTTP client
-        if (::httpClient.isInitialized) {
-            httpClient.close()
-        }
+        httpClient.close()
 
         // Stop the event-store instance
-        if (::eventStoreHelper.isInitialized && eventStoreHelper.isRunning()) {
+        if (eventStoreHelper.isRunning()) {
             eventStoreHelper.stop()
-        }
-
-        // Clean up temp directory
-        if (::tempDir.isInitialized) {
-            tempDir.toFile().deleteRecursively()
-        }
-    }
-
-    @BeforeEach
-    open fun setUp() {
-        // Re-authenticate before each test to ensure fresh session
-        // This is lightweight compared to server restart
-        runBlocking {
-            authenticate()
         }
     }
 

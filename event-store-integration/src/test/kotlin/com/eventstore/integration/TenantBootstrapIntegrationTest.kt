@@ -6,7 +6,6 @@ import io.ktor.client.request.parameter
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -20,7 +19,7 @@ class TenantBootstrapIntegrationTest : BaseTenantIntegrationTest() {
     // Section 4.1: System Tenant Bootstrap
 
     @Test
-    fun `should bootstrap system tenant on startup`() =
+    fun `should bootstrap system tenant on startup`() {
         runBlocking {
             // System tenant should exist after bootstrap (done in setUp)
             val tenants = tenantClient.listTenants()
@@ -30,9 +29,10 @@ class TenantBootstrapIntegrationTest : BaseTenantIntegrationTest() {
             assertEquals(SystemTopics.SYSTEM_TENANT_NAME, systemTenant.name)
             assertNotNull(systemTenant.createdAt)
         }
+    }
 
     @Test
-    fun `should bootstrap system namespace`() =
+    fun `should bootstrap system namespace`() {
         runBlocking {
             // Verify system namespace exists by checking if we can access system topics
             // Since we can't directly query namespaces via API in this test, we verify
@@ -41,9 +41,10 @@ class TenantBootstrapIntegrationTest : BaseTenantIntegrationTest() {
             // If we can get events from tenants topic, the namespace exists
             assertNotNull(events, "Should be able to access system topics")
         }
+    }
 
     @Test
-    fun `should bootstrap system topics`() =
+    fun `should bootstrap system topics`() {
         runBlocking {
             // Verify system topics exist by trying to access them
             val tenantsTopicId = SystemTopics.TENANTS_TOPIC_ID
@@ -57,36 +58,5 @@ class TenantBootstrapIntegrationTest : BaseTenantIntegrationTest() {
 
             assertEquals(HttpStatusCode.OK, response.status, "Should be able to access tenants topic")
         }
-
-    @Test
-    fun `should be idempotent on restart`() =
-        runBlocking {
-            // Get initial tenant count
-            val tenantsBefore = tenantClient.listTenants()
-            val countBefore = tenantsBefore.size
-
-            // Restart server
-            eventStoreHelper.stop()
-            delay(1000)
-            eventStoreHelper.start()
-            waitForServerReady()
-
-            // Re-authenticate after restart
-            authenticate()
-            tenantClient = TenantTestClient(httpClient, eventStoreHelper.getBaseUrl(), sessionId)
-
-            // Verify same number of tenants (no duplicates)
-            val tenantsAfter = tenantClient.listTenants()
-            assertEquals(countBefore, tenantsAfter.size, "Should have same number of tenants after restart")
-
-            // Verify system tenant still exists (only once)
-            val systemTenants = tenantsAfter.filter { it.name == SystemTopics.SYSTEM_TENANT_NAME }
-            assertEquals(1, systemTenants.size, "Should have exactly one system tenant")
-        }
-
-    // Section 4.2: System Tenant Protection
-    // Note: System tenant protection tests have been moved to unit tests:
-    // - DeleteTenantServiceTest.throws when attempting to delete system tenant
-    // - UpdateTenantServiceTest.throws when attempting to update system tenant
-    // - GetTenantServiceTest.system tenant always included in list
+    }
 }
