@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap
 data class Session(
     val id: String,
     val userId: String,
-    val createdAt: Instant = Instant.now()
+    val createdAt: Instant = Instant.now(),
 )
 
 class SessionManager {
@@ -25,7 +25,3 @@ class SessionManager {
         sessions.remove(sessionId)
     }
 }
-
-
-
-

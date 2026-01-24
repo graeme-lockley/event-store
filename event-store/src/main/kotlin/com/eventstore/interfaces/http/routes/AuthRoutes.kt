@@ -12,7 +12,10 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Route.authRoutes(authenticationService: AuthenticationService, application: com.eventstore.domain.Application) {
+fun Route.authRoutes(
+    authenticationService: AuthenticationService,
+    application: com.eventstore.domain.Application,
+) {
     route("/auth") {
         post("/login") {
             try {
@@ -23,7 +26,7 @@ fun Route.authRoutes(authenticationService: AuthenticationService, application: 
             } catch (e: InvalidCredentialsException) {
                 call.respond(
                     HttpStatusCode.Unauthorized,
-                    ErrorResponse(e.message ?: "Invalid credentials", "INVALID_CREDENTIALS")
+                    ErrorResponse(e.message ?: "Invalid credentials", "INVALID_CREDENTIALS"),
                 )
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.BadRequest, ErrorResponse(e.message ?: "Login failed", "LOGIN_FAILED"))
@@ -31,8 +34,9 @@ fun Route.authRoutes(authenticationService: AuthenticationService, application: 
         }
 
         post("/logout") {
-            val sessionId = call.request.cookies["sessionId"]
-                ?: call.request.headers["Authorization"]?.removePrefix("Bearer ")
+            val sessionId =
+                call.request.cookies["sessionId"]
+                    ?: call.request.headers["Authorization"]?.removePrefix("Bearer ")
             if (sessionId != null) {
                 authenticationService.logout(sessionId)
                 call.response.cookies.appendExpired("sessionId")
@@ -42,27 +46,28 @@ fun Route.authRoutes(authenticationService: AuthenticationService, application: 
 
         post("/password/change") {
             try {
-                val sessionId = call.request.cookies["sessionId"]
-                    ?: call.request.headers["Authorization"]?.removePrefix("Bearer ")
-                    ?: throw InvalidCredentialsException()
+                val sessionId =
+                    call.request.cookies["sessionId"]
+                        ?: call.request.headers["Authorization"]?.removePrefix("Bearer ")
+                        ?: throw InvalidCredentialsException()
                 val session = authenticationService.getSession(sessionId) ?: throw InvalidCredentialsException()
                 val body = call.receive<ChangePasswordRequestDto>()
                 application.changePassword(
                     userId = session.userId,
                     oldPassword = body.oldPassword,
                     newPassword = body.newPassword,
-                    changedBy = session.userId
+                    changedBy = session.userId,
                 )
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Password changed"))
             } catch (e: InvalidCredentialsException) {
                 call.respond(
                     HttpStatusCode.Unauthorized,
-                    ErrorResponse(e.message ?: "Invalid credentials", "INVALID_CREDENTIALS")
+                    ErrorResponse(e.message ?: "Invalid credentials", "INVALID_CREDENTIALS"),
                 )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to change password", "PASSWORD_CHANGE_FAILED")
+                    ErrorResponse(e.message ?: "Failed to change password", "PASSWORD_CHANGE_FAILED"),
                 )
             }
         }

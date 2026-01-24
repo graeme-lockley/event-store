@@ -2,7 +2,6 @@ package com.eventstore.domain.services.topic
 
 import com.eventstore.domain.Schema
 import com.eventstore.domain.Topic
-import com.eventstore.domain.exceptions.TopicAlreadyExistsException
 import com.eventstore.domain.ports.outbound.SchemaValidator
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
@@ -11,12 +10,12 @@ import java.util.*
 class CreateTopicService(
     private val topicRepository: TopicRepository,
     private val schemaValidator: SchemaValidator,
-    private val namespaceProjectionService: NamespaceProjectionService
+    private val namespaceProjectionService: NamespaceProjectionService,
 ) {
     suspend fun execute(
         name: String,
         schemas: List<Schema>,
-        namespaceId: UUID
+        namespaceId: UUID,
     ): Topic {
         // Rule C-6: At least one schema must be provided
         require(schemas.isNotEmpty()) {
@@ -43,12 +42,13 @@ class CreateTopicService(
         val topicId = UUID.randomUUID()
 
         // Create topic
-        val topic = topicRepository.createTopic(
-            topicId = topicId,
-            namespaceId = namespaceId,
-            name = name,
-            schemas = schemas
-        )
+        val topic =
+            topicRepository.createTopic(
+                topicId = topicId,
+                namespaceId = namespaceId,
+                name = name,
+                schemas = schemas,
+            )
 
         // Register schemas with validator
         schemaValidator.registerSchemas(topicId, schemas)
@@ -56,4 +56,3 @@ class CreateTopicService(
         return topic
     }
 }
-

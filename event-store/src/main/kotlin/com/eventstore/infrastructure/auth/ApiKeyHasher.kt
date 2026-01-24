@@ -9,8 +9,10 @@ object ApiKeyHasher {
         return hashBytes.joinToString("") { "%02x".format(it) }
     }
 
-    fun verify(key: String, hash: String): Boolean {
+    fun verify(
+        key: String,
+        hash: String,
+    ): Boolean {
         return hash(key) == hash
     }
 }
-

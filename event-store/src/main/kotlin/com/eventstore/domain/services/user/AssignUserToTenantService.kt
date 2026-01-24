@@ -17,14 +17,14 @@ data class AssignUserRequest(
     val tenantId: String,
     val role: String? = null,
     val isPrimary: Boolean = false,
-    val assignedBy: String = "system"
+    val assignedBy: String = "system",
 )
 
 class AssignUserToTenantService(
     private val tenantProjectionService: TenantProjectionService,
     private val userProjectionService: UserProjectionService,
     config: Config,
-    eventPublisher: SystemEventPublisher
+    eventPublisher: SystemEventPublisher,
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: AssignUserRequest): Boolean {
         if (!tenantProjectionService.tenantExistsByName(request.tenantId)) {
@@ -34,20 +34,21 @@ class AssignUserToTenantService(
         userProjectionService.getUser(request.userId) ?: throw UserNotFoundException(request.userId)
 
         val now = Instant.now()
-        val payload = UserTenantAssignedEvent(
-            userId = request.userId,
-            tenantId = request.tenantId,
-            role = request.role,
-            assignedBy = request.assignedBy,
-            assignedAt = now,
-            isPrimary = request.isPrimary
-        )
+        val payload =
+            UserTenantAssignedEvent(
+                userId = request.userId,
+                tenantId = request.tenantId,
+                role = request.role,
+                assignedBy = request.assignedBy,
+                assignedAt = now,
+                isPrimary = request.isPrimary,
+            )
 
         eventPublisher.publishEvent(
             topicId = SystemTopics.USERS_TOPIC_ID,
             eventType = UserEventType.TENANT_ASSIGNED,
             payload = payload.toPayload(),
-            timestamp = now
+            timestamp = now,
         )
 
         return true

@@ -1,24 +1,25 @@
 package com.eventstore
 
-import com.eventstore.domain.Application as DomainApplication
+import ch.qos.logback.classic.LoggerContext
 import com.eventstore.domain.services.auth.AuthenticationService
 import com.eventstore.domain.services.auth.AuthorizationService
-import com.eventstore.domain.services.namespace.CreateNamespaceRequest
-import com.eventstore.domain.tenants.SystemTopics
 import com.eventstore.infrastructure.auth.ApiKeyAuthenticator
 import com.eventstore.infrastructure.auth.SessionManager
 import com.eventstore.infrastructure.background.AsyncDispatcherManager
 import com.eventstore.infrastructure.external.JsonSchemaValidator
 import com.eventstore.infrastructure.persistence.FileSystemEventRepository
 import com.eventstore.infrastructure.persistence.FileSystemTopicRepository
-import com.eventstore.infrastructure.persistence.InMemoryApiKeyRepository
 import com.eventstore.infrastructure.persistence.InMemoryConsumerRepository
 import com.eventstore.infrastructure.projections.*
 import com.eventstore.interfaces.http.middleware.AuthenticationMiddleware
 import com.eventstore.interfaces.http.middleware.AuthorizationMiddleware
 import com.eventstore.interfaces.http.routes.*
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
@@ -30,10 +31,6 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.callloging.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.JsonMappingException
-import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -41,11 +38,11 @@ import io.ktor.util.*
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
-import ch.qos.logback.classic.Level as LogbackLevel
-import ch.qos.logback.classic.LoggerContext
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import ch.qos.logback.classic.Level as LogbackLevel
+import com.eventstore.domain.Application as DomainApplication
 
 fun main(args: Array<String>) {
     val config = Config.fromEnvironment()
@@ -65,12 +62,13 @@ fun Application.configureApplication(config: Config) {
     }
 
     // Configure Jackson ObjectMapper
-    val objectMapper = jacksonObjectMapper().apply {
-        registerKotlinModule()
-        registerModule(JavaTimeModule())
-        disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-    }
+    val objectMapper =
+        jacksonObjectMapper().apply {
+            registerKotlinModule()
+            registerModule(JavaTimeModule())
+            disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        }
 
     // Initialize infrastructure components
     val dataDir = Paths.get(config.dataDir)
@@ -83,22 +81,24 @@ fun Application.configureApplication(config: Config) {
     val consumerFactory = com.eventstore.infrastructure.factories.ConsumerFactoryImpl()
 
     // Initialize dispatcher manager for production
-    val dispatcherManager = AsyncDispatcherManager(
-        consumerRepository = consumerRepository,
-        eventRepository = eventRepository
-    )
+    val dispatcherManager =
+        AsyncDispatcherManager(
+            consumerRepository = consumerRepository,
+            eventRepository = eventRepository,
+        )
 
     // Create domain Application with FileSystem repositories and AsyncDispatcherManager
-    val domainApplication = DomainApplication(
-        bootstrap = true,
-        topicRepository = topicRepository,
-        eventRepository = eventRepository,
-        consumerRepository = consumerRepository,
-        schemaValidator = schemaValidator,
-        consumerFactory = consumerFactory,
-        config = config,
-        providedDispatcherManager = dispatcherManager
-    )
+    val domainApplication =
+        DomainApplication(
+            bootstrap = true,
+            topicRepository = topicRepository,
+            eventRepository = eventRepository,
+            consumerRepository = consumerRepository,
+            schemaValidator = schemaValidator,
+            consumerFactory = consumerFactory,
+            config = config,
+            providedDispatcherManager = dispatcherManager,
+        )
 
     // Create application scope for lifecycle management
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -116,14 +116,16 @@ fun Application.configureApplication(config: Config) {
     // Create auth services needed for middleware
     val sessionManager = SessionManager()
     val authenticationService = AuthenticationService(domainApplication.userProjectionService, sessionManager)
-    val authorizationService = AuthorizationService(
-        permissionProjectionService = domainApplication.permissionProjectionService,
-        resourceResolver = domainApplication.resourceResolver
-    )
-    val apiKeyAuthenticator = ApiKeyAuthenticator(
-        domainApplication.apiKeyProjectionService,
-        domainApplication.apiKeyRepository
-    )
+    val authorizationService =
+        AuthorizationService(
+            permissionProjectionService = domainApplication.permissionProjectionService,
+            resourceResolver = domainApplication.resourceResolver,
+        )
+    val apiKeyAuthenticator =
+        ApiKeyAuthenticator(
+            domainApplication.apiKeyProjectionService,
+            domainApplication.apiKeyRepository,
+        )
 
     // Ensure default/default namespace exists for legacy endpoints
     runBlocking {
@@ -176,8 +178,8 @@ fun Application.configureApplication(config: Config) {
                 HttpStatusCode.NotFound,
                 com.eventstore.interfaces.http.dto.ErrorResponse(
                     error = cause.message ?: "Tenant not found",
-                    code = "TENANT_NOT_FOUND"
-                )
+                    code = "TENANT_NOT_FOUND",
+                ),
             )
         }
         exception<com.eventstore.domain.exceptions.TenantNotFoundException> { call, cause ->
@@ -185,8 +187,8 @@ fun Application.configureApplication(config: Config) {
                 HttpStatusCode.NotFound,
                 com.eventstore.interfaces.http.dto.ErrorResponse(
                     error = cause.message ?: "Tenant not found",
-                    code = "TENANT_NOT_FOUND"
-                )
+                    code = "TENANT_NOT_FOUND",
+                ),
             )
         }
         // Order matters: more specific exceptions must come before their parent classes
@@ -195,8 +197,8 @@ fun Application.configureApplication(config: Config) {
                 HttpStatusCode.BadRequest,
                 com.eventstore.interfaces.http.dto.ErrorResponse(
                     error = "Invalid request format: ${cause.message ?: "Malformed request body"}",
-                    code = "INVALID_REQUEST"
-                )
+                    code = "INVALID_REQUEST",
+                ),
             )
         }
         exception<com.fasterxml.jackson.core.JsonParseException> { call, cause ->
@@ -204,8 +206,8 @@ fun Application.configureApplication(config: Config) {
                 HttpStatusCode.BadRequest,
                 com.eventstore.interfaces.http.dto.ErrorResponse(
                     error = "Invalid JSON syntax: ${cause.message ?: "Malformed request body"}",
-                    code = "INVALID_JSON"
-                )
+                    code = "INVALID_JSON",
+                ),
             )
         }
         exception<com.fasterxml.jackson.databind.JsonMappingException> { call, cause ->
@@ -213,8 +215,8 @@ fun Application.configureApplication(config: Config) {
                 HttpStatusCode.BadRequest,
                 com.eventstore.interfaces.http.dto.ErrorResponse(
                     error = "Invalid JSON mapping: ${cause.message ?: "Malformed request body"}",
-                    code = "INVALID_JSON"
-                )
+                    code = "INVALID_JSON",
+                ),
             )
         }
         exception<com.fasterxml.jackson.core.JsonProcessingException> { call, cause ->
@@ -222,25 +224,26 @@ fun Application.configureApplication(config: Config) {
                 HttpStatusCode.BadRequest,
                 com.eventstore.interfaces.http.dto.ErrorResponse(
                     error = "Invalid JSON: ${cause.message ?: "Malformed request body"}",
-                    code = "INVALID_JSON"
-                )
+                    code = "INVALID_JSON",
+                ),
             )
         }
         exception<Throwable> { call, cause ->
-            val status = when (cause) {
-                is com.eventstore.domain.exceptions.TopicNotFoundException -> HttpStatusCode.NotFound
-                is com.eventstore.domain.exceptions.ConsumerNotFoundException -> HttpStatusCode.NotFound
-                is com.eventstore.domain.exceptions.EventStorageException -> HttpStatusCode.InternalServerError
-                is com.eventstore.domain.exceptions.TopicConfigException -> HttpStatusCode.InternalServerError
-                is IllegalArgumentException -> HttpStatusCode.BadRequest
-                else -> HttpStatusCode.InternalServerError
-            }
+            val status =
+                when (cause) {
+                    is com.eventstore.domain.exceptions.TopicNotFoundException -> HttpStatusCode.NotFound
+                    is com.eventstore.domain.exceptions.ConsumerNotFoundException -> HttpStatusCode.NotFound
+                    is com.eventstore.domain.exceptions.EventStorageException -> HttpStatusCode.InternalServerError
+                    is com.eventstore.domain.exceptions.TopicConfigException -> HttpStatusCode.InternalServerError
+                    is IllegalArgumentException -> HttpStatusCode.BadRequest
+                    else -> HttpStatusCode.InternalServerError
+                }
             call.respond(
                 status,
                 com.eventstore.interfaces.http.dto.ErrorResponse(
                     error = cause.message ?: "Unknown error",
-                    code = null
-                )
+                    code = null,
+                ),
             )
         }
     }
@@ -254,8 +257,8 @@ fun Application.configureApplication(config: Config) {
                     HttpStatusCode.PayloadTooLarge,
                     com.eventstore.interfaces.http.dto.ErrorResponse(
                         error = "Payload too large",
-                        code = "PAYLOAD_TOO_LARGE"
-                    )
+                        code = "PAYLOAD_TOO_LARGE",
+                    ),
                 )
                 return@intercept
             }
@@ -275,20 +278,22 @@ fun Application.configureApplication(config: Config) {
     }
 
     intercept(ApplicationCallPipeline.Plugins) {
-        val ip = call.request.headers["X-Forwarded-For"]?.split(",")?.firstOrNull()?.trim()
-            ?: call.request.local.remoteHost
-            ?: "unknown"
+        val ip =
+            call.request.headers["X-Forwarded-For"]?.split(",")?.firstOrNull()?.trim()
+                ?: call.request.local.remoteHost
+                ?: "unknown"
         val route = call.request.path()
         val key = "$ip:$route"
 
         val now = System.currentTimeMillis()
-        val bucket = rateBuckets.compute(key) { _, existing ->
-            if (existing == null || now > existing.resetAt) {
-                RateBucket(count = AtomicInteger(0), resetAt = now + 60_000)
-            } else {
-                existing
-            }
-        }!!
+        val bucket =
+            rateBuckets.compute(key) { _, existing ->
+                if (existing == null || now > existing.resetAt) {
+                    RateBucket(count = AtomicInteger(0), resetAt = now + 60_000)
+                } else {
+                    existing
+                }
+            }!!
 
         val count = bucket.count.incrementAndGet()
         if (count > config.rateLimitPerMinute) {
@@ -298,8 +303,8 @@ fun Application.configureApplication(config: Config) {
                 HttpStatusCode.TooManyRequests,
                 com.eventstore.interfaces.http.dto.ErrorResponse(
                     error = "Too many requests",
-                    code = "RATE_LIMITED"
-                )
+                    code = "RATE_LIMITED",
+                ),
             )
             return@intercept
         }
@@ -397,5 +402,5 @@ fun Application.configureApplication(config: Config) {
 
 data class RateBucket(
     val count: AtomicInteger,
-    val resetAt: Long
+    val resetAt: Long,
 )

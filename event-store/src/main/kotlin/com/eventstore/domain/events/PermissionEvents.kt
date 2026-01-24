@@ -12,34 +12,44 @@ object PermissionEventType {
 
 sealed interface PermissionEventPayload {
     val type: String
+
     fun toPayload(): Map<String, Any>
 }
 
 data class PermissionGrantedEvent(
-    val principalId: String,              // UUID of user/API key/role/group
-    val principalType: PrincipalType,     // USER, API_KEY, ROLE, GROUP
-    val resourceType: ResourceType,       // TENANT, NAMESPACE, TOPIC, EVENT, CONSUMER, USER
-    val resourceId: String? = null,       // UUID of specific resource, or null for all resources of this type
-    val tenantResourceId: String,         // UUID of tenant (for context and inheritance)
-    val namespaceResourceId: String? = null, // UUID of namespace (for context and inheritance)
-    val topicId: String? = null,   // UUID of topic (for context and inheritance)
+    // UUID of user/API key/role/group
+    val principalId: String,
+    // USER, API_KEY, ROLE, GROUP
+    val principalType: PrincipalType,
+    // TENANT, NAMESPACE, TOPIC, EVENT, CONSUMER, USER
+    val resourceType: ResourceType,
+    // UUID of specific resource, or null for all resources of this type
+    val resourceId: String? = null,
+    // UUID of tenant (for context and inheritance)
+    val tenantResourceId: String,
+    // UUID of namespace (for context and inheritance)
+    val namespaceResourceId: String? = null,
+    // UUID of topic (for context and inheritance)
+    val topicId: String? = null,
     val permissions: Set<Permission>,
-    val grantedBy: String,                // UUID of user who granted permission
+    // UUID of user who granted permission
+    val grantedBy: String,
     val grantedAt: Instant,
-    val expiresAt: Instant? = null
+    val expiresAt: Instant? = null,
 ) : PermissionEventPayload {
     override val type: String = PermissionEventType.GRANTED
 
     override fun toPayload(): Map<String, Any> {
-        val payload = mutableMapOf<String, Any>(
-            "principalId" to principalId,
-            "principalType" to principalType.name,
-            "resourceType" to resourceType.name,
-            "tenantResourceId" to tenantResourceId,
-            "permissions" to permissions.map { it.name },
-            "grantedBy" to grantedBy,
-            "grantedAt" to grantedAt.toString()
-        )
+        val payload =
+            mutableMapOf<String, Any>(
+                "principalId" to principalId,
+                "principalType" to principalType.name,
+                "resourceType" to resourceType.name,
+                "tenantResourceId" to tenantResourceId,
+                "permissions" to permissions.map { it.name },
+                "grantedBy" to grantedBy,
+                "grantedAt" to grantedAt.toString(),
+            )
         resourceId?.let { payload["resourceId"] = it }
         namespaceResourceId?.let { payload["namespaceResourceId"] = it }
         topicId?.let { payload["topicId"] = it }
@@ -50,19 +60,22 @@ data class PermissionGrantedEvent(
     companion object {
         fun fromPayload(payload: Map<String, Any?>): PermissionGrantedEvent {
             val principalId = payload["principalId"] as? String ?: error("principalId missing")
-            val principalType = PrincipalType.valueOf(
-                payload["principalType"] as? String ?: error("principalType missing")
-            )
-            val resourceType = ResourceType.valueOf(
-                payload["resourceType"] as? String ?: error("resourceType missing")
-            )
+            val principalType =
+                PrincipalType.valueOf(
+                    payload["principalType"] as? String ?: error("principalType missing"),
+                )
+            val resourceType =
+                ResourceType.valueOf(
+                    payload["resourceType"] as? String ?: error("resourceType missing"),
+                )
             val resourceId = payload["resourceId"] as? String
             val tenantResourceId = payload["tenantResourceId"] as? String ?: error("tenantResourceId missing")
             val namespaceResourceId = payload["namespaceResourceId"] as? String
             val topicId = payload["topicId"] as? String
-            val permissions = (payload["permissions"] as? List<*>)?.map {
-                Permission.valueOf(it as String)
-            }?.toSet() ?: error("permissions missing")
+            val permissions =
+                (payload["permissions"] as? List<*>)?.map {
+                    Permission.valueOf(it as String)
+                }?.toSet() ?: error("permissions missing")
             val grantedBy = payload["grantedBy"] as? String ?: error("grantedBy missing")
             val grantedAt = parseInstant(payload["grantedAt"])
             val expiresAt = (payload["expiresAt"] as? String)?.let { Instant.parse(it) }
@@ -78,37 +91,41 @@ data class PermissionGrantedEvent(
                 permissions = permissions,
                 grantedBy = grantedBy,
                 grantedAt = grantedAt,
-                expiresAt = expiresAt
+                expiresAt = expiresAt,
             )
         }
     }
 }
 
 data class PermissionRevokedEvent(
-    val principalId: String,              // UUID of user/API key/role/group
+    // UUID of user/API key/role/group
+    val principalId: String,
     val principalType: PrincipalType,
     val resourceType: ResourceType,
-    val resourceId: String? = null,       // UUID of specific resource, or null for all resources
+    // UUID of specific resource, or null for all resources
+    val resourceId: String? = null,
     val tenantResourceId: String,
     val namespaceResourceId: String? = null,
     val topicId: String? = null,
     val permissions: Set<Permission>,
-    val revokedBy: String,                // UUID of user who revoked permission
+    // UUID of user who revoked permission
+    val revokedBy: String,
     val revokedAt: Instant,
-    val reason: String? = null
+    val reason: String? = null,
 ) : PermissionEventPayload {
     override val type: String = PermissionEventType.REVOKED
 
     override fun toPayload(): Map<String, Any> {
-        val payload = mutableMapOf<String, Any>(
-            "principalId" to principalId,
-            "principalType" to principalType.name,
-            "resourceType" to resourceType.name,
-            "tenantResourceId" to tenantResourceId,
-            "permissions" to permissions.map { it.name },
-            "revokedBy" to revokedBy,
-            "revokedAt" to revokedAt.toString()
-        )
+        val payload =
+            mutableMapOf<String, Any>(
+                "principalId" to principalId,
+                "principalType" to principalType.name,
+                "resourceType" to resourceType.name,
+                "tenantResourceId" to tenantResourceId,
+                "permissions" to permissions.map { it.name },
+                "revokedBy" to revokedBy,
+                "revokedAt" to revokedAt.toString(),
+            )
         resourceId?.let { payload["resourceId"] = it }
         namespaceResourceId?.let { payload["namespaceResourceId"] = it }
         topicId?.let { payload["topicId"] = it }
@@ -119,19 +136,22 @@ data class PermissionRevokedEvent(
     companion object {
         fun fromPayload(payload: Map<String, Any?>): PermissionRevokedEvent {
             val principalId = payload["principalId"] as? String ?: error("principalId missing")
-            val principalType = PrincipalType.valueOf(
-                payload["principalType"] as? String ?: error("principalType missing")
-            )
-            val resourceType = ResourceType.valueOf(
-                payload["resourceType"] as? String ?: error("resourceType missing")
-            )
+            val principalType =
+                PrincipalType.valueOf(
+                    payload["principalType"] as? String ?: error("principalType missing"),
+                )
+            val resourceType =
+                ResourceType.valueOf(
+                    payload["resourceType"] as? String ?: error("resourceType missing"),
+                )
             val resourceId = payload["resourceId"] as? String
             val tenantResourceId = payload["tenantResourceId"] as? String ?: error("tenantResourceId missing")
             val namespaceResourceId = payload["namespaceResourceId"] as? String
             val topicId = payload["topicId"] as? String
-            val permissions = (payload["permissions"] as? List<*>)?.map {
-                Permission.valueOf(it as String)
-            }?.toSet() ?: error("permissions missing")
+            val permissions =
+                (payload["permissions"] as? List<*>)?.map {
+                    Permission.valueOf(it as String)
+                }?.toSet() ?: error("permissions missing")
             val revokedBy = payload["revokedBy"] as? String ?: error("revokedBy missing")
             val revokedAt = parseInstant(payload["revokedAt"])
             val reason = payload["reason"] as? String
@@ -147,7 +167,7 @@ data class PermissionRevokedEvent(
                 permissions = permissions,
                 revokedBy = revokedBy,
                 revokedAt = revokedAt,
-                reason = reason
+                reason = reason,
             )
         }
     }
@@ -157,4 +177,3 @@ private fun parseInstant(value: Any?): Instant {
     val text = value as? String ?: error("timestamp value is required")
     return Instant.parse(text)
 }
-

@@ -24,42 +24,43 @@ fun Route.namespaceRoutes(application: Application) {
                 if (body.name.isBlank()) {
                     call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse("name is required", "INVALID_REQUEST")
+                        ErrorResponse("name is required", "INVALID_REQUEST"),
                     )
                     return@post
                 }
 
-                val created = application.createNamespace(
-                    tenantId = body.tenantId,
-                    namespaceName = body.name,
-                    description = body.description,
-                    metadata = body.metadata
-                )
+                val created =
+                    application.createNamespace(
+                        tenantId = body.tenantId,
+                        namespaceName = body.name,
+                        description = body.description,
+                        metadata = body.metadata,
+                    )
                 call.respond(HttpStatusCode.Created, created.toResponse())
             } catch (e: TenantNotFoundException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Tenant not found", "TENANT_NOT_FOUND")
+                    ErrorResponse(e.message ?: "Tenant not found", "TENANT_NOT_FOUND"),
                 )
             } catch (e: NamespaceAlreadyExistsException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Namespace exists", "NAMESPACE_EXISTS")
+                    ErrorResponse(e.message ?: "Namespace exists", "NAMESPACE_EXISTS"),
                 )
             } catch (e: QuotaExceededException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Quota exceeded", "QUOTA_EXCEEDED")
+                    ErrorResponse(e.message ?: "Quota exceeded", "QUOTA_EXCEEDED"),
                 )
             } catch (e: IllegalStateException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Feature disabled", "FEATURE_DISABLED")
+                    ErrorResponse(e.message ?: "Feature disabled", "FEATURE_DISABLED"),
                 )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,
-                    ErrorResponse(e.message ?: "Failed to create namespace", "NAMESPACE_CREATE_FAILED")
+                    ErrorResponse(e.message ?: "Failed to create namespace", "NAMESPACE_CREATE_FAILED"),
                 )
             }
         }
@@ -73,12 +74,12 @@ fun Route.namespaceRoutes(application: Application) {
             } catch (e: IllegalArgumentException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse("Invalid tenantId format", "INVALID_REQUEST")
+                    ErrorResponse("Invalid tenantId format", "INVALID_REQUEST"),
                 )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,
-                    ErrorResponse(e.message ?: "Failed to list namespaces", "NAMESPACE_LIST_FAILED")
+                    ErrorResponse(e.message ?: "Failed to list namespaces", "NAMESPACE_LIST_FAILED"),
                 )
             }
         }
@@ -93,17 +94,17 @@ fun Route.namespaceRoutes(application: Application) {
             } catch (e: IllegalArgumentException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse("Invalid namespaceId format", "INVALID_REQUEST")
+                    ErrorResponse("Invalid namespaceId format", "INVALID_REQUEST"),
                 )
             } catch (e: NamespaceNotFoundException) {
                 call.respond(
                     HttpStatusCode.NotFound,
-                    ErrorResponse(e.message ?: "Namespace not found", "NAMESPACE_NOT_FOUND")
+                    ErrorResponse(e.message ?: "Namespace not found", "NAMESPACE_NOT_FOUND"),
                 )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,
-                    ErrorResponse(e.message ?: "Failed to fetch namespace", "NAMESPACE_GET_FAILED")
+                    ErrorResponse(e.message ?: "Failed to fetch namespace", "NAMESPACE_GET_FAILED"),
                 )
             }
         }
@@ -115,32 +116,33 @@ fun Route.namespaceRoutes(application: Application) {
                 val namespaceId = UUID.fromString(namespaceIdStr)
                 val body = call.receive<NamespaceUpdateRequest>()
 
-                val updated = application.updateNamespace(
-                    namespaceId = namespaceId,
-                    name = body.name,
-                    description = body.description,
-                    metadata = body.metadata
-                )
+                val updated =
+                    application.updateNamespace(
+                        namespaceId = namespaceId,
+                        name = body.name,
+                        description = body.description,
+                        metadata = body.metadata,
+                    )
                 call.respond(HttpStatusCode.OK, updated.toResponse())
             } catch (e: IllegalArgumentException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse("Invalid namespaceId format", "INVALID_REQUEST")
+                    ErrorResponse("Invalid namespaceId format", "INVALID_REQUEST"),
                 )
             } catch (e: NamespaceNotFoundException) {
                 call.respond(
                     HttpStatusCode.NotFound,
-                    ErrorResponse(e.message ?: "Namespace not found", "NAMESPACE_NOT_FOUND")
+                    ErrorResponse(e.message ?: "Namespace not found", "NAMESPACE_NOT_FOUND"),
                 )
             } catch (e: IllegalStateException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Feature disabled", "FEATURE_DISABLED")
+                    ErrorResponse(e.message ?: "Feature disabled", "FEATURE_DISABLED"),
                 )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,
-                    ErrorResponse(e.message ?: "Failed to update namespace", "NAMESPACE_UPDATE_FAILED")
+                    ErrorResponse(e.message ?: "Failed to update namespace", "NAMESPACE_UPDATE_FAILED"),
                 )
             }
         }
@@ -154,44 +156,42 @@ fun Route.namespaceRoutes(application: Application) {
 
                 application.deleteNamespace(
                     namespaceId = namespaceId,
-                    reason = body?.reason
+                    reason = body?.reason,
                 )
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Namespace deleted"))
             } catch (e: IllegalArgumentException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse("Invalid namespaceId format", "INVALID_REQUEST")
+                    ErrorResponse("Invalid namespaceId format", "INVALID_REQUEST"),
                 )
             } catch (e: NamespaceNotFoundException) {
                 call.respond(
                     HttpStatusCode.NotFound,
-                    ErrorResponse(e.message ?: "Namespace not found", "NAMESPACE_NOT_FOUND")
+                    ErrorResponse(e.message ?: "Namespace not found", "NAMESPACE_NOT_FOUND"),
                 )
             } catch (e: IllegalStateException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Feature disabled", "FEATURE_DISABLED")
+                    ErrorResponse(e.message ?: "Feature disabled", "FEATURE_DISABLED"),
                 )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.InternalServerError,
-                    ErrorResponse(e.message ?: "Failed to delete namespace", "NAMESPACE_DELETE_FAILED")
+                    ErrorResponse(e.message ?: "Failed to delete namespace", "NAMESPACE_DELETE_FAILED"),
                 )
             }
         }
     }
 }
 
-private fun Namespace.toResponse(): NamespaceResponse = NamespaceResponse(
-    tenantId = tenantId.toString(),
-    id = namespaceId.toString(),
-    name = name,
-    description = description,
-    createdAt = createdAt.toString(),
-    updatedAt = updatedAt?.toString(),
-    deletedAt = deletedAt?.toString(),
-    metadata = metadata
-)
-
-
-
+private fun Namespace.toResponse(): NamespaceResponse =
+    NamespaceResponse(
+        tenantId = tenantId.toString(),
+        id = namespaceId.toString(),
+        name = name,
+        description = description,
+        createdAt = createdAt.toString(),
+        updatedAt = updatedAt?.toString(),
+        deletedAt = deletedAt?.toString(),
+        metadata = metadata,
+    )

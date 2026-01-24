@@ -16,13 +16,13 @@ data class ChangePasswordRequest(
     val userId: String,
     val oldPassword: String,
     val newPassword: String,
-    val changedBy: String = "self"
+    val changedBy: String = "self",
 )
 
 class ChangePasswordService(
     private val userProjectionService: UserProjectionService,
     config: Config,
-    eventPublisher: SystemEventPublisher
+    eventPublisher: SystemEventPublisher,
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: ChangePasswordRequest): Boolean {
         val user = userProjectionService.getUser(request.userId) ?: throw UserNotFoundException(request.userId)
@@ -32,21 +32,21 @@ class ChangePasswordService(
 
         val now = Instant.now()
         val newHash = BCrypt.hashpw(request.newPassword, BCrypt.gensalt())
-        val payload = UserPasswordChangedEvent(
-            userId = request.userId,
-            passwordHash = newHash,
-            changedBy = request.changedBy,
-            changedAt = now
-        )
+        val payload =
+            UserPasswordChangedEvent(
+                userId = request.userId,
+                passwordHash = newHash,
+                changedBy = request.changedBy,
+                changedAt = now,
+            )
 
         eventPublisher.publishEvent(
             topicId = SystemTopics.USERS_TOPIC_ID,
             eventType = UserEventType.PASSWORD_CHANGED,
             payload = payload.toPayload(),
-            timestamp = now
+            timestamp = now,
         )
 
         return true
     }
 }
-

@@ -18,23 +18,24 @@ class ExampleIntegrationTest {
     private lateinit var eventStoreHelper: EventStoreTestHelper
     private lateinit var dataDir: Path
     private lateinit var configDir: Path
-    
+
     @BeforeEach
     fun setUp() {
         // Create separate directories for data and config for this test
         dataDir = tempDir.resolve("data")
         configDir = tempDir.resolve("config")
-        
+
         // Initialize the helper with test-specific directories
-        eventStoreHelper = EventStoreTestHelper(
-            dataDir = dataDir,
-            configDir = configDir
-        )
-        
+        eventStoreHelper =
+            EventStoreTestHelper(
+                dataDir = dataDir,
+                configDir = configDir,
+            )
+
         // Start the event-store instance
         eventStoreHelper.start()
     }
-    
+
     @AfterEach
     fun tearDown() {
         // Stop the event-store instance
@@ -42,20 +43,19 @@ class ExampleIntegrationTest {
             eventStoreHelper.stop()
         }
     }
-    
+
     @Test
     fun `example test - event-store should be running`() {
         // Verify the instance is running
         assertTrue(eventStoreHelper.isRunning())
-        
+
         // Get the base URL for making HTTP requests
         val baseUrl = eventStoreHelper.getBaseUrl()
         assertNotNull(baseUrl)
-        
+
         // You can now make HTTP requests to the event-store instance
         // Example:
         // val client = HttpClient(CIO) { ... }
         // val response = client.get("$baseUrl/health")
     }
 }
-

@@ -18,14 +18,14 @@ import java.util.concurrent.TimeUnit
 
 data class DeliveryPayload(
     val consumerId: String,
-    val events: List<EventDto>
+    val events: List<EventDto>,
 )
 
 data class EventDto(
     val id: String,
     val timestamp: String,
     val type: String,
-    val payload: Map<String, Any>
+    val payload: Map<String, Any>,
 )
 
 class HttpConsumer(
@@ -33,9 +33,8 @@ class HttpConsumer(
     val callbackUrl: URL,
     topics: Map<UUID, String?>,
     private val httpClient: HttpClient = createDefaultHttpClient(),
-    private val timeoutSeconds: Long = 30
+    private val timeoutSeconds: Long = 30,
 ) : Consumer(id, topics) {
-
     override fun getType(): ConsumerType = ConsumerType.HTTP
 
     override suspend fun deliver(events: List<Event>): DeliveryResult {
@@ -44,44 +43,47 @@ class HttpConsumer(
         }
 
         try {
-            val eventDtos = events.map { event ->
-                EventDto(
-                    id = event.id.value,
-                    timestamp = event.timestamp.toString(),
-                    type = event.type,
-                    payload = event.payload
-                )
-            }
-
-            val payload = DeliveryPayload(
-                consumerId = id,
-                events = eventDtos
-            )
-
-            val response = withTimeout(TimeUnit.SECONDS.toMillis(timeoutSeconds)) {
-                httpClient.post(callbackUrl.toString()) {
-                    contentType(ContentType.Application.Json)
-                    setBody(payload)
+            val eventDtos =
+                events.map { event ->
+                    EventDto(
+                        id = event.id.value,
+                        timestamp = event.timestamp.toString(),
+                        type = event.type,
+                        payload = event.payload,
+                    )
                 }
-            }
+
+            val payload =
+                DeliveryPayload(
+                    consumerId = id,
+                    events = eventDtos,
+                )
+
+            val response =
+                withTimeout(TimeUnit.SECONDS.toMillis(timeoutSeconds)) {
+                    httpClient.post(callbackUrl.toString()) {
+                        contentType(ContentType.Application.Json)
+                        setBody(payload)
+                    }
+                }
 
             if (response.status.isSuccess()) {
                 return DeliveryResult(success = true)
             } else {
                 return DeliveryResult(
                     success = false,
-                    error = "HTTP ${response.status.value}: ${response.status.description}"
+                    error = "HTTP ${response.status.value}: ${response.status.description}",
                 )
             }
         } catch (e: TimeoutCancellationException) {
             return DeliveryResult(
                 success = false,
-                error = "Request timeout after ${timeoutSeconds}s"
+                error = "Request timeout after ${timeoutSeconds}s",
             )
         } catch (e: Exception) {
             return DeliveryResult(
                 success = false,
-                error = e.message ?: "Unknown error"
+                error = e.message ?: "Unknown error",
             )
         }
     }
@@ -90,13 +92,16 @@ class HttpConsumer(
         return "HttpConsumer(id=$id, callbackUrl=$callbackUrl, topics=$topics)"
     }
 
-    override fun withUpdatedLastEventId(topicId: UUID, eventId: String): Consumer {
+    override fun withUpdatedLastEventId(
+        topicId: UUID,
+        eventId: String,
+    ): Consumer {
         return HttpConsumer(
             id = id,
             callbackUrl = callbackUrl,
             topics = topics + (topicId to eventId),
             httpClient = httpClient,
-            timeoutSeconds = timeoutSeconds
+            timeoutSeconds = timeoutSeconds,
         )
     }
 
@@ -113,4 +118,3 @@ class HttpConsumer(
         }
     }
 }
-

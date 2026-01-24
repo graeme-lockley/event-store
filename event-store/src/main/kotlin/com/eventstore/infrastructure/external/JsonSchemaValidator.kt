@@ -14,9 +14,12 @@ class JsonSchemaValidator(private val objectMapper: ObjectMapper = ObjectMapper(
     private val validators = ConcurrentHashMap<String, com.networknt.schema.JsonSchema>()
     private val factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7)
 
-    override fun registerSchemas(topicId: UUID, schemas: List<Schema>) {
+    override fun registerSchemas(
+        topicId: UUID,
+        schemas: List<Schema>,
+    ) {
         schemas.forEach { schema ->
-            val key = "${topicId}:${schema.eventType}"
+            val key = "$topicId:${schema.eventType}"
 
             // Convert Schema to JSON Schema format
             val jsonSchema = buildJsonSchema(schema)
@@ -27,10 +30,15 @@ class JsonSchemaValidator(private val objectMapper: ObjectMapper = ObjectMapper(
         }
     }
 
-    override fun validateEvent(topicId: UUID, eventType: String, payload: Map<String, Any>) {
-        val key = "${topicId}:${eventType}"
-        val validator = validators[key]
-            ?: throw SchemaNotFoundException(topicId.toString(), eventType)
+    override fun validateEvent(
+        topicId: UUID,
+        eventType: String,
+        payload: Map<String, Any>,
+    ) {
+        val key = "$topicId:$eventType"
+        val validator =
+            validators[key]
+                ?: throw SchemaNotFoundException(topicId.toString(), eventType)
 
         try {
             val payloadJson = objectMapper.writeValueAsString(payload)
@@ -47,8 +55,11 @@ class JsonSchemaValidator(private val objectMapper: ObjectMapper = ObjectMapper(
         }
     }
 
-    override fun hasSchema(topicId: UUID, eventType: String): Boolean {
-        val key = "${topicId}:${eventType}"
+    override fun hasSchema(
+        topicId: UUID,
+        eventType: String,
+    ): Boolean {
+        val key = "$topicId:$eventType"
         return validators.containsKey(key)
     }
 

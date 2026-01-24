@@ -14,29 +14,31 @@ import java.util.*
 data class DeleteNamespaceRequest(
     val namespaceId: UUID,
     val deletedBy: String = "system",
-    val reason: String? = null
+    val reason: String? = null,
 )
 
 class DeleteNamespaceService(
     private val namespaceProjectionService: NamespaceProjectionService,
     config: Config,
-    eventPublisher: SystemEventPublisher
+    eventPublisher: SystemEventPublisher,
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: DeleteNamespaceRequest): Boolean {
-        val existing = namespaceProjectionService.getNamespaceById(request.namespaceId)
-            ?: throw NamespaceNotFoundException(request.namespaceId.toString())
+        val existing =
+            namespaceProjectionService.getNamespaceById(request.namespaceId)
+                ?: throw NamespaceNotFoundException(request.namespaceId.toString())
 
         if (!existing.isActive) {
             return false
         }
 
         val now = Instant.now()
-        val payload = NamespaceDeletedEvent(
-            namespaceId = existing.namespaceId,
-            deletedBy = request.deletedBy,
-            deletedAt = now,
-            reason = request.reason
-        )
+        val payload =
+            NamespaceDeletedEvent(
+                namespaceId = existing.namespaceId,
+                deletedBy = request.deletedBy,
+                deletedAt = now,
+                reason = request.reason,
+            )
 
         val eventPayload = payload.toPayload()
 
@@ -44,10 +46,9 @@ class DeleteNamespaceService(
             topicId = SystemTopics.NAMESPACES_TOPIC_ID,
             eventType = NamespaceEventType.DELETED,
             payload = eventPayload,
-            timestamp = now
+            timestamp = now,
         )
 
         return true
     }
 }
-

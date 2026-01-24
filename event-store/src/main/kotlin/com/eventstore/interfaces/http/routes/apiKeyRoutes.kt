@@ -37,7 +37,7 @@ fun Route.apiKeyRoutes(application: com.eventstore.domain.Application) {
                     trimmedName.isBlank() -> {
                         call.respond(
                             HttpStatusCode.BadRequest,
-                            ErrorResponse("name is required and cannot be empty", "INVALID_INPUT")
+                            ErrorResponse("name is required and cannot be empty", "INVALID_INPUT"),
                         )
                         return@post
                     }
@@ -45,7 +45,7 @@ fun Route.apiKeyRoutes(application: com.eventstore.domain.Application) {
                     trimmedName.length > MAX_NAME_LENGTH -> {
                         call.respond(
                             HttpStatusCode.BadRequest,
-                            ErrorResponse("name exceeds maximum length of $MAX_NAME_LENGTH characters", "INVALID_INPUT")
+                            ErrorResponse("name exceeds maximum length of $MAX_NAME_LENGTH characters", "INVALID_INPUT"),
                         )
                         return@post
                     }
@@ -58,41 +58,43 @@ fun Route.apiKeyRoutes(application: com.eventstore.domain.Application) {
                             HttpStatusCode.BadRequest,
                             ErrorResponse(
                                 "description exceeds maximum length of $MAX_DESCRIPTION_LENGTH characters",
-                                "INVALID_INPUT"
-                            )
+                                "INVALID_INPUT",
+                            ),
                         )
                         return@post
                     }
                 }
 
                 // Validate expiresAt
-                val expiresAt = body.expiresAt?.let {
-                    try {
-                        val parsed = Instant.parse(it)
-                        if (parsed.isBefore(Instant.now())) {
+                val expiresAt =
+                    body.expiresAt?.let {
+                        try {
+                            val parsed = Instant.parse(it)
+                            if (parsed.isBefore(Instant.now())) {
+                                call.respond(
+                                    HttpStatusCode.BadRequest,
+                                    ErrorResponse("expiresAt must be in the future", "INVALID_DATE"),
+                                )
+                                return@post
+                            }
+                            parsed
+                        } catch (e: Exception) {
                             call.respond(
                                 HttpStatusCode.BadRequest,
-                                ErrorResponse("expiresAt must be in the future", "INVALID_DATE")
+                                ErrorResponse("Invalid expiresAt format. Use ISO 8601 format.", "INVALID_DATE_FORMAT"),
                             )
                             return@post
                         }
-                        parsed
-                    } catch (e: Exception) {
-                        call.respond(
-                            HttpStatusCode.BadRequest,
-                            ErrorResponse("Invalid expiresAt format. Use ISO 8601 format.", "INVALID_DATE_FORMAT")
-                        )
-                        return@post
                     }
-                }
 
-                val (apiKey, plainKey) = application.createApiKey(
-                    userId = userId,
-                    name = trimmedName,
-                    description = body.description?.takeIf { it.isNotBlank() },
-                    expiresAt = expiresAt,
-                    scopes = body.scopes
-                )
+                val (apiKey, plainKey) =
+                    application.createApiKey(
+                        userId = userId,
+                        name = trimmedName,
+                        description = body.description?.takeIf { it.isNotBlank() },
+                        expiresAt = expiresAt,
+                        scopes = body.scopes,
+                    )
 
                 call.respond(HttpStatusCode.Created, apiKey.toResponse(plainKey))
             } catch (e: UserNotFoundException) {
@@ -100,12 +102,12 @@ fun Route.apiKeyRoutes(application: com.eventstore.domain.Application) {
             } catch (e: IllegalArgumentException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Invalid request parameter", "INVALID_PARAMETER")
+                    ErrorResponse(e.message ?: "Invalid request parameter", "INVALID_PARAMETER"),
                 )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to create API key", "API_KEY_CREATE_FAILED")
+                    ErrorResponse(e.message ?: "Failed to create API key", "API_KEY_CREATE_FAILED"),
                 )
             }
         }
@@ -118,12 +120,12 @@ fun Route.apiKeyRoutes(application: com.eventstore.domain.Application) {
             } catch (e: IllegalArgumentException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Invalid request parameter", "INVALID_PARAMETER")
+                    ErrorResponse(e.message ?: "Invalid request parameter", "INVALID_PARAMETER"),
                 )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to list API keys", "API_KEY_LIST_FAILED")
+                    ErrorResponse(e.message ?: "Failed to list API keys", "API_KEY_LIST_FAILED"),
                 )
             }
         }
@@ -138,7 +140,7 @@ fun Route.apiKeyRoutes(application: com.eventstore.domain.Application) {
                 if (apiKey.userId != userId) {
                     call.respond(
                         HttpStatusCode.Forbidden,
-                        ErrorResponse("API key does not belong to this user", "FORBIDDEN")
+                        ErrorResponse("API key does not belong to this user", "FORBIDDEN"),
                     )
                     return@get
                 }
@@ -147,17 +149,17 @@ fun Route.apiKeyRoutes(application: com.eventstore.domain.Application) {
             } catch (e: ApiKeyNotFoundException) {
                 call.respond(
                     HttpStatusCode.NotFound,
-                    ErrorResponse(e.message ?: "API key not found", "API_KEY_NOT_FOUND")
+                    ErrorResponse(e.message ?: "API key not found", "API_KEY_NOT_FOUND"),
                 )
             } catch (e: IllegalArgumentException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Invalid request parameter", "INVALID_PARAMETER")
+                    ErrorResponse(e.message ?: "Invalid request parameter", "INVALID_PARAMETER"),
                 )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to fetch API key", "API_KEY_GET_FAILED")
+                    ErrorResponse(e.message ?: "Failed to fetch API key", "API_KEY_GET_FAILED"),
                 )
             }
         }
@@ -168,13 +170,14 @@ fun Route.apiKeyRoutes(application: com.eventstore.domain.Application) {
                 val keyId = call.requireParameter("keyId")
 
                 // Validate ownership before revoking
-                val apiKey = application.getApiKey(keyId)
-                    ?: throw ApiKeyNotFoundException(keyId)
+                val apiKey =
+                    application.getApiKey(keyId)
+                        ?: throw ApiKeyNotFoundException(keyId)
 
                 if (apiKey.userId != userId) {
                     call.respond(
                         HttpStatusCode.Forbidden,
-                        ErrorResponse("API key does not belong to this user", "FORBIDDEN")
+                        ErrorResponse("API key does not belong to this user", "FORBIDDEN"),
                     )
                     return@delete
                 }
@@ -188,45 +191,45 @@ fun Route.apiKeyRoutes(application: com.eventstore.domain.Application) {
                     ApiKeyRevokeResponseDto(
                         message = "API key revoked",
                         keyId = keyId,
-                        revokedAt = revokedApiKey?.revokedAt?.toString() ?: Instant.now().toString()
-                    )
+                        revokedAt = revokedApiKey?.revokedAt?.toString() ?: Instant.now().toString(),
+                    ),
                 )
             } catch (e: ApiKeyNotFoundException) {
                 call.respond(
                     HttpStatusCode.NotFound,
-                    ErrorResponse(e.message ?: "API key not found", "API_KEY_NOT_FOUND")
+                    ErrorResponse(e.message ?: "API key not found", "API_KEY_NOT_FOUND"),
                 )
             } catch (e: ApiKeyAlreadyRevokedException) {
                 call.respond(
                     HttpStatusCode.Conflict,
-                    ErrorResponse(e.message ?: "API key already revoked", "API_KEY_ALREADY_REVOKED")
+                    ErrorResponse(e.message ?: "API key already revoked", "API_KEY_ALREADY_REVOKED"),
                 )
             } catch (e: IllegalArgumentException) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Invalid request parameter", "INVALID_PARAMETER")
+                    ErrorResponse(e.message ?: "Invalid request parameter", "INVALID_PARAMETER"),
                 )
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to revoke API key", "API_KEY_REVOKE_FAILED")
+                    ErrorResponse(e.message ?: "Failed to revoke API key", "API_KEY_REVOKE_FAILED"),
                 )
             }
         }
     }
 }
 
-private fun com.eventstore.domain.ApiKey.toResponse(plainKey: String? = null): ApiKeyResponseDto = ApiKeyResponseDto(
-    id = id,
-    userId = userId,
-    name = name,
-    description = description,
-    createdAt = createdAt.toString(),
-    expiresAt = expiresAt?.toString(),
-    lastUsedAt = lastUsedAt?.toString(),
-    revokedAt = revokedAt?.toString(),
-    scopes = scopes,
-    isActive = isActive,
-    key = plainKey
-)
-
+private fun com.eventstore.domain.ApiKey.toResponse(plainKey: String? = null): ApiKeyResponseDto =
+    ApiKeyResponseDto(
+        id = id,
+        userId = userId,
+        name = name,
+        description = description,
+        createdAt = createdAt.toString(),
+        expiresAt = expiresAt?.toString(),
+        lastUsedAt = lastUsedAt?.toString(),
+        revokedAt = revokedAt?.toString(),
+        scopes = scopes,
+        isActive = isActive,
+        key = plainKey,
+    )

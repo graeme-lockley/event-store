@@ -22,7 +22,7 @@ data class CreateNamespaceRequest(
     val name: String,
     val description: String? = null,
     val metadata: Map<String, Any> = emptyMap(),
-    val createdBy: String = "system"
+    val createdBy: String = "system",
 )
 
 class CreateNamespaceService(
@@ -30,11 +30,12 @@ class CreateNamespaceService(
     private val namespaceProjectionService: NamespaceProjectionService,
     private val tenantUsageService: TenantUsageService,
     config: Config,
-    eventPublisher: SystemEventPublisher
+    eventPublisher: SystemEventPublisher,
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateNamespaceRequest): Namespace {
-        val tenant = tenantProjectionService.getTenantById(request.tenantId)
-            ?: throw TenantNotFoundException(request.tenantId)
+        val tenant =
+            tenantProjectionService.getTenantById(request.tenantId)
+                ?: throw TenantNotFoundException(request.tenantId)
 
         // Check tenant quota limit (Rule C-10)
         val usage = tenantUsageService.getUsage(tenant.tenantId, tenant.name)
@@ -44,7 +45,7 @@ class CreateNamespaceService(
                 tenant.tenantId,
                 "namespaces",
                 usage.namespaces,
-                effectiveQuota
+                effectiveQuota,
             )
         }
 
@@ -54,15 +55,16 @@ class CreateNamespaceService(
 
         val now = Instant.now()
         val namespaceId = UUID.randomUUID()
-        val payload = NamespaceCreatedEvent(
-            namespaceId = namespaceId,
-            tenantId = tenant.tenantId,
-            name = request.name,
-            description = request.description,
-            createdBy = request.createdBy,
-            createdAt = now,
-            metadata = request.metadata
-        )
+        val payload =
+            NamespaceCreatedEvent(
+                namespaceId = namespaceId,
+                tenantId = tenant.tenantId,
+                name = request.name,
+                description = request.description,
+                createdBy = request.createdBy,
+                createdAt = now,
+                metadata = request.metadata,
+            )
 
         val eventPayload = payload.toPayload().toMutableMap()
         eventPayload["tenantName"] = tenant.name // Include tenantName for projection service
@@ -71,7 +73,7 @@ class CreateNamespaceService(
             topicId = SystemTopics.NAMESPACES_TOPIC_ID,
             eventType = NamespaceEventType.CREATED,
             payload = eventPayload,
-            timestamp = now
+            timestamp = now,
         )
 
         return Namespace(
@@ -81,8 +83,7 @@ class CreateNamespaceService(
             name = request.name,
             description = request.description,
             createdAt = now,
-            metadata = request.metadata
+            metadata = request.metadata,
         )
     }
 }
-

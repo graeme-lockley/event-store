@@ -12,9 +12,15 @@ class InMemoryNamespaceRepository : NamespaceRepository {
     private val namespacesById = mutableMapOf<Pair<UUID, UUID>, Namespace>()
     private val namespacesByNamespaceId = mutableMapOf<UUID, Namespace>()
 
-    private fun nameKey(tenantName: String, name: String): String = "$tenantName/$name"
-    private fun idKey(tenantId: UUID, namespaceId: UUID): Pair<UUID, UUID> =
-        Pair(tenantId, namespaceId)
+    private fun nameKey(
+        tenantName: String,
+        name: String,
+    ): String = "$tenantName/$name"
+
+    private fun idKey(
+        tenantId: UUID,
+        namespaceId: UUID,
+    ): Pair<UUID, UUID> = Pair(tenantId, namespaceId)
 
     override suspend fun save(namespace: Namespace) {
         mutex.withLock {
@@ -29,11 +35,17 @@ class InMemoryNamespaceRepository : NamespaceRepository {
         }
     }
 
-    override suspend fun findByName(tenantName: String, name: String): Namespace? {
+    override suspend fun findByName(
+        tenantName: String,
+        name: String,
+    ): Namespace? {
         return mutex.withLock { namespacesByName[nameKey(tenantName, name)] }
     }
 
-    override suspend fun findById(tenantId: UUID, namespaceId: UUID): Namespace? {
+    override suspend fun findById(
+        tenantId: UUID,
+        namespaceId: UUID,
+    ): Namespace? {
         return mutex.withLock { namespacesById[idKey(tenantId, namespaceId)] }
     }
 
@@ -45,8 +57,10 @@ class InMemoryNamespaceRepository : NamespaceRepository {
         return mutex.withLock { namespacesByName.values.toList() }
     }
 
-    override suspend fun findById(tenantId: String, namespaceId: String): Namespace? {
+    override suspend fun findById(
+        tenantId: String,
+        namespaceId: String,
+    ): Namespace? {
         return findByName(tenantId, namespaceId)
     }
 }
-

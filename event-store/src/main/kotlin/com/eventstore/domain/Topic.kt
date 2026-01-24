@@ -4,7 +4,7 @@ import java.util.*
 
 /**
  * Domain entity representing a topic with its configuration.
- * 
+ *
  * - topicId: Stable UUID that never changes (used in permissions and references). Globally unique.
  * - namespaceId: Reference to namespace's stable UUID (globally unique)
  * - name: Human-readable topic name (used for display purposes)
@@ -12,11 +12,14 @@ import java.util.*
  * - schemas: List of schemas defining event types for this topic
  */
 data class Topic(
-    val topicId: UUID,        // Stable GUID, never changes (used in permissions). Globally unique.
-    val namespaceId: UUID,   // Reference to namespace's UUID (globally unique)
-    val name: String,        // Human-readable topic name (used for display)
+    // Stable GUID, never changes (used in permissions). Globally unique.
+    val topicId: UUID,
+    // Reference to namespace's UUID (globally unique)
+    val namespaceId: UUID,
+    // Human-readable topic name (used for display)
+    val name: String,
     val sequence: Long,
-    val schemas: List<Schema>
+    val schemas: List<Schema>,
 ) {
     init {
         require(name.isNotBlank()) { "Topic name is required" }
@@ -33,4 +36,3 @@ data class Topic(
         return copy(schemas = newSchemas)
     }
 }
-

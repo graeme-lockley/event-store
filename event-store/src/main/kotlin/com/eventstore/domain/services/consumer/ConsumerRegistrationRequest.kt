@@ -15,7 +15,7 @@ sealed interface ConsumerRegistrationRequest {
  */
 data class HttpConsumerRegistrationRequest(
     val callbackUrl: String,
-    override val topics: Map<UUID, String?>
+    override val topics: Map<UUID, String?>,
 ) : ConsumerRegistrationRequest
 
 /**
@@ -24,7 +24,7 @@ data class HttpConsumerRegistrationRequest(
  */
 data class InMemoryConsumerRegistrationRequest(
     val handler: suspend (List<com.eventstore.domain.Event>) -> com.eventstore.domain.ports.outbound.DeliveryResult,
-    override val topics: Map<UUID, String?>
+    override val topics: Map<UUID, String?>,
 ) : ConsumerRegistrationRequest
 
 /**
@@ -33,6 +33,5 @@ data class InMemoryConsumerRegistrationRequest(
 data class AzureEventGridConsumerRegistrationRequest(
     val endpointUrl: String,
     val accessKey: String,
-    override val topics: Map<UUID, String?>
+    override val topics: Map<UUID, String?>,
 ) : ConsumerRegistrationRequest
-

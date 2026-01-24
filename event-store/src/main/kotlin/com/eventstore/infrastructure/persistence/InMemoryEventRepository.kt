@@ -19,7 +19,7 @@ class InMemoryEventRepository : EventRepository {
         type: String,
         payload: Map<String, Any>,
         eventId: EventId,
-        timestamp: Instant
+        timestamp: Instant,
     ): Event {
         return mutex.withLock {
             val event = Event(eventId, timestamp, type, payload)
@@ -39,9 +39,7 @@ class InMemoryEventRepository : EventRepository {
         }
     }
 
-    override suspend fun storeEvents(
-        events: List<Event>
-    ): List<Event> {
+    override suspend fun storeEvents(events: List<Event>): List<Event> {
         if (events.isEmpty()) {
             return emptyList()
         }
@@ -69,7 +67,7 @@ class InMemoryEventRepository : EventRepository {
 
     override suspend fun getEvent(
         topicId: UUID,
-        eventId: EventId
+        eventId: EventId,
     ): Event? {
         return mutex.withLock {
             val key = topicKey(topicId)
@@ -81,7 +79,7 @@ class InMemoryEventRepository : EventRepository {
         topicId: UUID,
         sinceEventId: EventId?,
         date: String?,
-        limit: Int?
+        limit: Int?,
     ): List<Event> {
         return mutex.withLock {
             val key = topicKey(topicId)
@@ -90,17 +88,20 @@ class InMemoryEventRepository : EventRepository {
             var filtered = events.asSequence()
 
             if (sinceEventId != null) {
-                filtered = filtered.filter { event ->
-                    compareEventIds(event.id, sinceEventId) > 0
-                }
+                filtered =
+                    filtered.filter { event ->
+                        compareEventIds(event.id, sinceEventId) > 0
+                    }
             }
 
             if (date != null) {
-                filtered = filtered.filter { event ->
-                    val eventDate = event.timestamp.atZone(java.time.ZoneId.systemDefault())
-                        .format(DateTimeFormatter.ISO_LOCAL_DATE)
-                    eventDate == date
-                }
+                filtered =
+                    filtered.filter { event ->
+                        val eventDate =
+                            event.timestamp.atZone(java.time.ZoneId.systemDefault())
+                                .format(DateTimeFormatter.ISO_LOCAL_DATE)
+                        eventDate == date
+                    }
             }
 
             val sorted = filtered.sortedWith { a, b -> compareEventIds(a.id, b.id) }
@@ -113,9 +114,7 @@ class InMemoryEventRepository : EventRepository {
         }
     }
 
-    override suspend fun getLatestEventId(
-        topicId: UUID
-    ): EventId? {
+    override suspend fun getLatestEventId(topicId: UUID): EventId? {
         val events = getEvents(topicId)
         return events.lastOrNull()?.id
     }
@@ -124,7 +123,10 @@ class InMemoryEventRepository : EventRepository {
         return topicId.toString()
     }
 
-    private fun compareEventIds(id1: EventId, id2: EventId): Int {
+    private fun compareEventIds(
+        id1: EventId,
+        id2: EventId,
+    ): Int {
         val topicComparison = id1.topicId.compareTo(id2.topicId)
         return if (topicComparison != 0) {
             topicComparison
@@ -133,4 +135,3 @@ class InMemoryEventRepository : EventRepository {
         }
     }
 }
-

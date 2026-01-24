@@ -12,19 +12,24 @@ interface TopicRepository {
         topicId: UUID,
         namespaceId: UUID,
         name: String,
-        schemas: List<Schema>
+        schemas: List<Schema>,
     ): Topic
 
     suspend fun getTopic(topicId: UUID): Topic?
 
     suspend fun topicExists(topicId: UUID): Boolean
 
-    suspend fun updateSequence(topicId: UUID, sequence: Long)
+    suspend fun updateSequence(
+        topicId: UUID,
+        sequence: Long,
+    )
 
     suspend fun getAndIncrementSequence(topicId: UUID): Long
 
-    suspend fun updateSchemas(topicId: UUID, schemas: List<Schema>): Topic
+    suspend fun updateSchemas(
+        topicId: UUID,
+        schemas: List<Schema>,
+    ): Topic
 
     suspend fun getAllTopics(): List<Topic>
 }
-

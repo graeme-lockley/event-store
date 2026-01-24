@@ -25,158 +25,173 @@ class GrantPermissionServiceTest {
     private lateinit var userId: String
 
     @BeforeEach
-    fun setup() = runTest {
-        application = createApplication()
-        tenantName = "test-tenant"
-        userId = UUID.randomUUID().toString()
+    fun setup() =
+        runTest {
+            application = createApplication()
+            tenantName = "test-tenant"
+            userId = UUID.randomUUID().toString()
 
-        // Create tenant
-        application.createTenant(tenantName)
-    }
-
-    @Test
-    fun `grants permission and emits event`() = runTest {
-        val tenant = application.getTenant(tenantName)!!
-        val permissions = setOf(Permission.READ, Permission.UPDATE)
-
-        val event = application.grantPermission(
-            GrantPermissionRequest(
-                principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                tenantId = tenant.tenantId,
-                permissions = permissions,
-                grantedBy = "admin"
-            )
-        )
-
-        assertEquals(userId, event.principalId)
-        assertEquals(PrincipalType.USER, event.principalType)
-        assertEquals(ResourceType.TENANT, event.resourceType)
-        assertEquals(permissions, event.permissions)
-
-        // Verify event was stored
-        val storedEvents = application.getEvents(
-            topicId = SystemTopics.PERMISSIONS_TOPIC_ID
-        )
-        val permissionEvents = storedEvents.filter { it.type == PermissionEventType.GRANTED }
-        assertTrue(permissionEvents.isNotEmpty())
-        assertEquals(PermissionEventType.GRANTED, permissionEvents.last().type)
-    }
+            // Create tenant
+            application.createTenant(tenantName)
+        }
 
     @Test
-    fun `grants permission for specific resource`() = runTest {
-        val tenant = application.getTenant(tenantName)!!
-        val resourceId = UUID.randomUUID()
+    fun `grants permission and emits event`() =
+        runTest {
+            val tenant = application.getTenant(tenantName)!!
+            val permissions = setOf(Permission.READ, Permission.UPDATE)
 
-        val event = application.grantPermission(
-            GrantPermissionRequest(
-                principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId.toString(),
-                tenantId = tenant.tenantId,
-                permissions = setOf(Permission.READ),
-                grantedBy = "admin"
-            )
-        )
+            val event =
+                application.grantPermission(
+                    GrantPermissionRequest(
+                        principalId = userId,
+                        principalType = PrincipalType.USER,
+                        resourceType = ResourceType.TENANT,
+                        tenantId = tenant.tenantId,
+                        permissions = permissions,
+                        grantedBy = "admin",
+                    ),
+                )
 
-        assertEquals(resourceId.toString(), event.resourceId)
-    }
+            assertEquals(userId, event.principalId)
+            assertEquals(PrincipalType.USER, event.principalType)
+            assertEquals(ResourceType.TENANT, event.resourceType)
+            assertEquals(permissions, event.permissions)
 
-    @Test
-    fun `grants permission for namespace`() = runTest {
-        val namespaceName = "test-namespace"
-
-        // Create namespace
-        val tenant = application.getTenant(tenantName)!!
-        val namespace = application.createNamespace(tenant.tenantId, namespaceName)
-
-        val event = application.grantPermission(
-            GrantPermissionRequest(
-                principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.NAMESPACE,
-                tenantId = tenant.tenantId,
-                resourceId = namespace.namespaceId.toString(),
-                permissions = setOf(Permission.READ),
-                grantedBy = "admin"
-            )
-        )
-
-        assertEquals(ResourceType.NAMESPACE, event.resourceType)
-        assertNotNull(event.namespaceResourceId)
-        assertEquals(namespace.namespaceId.toString(), event.namespaceResourceId)
-    }
+            // Verify event was stored
+            val storedEvents =
+                application.getEvents(
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                )
+            val permissionEvents = storedEvents.filter { it.type == PermissionEventType.GRANTED }
+            assertTrue(permissionEvents.isNotEmpty())
+            assertEquals(PermissionEventType.GRANTED, permissionEvents.last().type)
+        }
 
     @Test
-    fun `grants permission for topic`() = runTest {
-        val namespaceName = "test-namespace"
-        val topicName = "test-topic"
+    fun `grants permission for specific resource`() =
+        runTest {
+            val tenant = application.getTenant(tenantName)!!
+            val resourceId = UUID.randomUUID()
 
-        // Create namespace and topic
-        val tenant = application.getTenant(tenantName)!!
-        val namespace = application.createNamespace(tenant.tenantId, namespaceName)
-        val topic = application.createTopic(
-            name = topicName,
-            schemas = listOf(Schema(eventType = "test.event")),
-            namespaceId = namespace.namespaceId
-        )
+            val event =
+                application.grantPermission(
+                    GrantPermissionRequest(
+                        principalId = userId,
+                        principalType = PrincipalType.USER,
+                        resourceType = ResourceType.TENANT,
+                        resourceId = resourceId.toString(),
+                        tenantId = tenant.tenantId,
+                        permissions = setOf(Permission.READ),
+                        grantedBy = "admin",
+                    ),
+                )
 
-        val event = application.grantPermission(
-            GrantPermissionRequest(
-                principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TOPIC,
-                tenantId = tenant.tenantId,
-                resourceId = topic.topicId.toString(),
-                permissions = setOf(Permission.READ),
-                grantedBy = "admin"
-            )
-        )
-
-        assertEquals(ResourceType.TOPIC, event.resourceType)
-        assertNotNull(event.topicId)
-        assertEquals(topic.topicId.toString(), event.topicId)
-    }
+            assertEquals(resourceId.toString(), event.resourceId)
+        }
 
     @Test
-    fun `grants permission with expiration`() = runTest {
-        val tenant = application.getTenant(tenantName)!!
-        val expiresAt = Instant.now().plusSeconds(3600)
+    fun `grants permission for namespace`() =
+        runTest {
+            val namespaceName = "test-namespace"
 
-        val event = application.grantPermission(
-            GrantPermissionRequest(
-                principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                tenantId = tenant.tenantId,
-                permissions = setOf(Permission.READ),
-                expiresAt = expiresAt,
-                grantedBy = "admin"
-            )
-        )
+            // Create namespace
+            val tenant = application.getTenant(tenantName)!!
+            val namespace = application.createNamespace(tenant.tenantId, namespaceName)
 
-        assertEquals(expiresAt, event.expiresAt)
-    }
+            val event =
+                application.grantPermission(
+                    GrantPermissionRequest(
+                        principalId = userId,
+                        principalType = PrincipalType.USER,
+                        resourceType = ResourceType.NAMESPACE,
+                        tenantId = tenant.tenantId,
+                        resourceId = namespace.namespaceId.toString(),
+                        permissions = setOf(Permission.READ),
+                        grantedBy = "admin",
+                    ),
+                )
+
+            assertEquals(ResourceType.NAMESPACE, event.resourceType)
+            assertNotNull(event.namespaceResourceId)
+            assertEquals(namespace.namespaceId.toString(), event.namespaceResourceId)
+        }
 
     @Test
-    fun `grants permission for API key principal`() = runTest {
-        val tenant = application.getTenant(tenantName)!!
-        val apiKeyId = UUID.randomUUID().toString()
+    fun `grants permission for topic`() =
+        runTest {
+            val namespaceName = "test-namespace"
+            val topicName = "test-topic"
 
-        val event = application.grantPermission(
-            GrantPermissionRequest(
-                principalId = apiKeyId,
-                principalType = PrincipalType.API_KEY,
-                resourceType = ResourceType.TENANT,
-                tenantId = tenant.tenantId,
-                permissions = setOf(Permission.READ),
-                grantedBy = "admin"
-            )
-        )
+            // Create namespace and topic
+            val tenant = application.getTenant(tenantName)!!
+            val namespace = application.createNamespace(tenant.tenantId, namespaceName)
+            val topic =
+                application.createTopic(
+                    name = topicName,
+                    schemas = listOf(Schema(eventType = "test.event")),
+                    namespaceId = namespace.namespaceId,
+                )
 
-        assertEquals(apiKeyId, event.principalId)
-        assertEquals(PrincipalType.API_KEY, event.principalType)
-    }
+            val event =
+                application.grantPermission(
+                    GrantPermissionRequest(
+                        principalId = userId,
+                        principalType = PrincipalType.USER,
+                        resourceType = ResourceType.TOPIC,
+                        tenantId = tenant.tenantId,
+                        resourceId = topic.topicId.toString(),
+                        permissions = setOf(Permission.READ),
+                        grantedBy = "admin",
+                    ),
+                )
+
+            assertEquals(ResourceType.TOPIC, event.resourceType)
+            assertNotNull(event.topicId)
+            assertEquals(topic.topicId.toString(), event.topicId)
+        }
+
+    @Test
+    fun `grants permission with expiration`() =
+        runTest {
+            val tenant = application.getTenant(tenantName)!!
+            val expiresAt = Instant.now().plusSeconds(3600)
+
+            val event =
+                application.grantPermission(
+                    GrantPermissionRequest(
+                        principalId = userId,
+                        principalType = PrincipalType.USER,
+                        resourceType = ResourceType.TENANT,
+                        tenantId = tenant.tenantId,
+                        permissions = setOf(Permission.READ),
+                        expiresAt = expiresAt,
+                        grantedBy = "admin",
+                    ),
+                )
+
+            assertEquals(expiresAt, event.expiresAt)
+        }
+
+    @Test
+    fun `grants permission for API key principal`() =
+        runTest {
+            val tenant = application.getTenant(tenantName)!!
+            val apiKeyId = UUID.randomUUID().toString()
+
+            val event =
+                application.grantPermission(
+                    GrantPermissionRequest(
+                        principalId = apiKeyId,
+                        principalType = PrincipalType.API_KEY,
+                        resourceType = ResourceType.TENANT,
+                        tenantId = tenant.tenantId,
+                        permissions = setOf(Permission.READ),
+                        grantedBy = "admin",
+                    ),
+                )
+
+            assertEquals(apiKeyId, event.principalId)
+            assertEquals(PrincipalType.API_KEY, event.principalType)
+        }
 }

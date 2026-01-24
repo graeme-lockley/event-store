@@ -17,18 +17,20 @@ data class GrantPermissionRequestDto(
     val principalId: String,
     val principalType: String,
     val resourceType: String,
-    val resourceId: String? = null,  // UUID string for the target resource (namespaceId, topicId, etc.)
+    // UUID string for the target resource (namespaceId, topicId, etc.)
+    val resourceId: String? = null,
     val permissions: List<String>,
-    val expiresAt: String? = null
+    val expiresAt: String? = null,
 )
 
 data class RevokePermissionRequestDto(
     val principalId: String,
     val principalType: String,
     val resourceType: String,
-    val resourceId: String? = null,  // UUID string for the target resource (namespaceId, topicId, etc.)
+    // UUID string for the target resource (namespaceId, topicId, etc.)
+    val resourceId: String? = null,
     val permissions: List<String>,
-    val reason: String? = null
+    val reason: String? = null,
 )
 
 data class PermissionResponseDto(
@@ -38,107 +40,118 @@ data class PermissionResponseDto(
     val resourceId: String?,
     val permissions: List<String>,
     val grantedAt: String,
-    val grantedBy: String
+    val grantedBy: String,
 )
 
 fun Route.permissionRoutes(application: com.eventstore.domain.Application) {
     route("/tenants/{tenantId}/users/{userId}/permissions") {
         get {
             try {
-                val tenantIdStr = call.parameters["tenantId"]
-                    ?: throw IllegalArgumentException("tenantId is required")
-                val tenantId = try {
-                    UUID.fromString(tenantIdStr)
-                } catch (e: IllegalArgumentException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ErrorResponse("Invalid tenantId format. Expected UUID.", "INVALID_TENANT_ID")
-                    )
-                    return@get
-                }
-                val userId = call.parameters["userId"]
-                    ?: throw IllegalArgumentException("userId is required")
+                val tenantIdStr =
+                    call.parameters["tenantId"]
+                        ?: throw IllegalArgumentException("tenantId is required")
+                val tenantId =
+                    try {
+                        UUID.fromString(tenantIdStr)
+                    } catch (e: IllegalArgumentException) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Invalid tenantId format. Expected UUID.", "INVALID_TENANT_ID"),
+                        )
+                        return@get
+                    }
+                val userId =
+                    call.parameters["userId"]
+                        ?: throw IllegalArgumentException("userId is required")
 
-                val grants = application.getPermissions(
-                    com.eventstore.domain.services.permission.GetPermissionsRequest(
-                        principalId = userId,
-                        tenantId = tenantId
+                val grants =
+                    application.getPermissions(
+                        com.eventstore.domain.services.permission.GetPermissionsRequest(
+                            principalId = userId,
+                            tenantId = tenantId,
+                        ),
                     )
-                )
 
-                val response = grants.map { grant: com.eventstore.domain.PermissionGrant ->
-                    PermissionResponseDto(
-                        principalId = grant.principalId,
-                        principalType = grant.principalType.name,
-                        resourceType = grant.resourceType.name,
-                        resourceId = grant.resourceId,
-                        permissions = grant.permissions.map { permission -> permission.name },
-                        grantedAt = grant.grantedAt.toString(),
-                        grantedBy = grant.grantedBy
-                    )
-                }
+                val response =
+                    grants.map { grant: com.eventstore.domain.PermissionGrant ->
+                        PermissionResponseDto(
+                            principalId = grant.principalId,
+                            principalType = grant.principalType.name,
+                            resourceType = grant.resourceType.name,
+                            resourceId = grant.resourceId,
+                            permissions = grant.permissions.map { permission -> permission.name },
+                            grantedAt = grant.grantedAt.toString(),
+                            grantedBy = grant.grantedBy,
+                        )
+                    }
 
                 call.respond(HttpStatusCode.OK, response)
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to get permissions", "GET_PERMISSIONS_FAILED")
+                    ErrorResponse(e.message ?: "Failed to get permissions", "GET_PERMISSIONS_FAILED"),
                 )
             }
         }
 
         post {
             try {
-                val tenantIdStr = call.parameters["tenantId"]
-                    ?: throw IllegalArgumentException("tenantId is required")
-                val tenantId = try {
-                    UUID.fromString(tenantIdStr)
-                } catch (e: IllegalArgumentException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ErrorResponse("Invalid tenantId format. Expected UUID.", "INVALID_TENANT_ID")
-                    )
-                    return@post
-                }
+                val tenantIdStr =
+                    call.parameters["tenantId"]
+                        ?: throw IllegalArgumentException("tenantId is required")
+                val tenantId =
+                    try {
+                        UUID.fromString(tenantIdStr)
+                    } catch (e: IllegalArgumentException) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Invalid tenantId format. Expected UUID.", "INVALID_TENANT_ID"),
+                        )
+                        return@post
+                    }
                 call.parameters["userId"]
                     ?: throw IllegalArgumentException("userId is required")
-                val currentUserId = call.attributes.getOrNull(AuthenticationMiddleware.UserIdKey)
-                    ?: throw IllegalStateException("Authentication required")
+                val currentUserId =
+                    call.attributes.getOrNull(AuthenticationMiddleware.UserIdKey)
+                        ?: throw IllegalStateException("Authentication required")
 
                 val body = call.receive<GrantPermissionRequestDto>()
 
-                val principalType = try {
-                    PrincipalType.valueOf(body.principalType.uppercase())
-                } catch (e: IllegalArgumentException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ErrorResponse("Invalid principalType: ${body.principalType}", "INVALID_PRINCIPAL_TYPE")
-                    )
-                    return@post
-                }
-
-                val resourceType = try {
-                    ResourceType.valueOf(body.resourceType.uppercase())
-                } catch (e: IllegalArgumentException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ErrorResponse("Invalid resourceType: ${body.resourceType}", "INVALID_RESOURCE_TYPE")
-                    )
-                    return@post
-                }
-
-                val permissions = body.permissions.mapNotNull {
+                val principalType =
                     try {
-                        Permission.valueOf(it.uppercase())
+                        PrincipalType.valueOf(body.principalType.uppercase())
                     } catch (e: IllegalArgumentException) {
-                        null
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Invalid principalType: ${body.principalType}", "INVALID_PRINCIPAL_TYPE"),
+                        )
+                        return@post
                     }
-                }
+
+                val resourceType =
+                    try {
+                        ResourceType.valueOf(body.resourceType.uppercase())
+                    } catch (e: IllegalArgumentException) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Invalid resourceType: ${body.resourceType}", "INVALID_RESOURCE_TYPE"),
+                        )
+                        return@post
+                    }
+
+                val permissions =
+                    body.permissions.mapNotNull {
+                        try {
+                            Permission.valueOf(it.uppercase())
+                        } catch (e: IllegalArgumentException) {
+                            null
+                        }
+                    }
 
                 if (permissions.isEmpty()) {
                     call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse("At least one valid permission is required", "INVALID_PERMISSIONS")
+                        ErrorResponse("At least one valid permission is required", "INVALID_PERMISSIONS"),
                     )
                     return@post
                 }
@@ -154,71 +167,77 @@ fun Route.permissionRoutes(application: com.eventstore.domain.Application) {
                         tenantId = tenantId,
                         permissions = permissions.toSet(),
                         expiresAt = expiresAt,
-                        grantedBy = currentUserId
-                    )
+                        grantedBy = currentUserId,
+                    ),
                 )
 
                 call.respond(HttpStatusCode.Created, mapOf("message" to "Permission granted"))
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to grant permission", "GRANT_PERMISSION_FAILED")
+                    ErrorResponse(e.message ?: "Failed to grant permission", "GRANT_PERMISSION_FAILED"),
                 )
             }
         }
 
         delete {
             try {
-                val tenantIdStr = call.parameters["tenantId"]
-                    ?: throw IllegalArgumentException("tenantId is required")
-                val tenantId = try {
-                    UUID.fromString(tenantIdStr)
-                } catch (e: IllegalArgumentException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ErrorResponse("Invalid tenantId format. Expected UUID.", "INVALID_TENANT_ID")
-                    )
-                    return@delete
-                }
+                val tenantIdStr =
+                    call.parameters["tenantId"]
+                        ?: throw IllegalArgumentException("tenantId is required")
+                val tenantId =
+                    try {
+                        UUID.fromString(tenantIdStr)
+                    } catch (e: IllegalArgumentException) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Invalid tenantId format. Expected UUID.", "INVALID_TENANT_ID"),
+                        )
+                        return@delete
+                    }
                 call.parameters["userId"]
                     ?: throw IllegalArgumentException("userId is required")
-                val currentUserId = call.attributes.getOrNull(AuthenticationMiddleware.UserIdKey)
-                    ?: throw IllegalStateException("Authentication required")
+                val currentUserId =
+                    call.attributes.getOrNull(AuthenticationMiddleware.UserIdKey)
+                        ?: throw IllegalStateException("Authentication required")
 
                 val body = call.receive<RevokePermissionRequestDto>()
 
-                val principalType = try {
-                    PrincipalType.valueOf(body.principalType.uppercase())
-                } catch (e: IllegalArgumentException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ErrorResponse("Invalid principalType: ${body.principalType}", "INVALID_PRINCIPAL_TYPE")
-                    )
-                    return@delete
-                }
-
-                val resourceType = try {
-                    ResourceType.valueOf(body.resourceType.uppercase())
-                } catch (e: IllegalArgumentException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ErrorResponse("Invalid resourceType: ${body.resourceType}", "INVALID_RESOURCE_TYPE")
-                    )
-                    return@delete
-                }
-
-                val permissions = body.permissions.mapNotNull {
+                val principalType =
                     try {
-                        Permission.valueOf(it.uppercase())
+                        PrincipalType.valueOf(body.principalType.uppercase())
                     } catch (e: IllegalArgumentException) {
-                        null
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Invalid principalType: ${body.principalType}", "INVALID_PRINCIPAL_TYPE"),
+                        )
+                        return@delete
                     }
-                }
+
+                val resourceType =
+                    try {
+                        ResourceType.valueOf(body.resourceType.uppercase())
+                    } catch (e: IllegalArgumentException) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse("Invalid resourceType: ${body.resourceType}", "INVALID_RESOURCE_TYPE"),
+                        )
+                        return@delete
+                    }
+
+                val permissions =
+                    body.permissions.mapNotNull {
+                        try {
+                            Permission.valueOf(it.uppercase())
+                        } catch (e: IllegalArgumentException) {
+                            null
+                        }
+                    }
 
                 if (permissions.isEmpty()) {
                     call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse("At least one valid permission is required", "INVALID_PERMISSIONS")
+                        ErrorResponse("At least one valid permission is required", "INVALID_PERMISSIONS"),
                     )
                     return@delete
                 }
@@ -232,20 +251,17 @@ fun Route.permissionRoutes(application: com.eventstore.domain.Application) {
                         tenantId = tenantId,
                         permissions = permissions.toSet(),
                         revokedBy = currentUserId,
-                        reason = body.reason
-                    )
+                        reason = body.reason,
+                    ),
                 )
 
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Permission revoked"))
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to revoke permission", "REVOKE_PERMISSION_FAILED")
+                    ErrorResponse(e.message ?: "Failed to revoke permission", "REVOKE_PERMISSION_FAILED"),
                 )
             }
         }
     }
 }
-
-
-

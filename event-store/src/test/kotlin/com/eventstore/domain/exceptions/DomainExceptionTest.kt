@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 class DomainExceptionTest {
-
     @Test
     fun `TopicNotFoundException should contain topic name`() {
         val exception = TopicNotFoundException("user-events")
@@ -54,4 +53,3 @@ class DomainExceptionTest {
         assertEquals("Invalid consumer registration: Invalid callback URL", exception.message)
     }
 }
-

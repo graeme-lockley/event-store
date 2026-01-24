@@ -15,9 +15,8 @@ fun Route.healthRoutes(application: Application) {
             HealthResponse(
                 status = status.status,
                 consumers = status.consumers,
-                runningDispatchers = status.runningDispatchers
-            )
+                runningDispatchers = status.runningDispatchers,
+            ),
         )
     }
 }
-

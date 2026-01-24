@@ -5,19 +5,17 @@ import java.time.Instant
 data class ApiKey(
     val id: String,
     val userId: String,
-    val keyHash: String, // Hashed API key (never store plain key)
+    // Hashed API key (never store plain key)
+    val keyHash: String,
     val name: String,
     val description: String? = null,
     val createdAt: Instant,
     val expiresAt: Instant? = null,
     val lastUsedAt: Instant? = null,
     val revokedAt: Instant? = null,
-    val scopes: Set<String>? = null // Optional scoping
+    // Optional scoping
+    val scopes: Set<String>? = null,
 ) {
     val isActive: Boolean
         get() = revokedAt == null && (expiresAt == null || expiresAt.isAfter(Instant.now()))
 }
-
-
-
-

@@ -5,10 +5,9 @@ data class TopicResponse(
     val namespaceId: String,
     val name: String,
     val sequence: Long,
-    val schemas: List<SchemaDto>
+    val schemas: List<SchemaDto>,
 )
 
 data class TopicsResponse(
-    val topics: List<TopicResponse>
+    val topics: List<TopicResponse>,
 )
-

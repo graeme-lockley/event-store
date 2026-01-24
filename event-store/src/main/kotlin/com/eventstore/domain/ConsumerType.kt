@@ -6,6 +6,5 @@ package com.eventstore.domain
 enum class ConsumerType {
     HTTP,
     IN_MEMORY,
-    AZURE_EVENT_GRID  // For future implementation
+    AZURE_EVENT_GRID, // For future implementation
 }
-

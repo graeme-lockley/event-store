@@ -21,19 +21,20 @@ data class UpdateTenantRequest(
     val name: String? = null,
     val quota: Quota? = null,
     val metadata: Map<String, Any>? = null,
-    val updatedBy: String = "system"
+    val updatedBy: String = "system",
 )
 
 class UpdateTenantService(
     private val tenantProjectionService: TenantProjectionService,
     private val tenantUsageService: TenantUsageService,
     config: Config,
-    eventPublisher: SystemEventPublisher
+    eventPublisher: SystemEventPublisher,
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: UpdateTenantRequest): Tenant {
         // Get existing tenant (including deleted ones for the check)
-        val existing = tenantProjectionService.getTenantByIdIncludingDeleted(request.tenantId)
-            ?: throw TenantNotFoundException(request.tenantId)
+        val existing =
+            tenantProjectionService.getTenantByIdIncludingDeleted(request.tenantId)
+                ?: throw TenantNotFoundException(request.tenantId)
 
         // Rule 2: Block updates to deleted tenants
         if (!existing.isActive) {
@@ -65,7 +66,7 @@ class UpdateTenantService(
                         existing.tenantId,
                         "topics",
                         usage.topics,
-                        request.quota.maxTopics
+                        request.quota.maxTopics,
                     )
                 }
             }
@@ -76,7 +77,7 @@ class UpdateTenantService(
                         existing.tenantId,
                         "namespaces",
                         usage.namespaces,
-                        request.quota.maxNamespaces
+                        request.quota.maxNamespaces,
                     )
                 }
             }
@@ -87,7 +88,7 @@ class UpdateTenantService(
                         existing.tenantId,
                         "consumers",
                         usage.consumers,
-                        request.quota.maxConsumers
+                        request.quota.maxConsumers,
                     )
                 }
             }
@@ -98,21 +99,22 @@ class UpdateTenantService(
                         existing.tenantId,
                         "users",
                         usage.users,
-                        request.quota.maxUsers
+                        request.quota.maxUsers,
                     )
                 }
             }
         }
 
         val now = Instant.now()
-        val eventPayload = TenantUpdatedEvent(
-            tenantId = existing.tenantId,
-            name = request.name,
-            quota = request.quota,
-            updatedBy = request.updatedBy,
-            updatedAt = now,
-            metadata = request.metadata
-        )
+        val eventPayload =
+            TenantUpdatedEvent(
+                tenantId = existing.tenantId,
+                name = request.name,
+                quota = request.quota,
+                updatedBy = request.updatedBy,
+                updatedAt = now,
+                metadata = request.metadata,
+            )
 
         val payload = eventPayload.toPayload()
 
@@ -120,14 +122,14 @@ class UpdateTenantService(
             topicId = SystemTopics.TENANTS_TOPIC_ID,
             eventType = TenantEventType.UPDATED,
             payload = payload,
-            timestamp = now
+            timestamp = now,
         )
 
         return existing.copy(
             name = request.name ?: existing.name,
             quota = request.quota ?: existing.quota,
             updatedAt = now,
-            metadata = request.metadata ?: existing.metadata
+            metadata = request.metadata ?: existing.metadata,
         )
     }
 }

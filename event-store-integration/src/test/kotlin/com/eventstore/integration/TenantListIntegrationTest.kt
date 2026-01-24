@@ -3,13 +3,18 @@ package com.eventstore.integration
 import com.eventstore.interfaces.http.dto.LoginRequest
 import com.eventstore.interfaces.http.dto.LoginResponse
 import com.eventstore.interfaces.http.dto.TenantListResponse
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.serialization.jackson.*
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.contentType
+import io.ktor.client.request.cookie
+import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.jackson.jackson
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
@@ -23,7 +28,7 @@ import kotlin.test.assertTrue
 
 /**
  * Integration test that authenticates via the API and retrieves the list of tenants.
- * 
+ *
  * This test:
  * 1. Starts an event-store instance (which automatically bootstraps an admin user)
  * 2. Waits for bootstrap to complete
@@ -48,20 +53,22 @@ class TenantListIntegrationTest {
         configDir = tempDir.resolve("config")
 
         // Initialize the helper with test-specific directories
-        eventStoreHelper = EventStoreTestHelper(
-            dataDir = dataDir,
-            configDir = configDir
-        )
+        eventStoreHelper =
+            EventStoreTestHelper(
+                dataDir = dataDir,
+                configDir = configDir,
+            )
 
         // Start the event-store instance
         eventStoreHelper.start()
 
         // Create HTTP client with JSON serialization
-        httpClient = HttpClient(CIO) {
-            install(ContentNegotiation) {
-                jackson()
+        httpClient =
+            HttpClient(CIO) {
+                install(ContentNegotiation) {
+                    jackson()
+                }
             }
-        }
 
         // Wait for server to be ready and bootstrap to complete
         waitForServerReady()
@@ -82,35 +89,36 @@ class TenantListIntegrationTest {
      * Waits for the server to be ready and bootstrap to complete.
      * Polls the health endpoint until it responds successfully.
      */
-    private fun waitForServerReady() = runBlocking {
-        val baseUrl = eventStoreHelper.getBaseUrl()
-        val maxAttempts = 30
-        val delayMs = 200L
+    private fun waitForServerReady() =
+        runBlocking {
+            val baseUrl = eventStoreHelper.getBaseUrl()
+            val maxAttempts = 30
+            val delayMs = 200L
 
-        var serverReady = false
-        for (attempt in 0 until maxAttempts) {
-            try {
-                val response = httpClient.get("$baseUrl/health")
-                if (response.status == HttpStatusCode.OK) {
-                    // Server is ready. We are not going to wait a bit more for bootstrap projections to process
-                    // as the processing of bootstrap projections is quick and should be done by now.
+            var serverReady = false
+            for (attempt in 0 until maxAttempts) {
+                try {
+                    val response = httpClient.get("$baseUrl/health")
+                    if (response.status == HttpStatusCode.OK) {
+                        // Server is ready. We are not going to wait a bit more for bootstrap projections to process
+                        // as the processing of bootstrap projections is quick and should be done by now.
 
-                    // delay(500)
-                    serverReady = true
-                    break
+                        // delay(500)
+                        serverReady = true
+                        break
+                    }
+                } catch (_: Exception) {
+                    // Server not ready yet, continue waiting
                 }
-            } catch (_: Exception) {
-                // Server not ready yet, continue waiting
+                if (attempt < maxAttempts - 1) {
+                    println("Waiting for server to be ready... (attempt ${attempt + 1}/$maxAttempts)")
+                    delay(delayMs)
+                }
             }
-            if (attempt < maxAttempts - 1) {
-                println("Waiting for server to be ready... (attempt ${attempt + 1}/$maxAttempts)")
-                delay(delayMs)
+            if (!serverReady) {
+                throw IllegalStateException("Server failed to become ready after ${maxAttempts * delayMs}ms")
             }
         }
-        if (!serverReady) {
-            throw IllegalStateException("Server failed to become ready after ${maxAttempts * delayMs}ms")
-        }
-    }
 
     @Test
     fun `should login and retrieve tenant list using authenticated session`() {
@@ -120,15 +128,17 @@ class TenantListIntegrationTest {
             val adminPassword = eventStoreHelper.getAdminPassword()
 
             // Step 1: Login to get session cookie
-            val loginRequest = LoginRequest(
-                email = adminEmail,
-                password = adminPassword
-            )
+            val loginRequest =
+                LoginRequest(
+                    email = adminEmail,
+                    password = adminPassword,
+                )
 
-            val loginResponse = httpClient.post("$baseUrl/auth/login") {
-                contentType(ContentType.Application.Json)
-                setBody(loginRequest)
-            }
+            val loginResponse =
+                httpClient.post("$baseUrl/auth/login") {
+                    contentType(ContentType.Application.Json)
+                    setBody(loginRequest)
+                }
 
             // Extract sessionId from response cookie
             val setCookieHeader = loginResponse.headers["Set-Cookie"]
@@ -145,10 +155,11 @@ class TenantListIntegrationTest {
 
             // Step 2: Retrieve tenant list using the authenticated session
             // Include the sessionId cookie in the request
-            val tenantListResponse = httpClient.get("$baseUrl/tenants") {
-                contentType(ContentType.Application.Json)
-                cookie("sessionId", sessionId!!)
-            }.body<TenantListResponse>()
+            val tenantListResponse =
+                httpClient.get("$baseUrl/tenants") {
+                    contentType(ContentType.Application.Json)
+                    cookie("sessionId", sessionId!!)
+                }.body<TenantListResponse>()
 
             // Verify tenant list response
             assertNotNull(tenantListResponse.tenants, "Tenants list should not be null")

@@ -15,16 +15,19 @@ object TenantEventType {
 
 sealed interface TenantEventPayload {
     val type: String
+
     fun toPayload(): Map<String, Any>
 }
 
 data class TenantCreatedEvent(
-    val tenantId: UUID,        // Stable GUID, never changes (used in permissions)
-    val name: String,            // Human-readable identifier (used in URLs and for display)
+    // Stable GUID, never changes (used in permissions)
+    val tenantId: UUID,
+    // Human-readable identifier (used in URLs and for display)
+    val name: String,
     val quota: Quota? = null,
     val createdBy: String = "system",
     val createdAt: Instant,
-    val metadata: Map<String, Any> = emptyMap()
+    val metadata: Map<String, Any> = emptyMap(),
 ) : TenantEventPayload {
     init {
         require(name.isNotBlank()) { "name is required" }
@@ -33,23 +36,26 @@ data class TenantCreatedEvent(
     override val type: String = TenantEventType.CREATED
 
     override fun toPayload(): Map<String, Any> {
-        val payload = mutableMapOf<String, Any>(
-            "tenantId" to tenantId.toString(),
-            "name" to name,
-            "createdBy" to createdBy,
-            "createdAt" to createdAt.toString(),
-            "metadata" to metadata
-        )
+        val payload =
+            mutableMapOf<String, Any>(
+                "tenantId" to tenantId.toString(),
+                "name" to name,
+                "createdBy" to createdBy,
+                "createdAt" to createdAt.toString(),
+                "metadata" to metadata,
+            )
         quota?.let { payload["quota"] = it.toMap() }
         return payload
     }
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): TenantCreatedEvent {
-            val tenantId = (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
-                ?: error("tenantId missing - cannot create tenant without stable identifier")
-            val name = payload["name"] as? String
-                ?: error("name is required")
+            val tenantId =
+                (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
+                    ?: error("tenantId missing - cannot create tenant without stable identifier")
+            val name =
+                payload["name"] as? String
+                    ?: error("name is required")
             val createdBy = payload["createdBy"] as? String ?: "system"
             val createdAt = parseInstant(payload["createdAt"])
             val metadata = payload["metadata"] as? Map<String, Any> ?: emptyMap()
@@ -61,28 +67,31 @@ data class TenantCreatedEvent(
                 quota = quota,
                 createdBy = createdBy,
                 createdAt = createdAt,
-                metadata = metadata
+                metadata = metadata,
             )
         }
     }
 }
 
 data class TenantUpdatedEvent(
-    val tenantId: UUID,        // Stable GUID reference (used to identify tenant)
-    val name: String?,           // Human-readable identifier (may change on rename)
+    // Stable GUID reference (used to identify tenant)
+    val tenantId: UUID,
+    // Human-readable identifier (may change on rename)
+    val name: String?,
     val quota: Quota? = null,
     val updatedBy: String = "system",
     val updatedAt: Instant,
-    val metadata: Map<String, Any>? = null
+    val metadata: Map<String, Any>? = null,
 ) : TenantEventPayload {
     override val type: String = TenantEventType.UPDATED
 
     override fun toPayload(): Map<String, Any> {
-        val payload = mutableMapOf<String, Any>(
-            "tenantId" to tenantId.toString(),
-            "updatedBy" to updatedBy,
-            "updatedAt" to updatedAt.toString()
-        )
+        val payload =
+            mutableMapOf<String, Any>(
+                "tenantId" to tenantId.toString(),
+                "updatedBy" to updatedBy,
+                "updatedAt" to updatedAt.toString(),
+            )
         name?.let { payload["name"] = it }
         metadata?.let { payload["metadata"] = it }
         quota?.let { payload["quota"] = it.toMap() }
@@ -91,8 +100,9 @@ data class TenantUpdatedEvent(
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): TenantUpdatedEvent {
-            val tenantId = (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
-                ?: error("tenantId missing - cannot update tenant without stable identifier")
+            val tenantId =
+                (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
+                    ?: error("tenantId missing - cannot update tenant without stable identifier")
             val name = payload["name"] as? String
             val updatedBy = payload["updatedBy"] as? String ?: "system"
             val updatedAt = parseInstant(payload["updatedAt"])
@@ -105,34 +115,37 @@ data class TenantUpdatedEvent(
                 quota = quota,
                 updatedBy = updatedBy,
                 updatedAt = updatedAt,
-                metadata = metadata
+                metadata = metadata,
             )
         }
     }
 }
 
 data class TenantDeletedEvent(
-    val tenantId: UUID,        // Stable GUID reference (used to identify tenant)
+    // Stable GUID reference (used to identify tenant)
+    val tenantId: UUID,
     val deletedBy: String = "system",
     val deletedAt: Instant,
-    val reason: String? = null
+    val reason: String? = null,
 ) : TenantEventPayload {
     override val type: String = TenantEventType.DELETED
 
     override fun toPayload(): Map<String, Any> {
-        val payload = mutableMapOf<String, Any>(
-            "tenantId" to tenantId.toString(),
-            "deletedBy" to deletedBy,
-            "deletedAt" to deletedAt.toString()
-        )
+        val payload =
+            mutableMapOf<String, Any>(
+                "tenantId" to tenantId.toString(),
+                "deletedBy" to deletedBy,
+                "deletedAt" to deletedAt.toString(),
+            )
         reason?.let { payload["reason"] = it }
         return payload
     }
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): TenantDeletedEvent {
-            val tenantId = (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
-                ?: error("tenantId missing - cannot delete tenant without stable identifier")
+            val tenantId =
+                (payload["tenantId"] as? String)?.let { UUID.fromString(it) }
+                    ?: error("tenantId missing - cannot delete tenant without stable identifier")
             val deletedBy = payload["deletedBy"] as? String ?: "system"
             val deletedAt = parseInstant(payload["deletedAt"])
             val reason = payload["reason"] as? String
@@ -141,28 +154,35 @@ data class TenantDeletedEvent(
                 tenantId = tenantId,
                 deletedBy = deletedBy,
                 deletedAt = deletedAt,
-                reason = reason
+                reason = reason,
             )
         }
     }
 }
 
-private fun Quota.toMap(): Map<String, Any> = mapOf(
-    "maxTopics" to maxTopics,
-    "maxNamespaces" to maxNamespaces,
-    "maxEventsPerDay" to maxEventsPerDay,
-    "maxConsumers" to maxConsumers,
-    "maxUsers" to maxUsers,
-    "maxEventSizeBytes" to maxEventSizeBytes
-)
+private fun Quota.toMap(): Map<String, Any> =
+    mapOf(
+        "maxTopics" to maxTopics,
+        "maxNamespaces" to maxNamespaces,
+        "maxEventsPerDay" to maxEventsPerDay,
+        "maxConsumers" to maxConsumers,
+        "maxUsers" to maxUsers,
+        "maxEventSizeBytes" to maxEventSizeBytes,
+    )
 
 private fun mapToQuota(map: Map<*, *>): Quota {
-    fun numberToInt(value: Any?, field: String): Int {
+    fun numberToInt(
+        value: Any?,
+        field: String,
+    ): Int {
         val number = value as? Number ?: error("$field must be a number")
         return number.toInt()
     }
 
-    fun numberToLong(value: Any?, field: String): Long {
+    fun numberToLong(
+        value: Any?,
+        field: String,
+    ): Long {
         val number = value as? Number ?: error("$field must be a number")
         return number.toLong()
     }
@@ -173,7 +193,7 @@ private fun mapToQuota(map: Map<*, *>): Quota {
         maxEventsPerDay = numberToLong(map["maxEventsPerDay"], "maxEventsPerDay"),
         maxConsumers = numberToInt(map["maxConsumers"], "maxConsumers"),
         maxUsers = numberToInt(map["maxUsers"], "maxUsers"),
-        maxEventSizeBytes = numberToLong(map["maxEventSizeBytes"], "maxEventSizeBytes")
+        maxEventSizeBytes = numberToLong(map["maxEventSizeBytes"], "maxEventSizeBytes"),
     )
 }
 

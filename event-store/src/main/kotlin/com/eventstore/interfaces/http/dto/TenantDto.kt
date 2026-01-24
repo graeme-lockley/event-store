@@ -6,20 +6,20 @@ data class QuotaDto(
     val maxEventsPerDay: Long = 1_000_000,
     val maxConsumers: Int = 100,
     val maxUsers: Int = 50,
-    val maxEventSizeBytes: Long = 1024 * 1024
+    val maxEventSizeBytes: Long = 1024 * 1024,
 )
 
 data class TenantCreateRequest(
     val id: String,
     val name: String,
     val quota: QuotaDto? = null,
-    val metadata: Map<String, Any> = emptyMap()
+    val metadata: Map<String, Any> = emptyMap(),
 )
 
 data class TenantUpdateRequest(
     val name: String? = null,
     val quota: QuotaDto? = null,
-    val metadata: Map<String, Any>? = null
+    val metadata: Map<String, Any>? = null,
 )
 
 data class TenantResponse(
@@ -29,13 +29,9 @@ data class TenantResponse(
     val updatedAt: String?,
     val deletedAt: String?,
     val quota: QuotaDto?,
-    val metadata: Map<String, Any>
+    val metadata: Map<String, Any>,
 )
 
 data class TenantListResponse(
-    val tenants: List<TenantResponse>
+    val tenants: List<TenantResponse>,
 )
-
-
-
-

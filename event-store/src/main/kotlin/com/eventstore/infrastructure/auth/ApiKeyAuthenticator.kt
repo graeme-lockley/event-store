@@ -10,21 +10,22 @@ import java.time.Instant
 
 data class ApiKeyAuthResult(
     val userId: String,
-    val apiKeyId: String
+    val apiKeyId: String,
 )
 
 class ApiKeyAuthenticator(
     private val apiKeyProjectionService: ApiKeyProjectionService,
     private val apiKeyRepository: ApiKeyRepository,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) {
     suspend fun authenticate(apiKey: String): ApiKeyAuthResult {
         // Hash the provided key
         val keyHash = ApiKeyHasher.hash(apiKey)
 
         // Look up API key by hash from projection
-        val storedKey = apiKeyProjectionService.getApiKeyByKeyHash(keyHash)
-            ?: throw InvalidApiKeyException("API key not found")
+        val storedKey =
+            apiKeyProjectionService.getApiKeyByKeyHash(keyHash)
+                ?: throw InvalidApiKeyException("API key not found")
 
         // Validate key is active (not revoked, not expired)
         if (!storedKey.isActive) {
@@ -33,7 +34,7 @@ class ApiKeyAuthenticator(
                     storedKey.revokedAt != null -> "API key has been revoked"
                     storedKey.expiresAt != null && storedKey.expiresAt.isBefore(Instant.now()) -> "API key has expired"
                     else -> "API key is not active"
-                }
+                },
             )
         }
 
@@ -50,11 +51,7 @@ class ApiKeyAuthenticator(
 
         return ApiKeyAuthResult(
             userId = storedKey.userId,
-            apiKeyId = storedKey.id
+            apiKeyId = storedKey.id,
         )
     }
 }
-
-
-
-

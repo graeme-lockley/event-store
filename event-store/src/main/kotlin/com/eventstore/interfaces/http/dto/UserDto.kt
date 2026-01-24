@@ -5,18 +5,18 @@ data class UserCreateRequest(
     val name: String,
     val password: String,
     val metadata: Map<String, Any> = emptyMap(),
-    val primaryTenantId: String? = null
+    val primaryTenantId: String? = null,
 )
 
 data class UserUpdateRequest(
     val email: String? = null,
     val name: String? = null,
-    val metadata: Map<String, Any>? = null
+    val metadata: Map<String, Any>? = null,
 )
 
 data class AssignUserTenantRequest(
     val role: String? = null,
-    val isPrimary: Boolean = false
+    val isPrimary: Boolean = false,
 )
 
 data class UserResponse(
@@ -29,9 +29,9 @@ data class UserResponse(
     val lastLoginAt: String?,
     val emailVerified: Boolean,
     val primaryTenantId: String?,
-    val metadata: Map<String, Any>
+    val metadata: Map<String, Any>,
 )
 
 data class UserListResponse(
-    val users: List<UserResponse>
+    val users: List<UserResponse>,
 )

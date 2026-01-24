@@ -14,18 +14,19 @@ import java.util.UUID
 data class DeleteTenantRequest(
     val tenantId: UUID,
     val deletedBy: String = "system",
-    val reason: String? = null
+    val reason: String? = null,
 )
 
 class DeleteTenantService(
     private val tenantProjectionService: TenantProjectionService,
     config: Config,
-    eventPublisher: SystemEventPublisher
+    eventPublisher: SystemEventPublisher,
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: DeleteTenantRequest): Boolean {
         // Use getTenantByIdIncludingDeleted to check if tenant exists at all (including deleted)
-        val existing = tenantProjectionService.getTenantByIdIncludingDeleted(request.tenantId)
-            ?: throw TenantNotFoundException(request.tenantId)
+        val existing =
+            tenantProjectionService.getTenantByIdIncludingDeleted(request.tenantId)
+                ?: throw TenantNotFoundException(request.tenantId)
 
         // Rule D-3: Idempotent deletion - return false if already deleted, no error
         if (!existing.isActive) {
@@ -33,12 +34,13 @@ class DeleteTenantService(
         }
 
         val now = Instant.now()
-        val payload = TenantDeletedEvent(
-            tenantId = existing.tenantId,
-            deletedBy = request.deletedBy,
-            deletedAt = now,
-            reason = request.reason
-        )
+        val payload =
+            TenantDeletedEvent(
+                tenantId = existing.tenantId,
+                deletedBy = request.deletedBy,
+                deletedAt = now,
+                reason = request.reason,
+            )
 
         val eventPayload = payload.toPayload()
 
@@ -46,7 +48,7 @@ class DeleteTenantService(
             topicId = SystemTopics.TENANTS_TOPIC_ID,
             eventType = TenantEventType.DELETED,
             payload = eventPayload,
-            timestamp = now
+            timestamp = now,
         )
 
         return true

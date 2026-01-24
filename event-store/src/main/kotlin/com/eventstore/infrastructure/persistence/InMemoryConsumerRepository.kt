@@ -34,7 +34,10 @@ class InMemoryConsumerRepository : ConsumerRepository {
         }
     }
 
-    override suspend fun findByTenantAndNamespace(tenantName: String, namespaceName: String): List<Consumer> {
+    override suspend fun findByTenantAndNamespace(
+        tenantName: String,
+        namespaceName: String,
+    ): List<Consumer> {
         // Note: Topics are now identified by UUIDs (topicId), not qualified names.
         // This method cannot filter by tenant/namespace anymore since consumers don't store that information.
         // Return empty list as this method is deprecated with the topicId refactoring.
@@ -53,4 +56,3 @@ class InMemoryConsumerRepository : ConsumerRepository {
         }
     }
 }
-

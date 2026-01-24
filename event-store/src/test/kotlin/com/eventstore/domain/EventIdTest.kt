@@ -6,7 +6,6 @@ import java.util.*
 import kotlin.test.assertEquals
 
 class EventIdTest {
-
     @Test
     fun `should create valid EventId`() {
         val topicId = UUID.randomUUID()

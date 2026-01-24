@@ -14,14 +14,14 @@ import java.util.*
 data class EventRequest(
     val topicId: UUID,
     val type: String,
-    val payload: Map<String, Any>
+    val payload: Map<String, Any>,
 )
 
 class PublishEventsService(
     private val topicRepository: TopicRepository,
     private val eventRepository: EventRepository,
     private val schemaValidator: SchemaValidator,
-    private val eventDispatcher: EventDispatcher
+    private val eventDispatcher: EventDispatcher,
 ) {
     suspend fun execute(requests: List<EventRequest>): List<String> {
         require(requests.isNotEmpty()) { "Events must be a non-empty array" }
@@ -64,4 +64,3 @@ class PublishEventsService(
         return storedEvents.map { it.id.value }
     }
 }
-

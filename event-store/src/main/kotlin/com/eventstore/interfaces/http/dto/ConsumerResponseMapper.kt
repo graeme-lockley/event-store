@@ -9,16 +9,16 @@ import com.eventstore.domain.consumers.HttpConsumer
 object ConsumerResponseMapper {
     fun toDto(consumer: Consumer): ConsumerResponse {
         // Extract callback URL for HTTP consumers, use toString() for others
-        val callback = when (consumer) {
-            is HttpConsumer -> consumer.callbackUrl.toString()
-            else -> consumer.toString() // Fallback for non-HTTP consumers
-        }
+        val callback =
+            when (consumer) {
+                is HttpConsumer -> consumer.callbackUrl.toString()
+                else -> consumer.toString() // Fallback for non-HTTP consumers
+            }
 
         return ConsumerResponse(
             id = consumer.id,
             callback = callback,
-            topics = consumer.topics.mapKeys { it.key.toString() }
+            topics = consumer.topics.mapKeys { it.key.toString() },
         )
     }
 }
-

@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class ApiKeyGeneratorTest {
-
     @Test
     fun `generates key with correct prefix`() {
         val key = ApiKeyGenerator.generate()
@@ -31,7 +30,3 @@ class ApiKeyGeneratorTest {
         assertEquals(100, keys.size) // All should be unique
     }
 }
-
-
-
-

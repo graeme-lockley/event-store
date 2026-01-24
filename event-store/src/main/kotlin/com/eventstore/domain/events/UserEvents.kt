@@ -14,6 +14,7 @@ object UserEventType {
 
 sealed interface UserEventPayload {
     val type: String
+
     fun toPayload(): Map<String, Any>
 }
 
@@ -25,20 +26,21 @@ data class UserCreatedEvent(
     val status: UserStatus = UserStatus.ACTIVE,
     val createdBy: String = "system",
     val createdAt: Instant,
-    val metadata: Map<String, Any> = emptyMap()
+    val metadata: Map<String, Any> = emptyMap(),
 ) : UserEventPayload {
     override val type: String = UserEventType.CREATED
 
-    override fun toPayload(): Map<String, Any> = mapOf(
-        "userId" to userId,
-        "email" to email,
-        "name" to name,
-        "passwordHash" to passwordHash,
-        "status" to status.name,
-        "createdBy" to createdBy,
-        "createdAt" to createdAt.toString(),
-        "metadata" to metadata
-    )
+    override fun toPayload(): Map<String, Any> =
+        mapOf(
+            "userId" to userId,
+            "email" to email,
+            "name" to name,
+            "passwordHash" to passwordHash,
+            "status" to status.name,
+            "createdBy" to createdBy,
+            "createdAt" to createdAt.toString(),
+            "metadata" to metadata,
+        )
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): UserCreatedEvent {
@@ -61,18 +63,19 @@ data class UserUpdatedEvent(
     val name: String? = null,
     val updatedBy: String = "system",
     val updatedAt: Instant,
-    val metadata: Map<String, Any>? = null
+    val metadata: Map<String, Any>? = null,
 ) : UserEventPayload {
     override val type: String = UserEventType.UPDATED
 
-    override fun toPayload(): Map<String, Any> = buildMap {
-        put("userId", userId)
-        email?.let { put("email", it) }
-        name?.let { put("name", it) }
-        put("updatedBy", updatedBy)
-        put("updatedAt", updatedAt.toString())
-        metadata?.let { put("metadata", it) }
-    }
+    override fun toPayload(): Map<String, Any> =
+        buildMap {
+            put("userId", userId)
+            email?.let { put("email", it) }
+            name?.let { put("name", it) }
+            put("updatedBy", updatedBy)
+            put("updatedAt", updatedAt.toString())
+            metadata?.let { put("metadata", it) }
+        }
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): UserUpdatedEvent {
@@ -91,16 +94,17 @@ data class UserStatusChangedEvent(
     val userId: String,
     val status: UserStatus,
     val changedBy: String = "system",
-    val changedAt: Instant
+    val changedAt: Instant,
 ) : UserEventPayload {
     override val type: String = UserEventType.STATUS_CHANGED
 
-    override fun toPayload(): Map<String, Any> = mapOf(
-        "userId" to userId,
-        "status" to status.name,
-        "changedBy" to changedBy,
-        "changedAt" to changedAt.toString()
-    )
+    override fun toPayload(): Map<String, Any> =
+        mapOf(
+            "userId" to userId,
+            "status" to status.name,
+            "changedBy" to changedBy,
+            "changedAt" to changedAt.toString(),
+        )
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): UserStatusChangedEvent {
@@ -117,16 +121,17 @@ data class UserPasswordChangedEvent(
     val userId: String,
     val passwordHash: String,
     val changedBy: String = "system",
-    val changedAt: Instant
+    val changedAt: Instant,
 ) : UserEventPayload {
     override val type: String = UserEventType.PASSWORD_CHANGED
 
-    override fun toPayload(): Map<String, Any> = mapOf(
-        "userId" to userId,
-        "passwordHash" to passwordHash,
-        "changedBy" to changedBy,
-        "changedAt" to changedAt.toString()
-    )
+    override fun toPayload(): Map<String, Any> =
+        mapOf(
+            "userId" to userId,
+            "passwordHash" to passwordHash,
+            "changedBy" to changedBy,
+            "changedAt" to changedAt.toString(),
+        )
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): UserPasswordChangedEvent {
@@ -145,18 +150,19 @@ data class UserTenantAssignedEvent(
     val role: String? = null,
     val assignedBy: String = "system",
     val assignedAt: Instant,
-    val isPrimary: Boolean = false
+    val isPrimary: Boolean = false,
 ) : UserEventPayload {
     override val type: String = UserEventType.TENANT_ASSIGNED
 
-    override fun toPayload(): Map<String, Any> = buildMap {
-        put("userId", userId)
-        put("tenantId", tenantId)
-        role?.let { put("role", it) }
-        put("assignedBy", assignedBy)
-        put("assignedAt", assignedAt.toString())
-        put("isPrimary", isPrimary)
-    }
+    override fun toPayload(): Map<String, Any> =
+        buildMap {
+            put("userId", userId)
+            put("tenantId", tenantId)
+            role?.let { put("role", it) }
+            put("assignedBy", assignedBy)
+            put("assignedAt", assignedAt.toString())
+            put("isPrimary", isPrimary)
+        }
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): UserTenantAssignedEvent {
@@ -176,17 +182,18 @@ data class UserTenantRemovedEvent(
     val tenantId: String,
     val removedBy: String = "system",
     val removedAt: Instant,
-    val reason: String? = null
+    val reason: String? = null,
 ) : UserEventPayload {
     override val type: String = UserEventType.TENANT_REMOVED
 
-    override fun toPayload(): Map<String, Any> = buildMap {
-        put("userId", userId)
-        put("tenantId", tenantId)
-        put("removedBy", removedBy)
-        put("removedAt", removedAt.toString())
-        reason?.let { put("reason", it) }
-    }
+    override fun toPayload(): Map<String, Any> =
+        buildMap {
+            put("userId", userId)
+            put("tenantId", tenantId)
+            put("removedBy", removedBy)
+            put("removedAt", removedAt.toString())
+            reason?.let { put("reason", it) }
+        }
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): UserTenantRemovedEvent {

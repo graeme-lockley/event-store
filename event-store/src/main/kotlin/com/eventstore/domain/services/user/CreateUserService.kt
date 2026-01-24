@@ -23,14 +23,14 @@ data class CreateUserRequest(
     val status: UserStatus = UserStatus.ACTIVE,
     val createdBy: String = "system",
     val metadata: Map<String, Any> = emptyMap(),
-    val primaryTenantId: String? = null
+    val primaryTenantId: String? = null,
 )
 
 class CreateUserService(
     private val tenantProjectionService: TenantProjectionService,
     private val userProjectionService: UserProjectionService,
     config: Config,
-    eventPublisher: SystemEventPublisher
+    eventPublisher: SystemEventPublisher,
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateUserRequest): User {
         if (userProjectionService.userExistsByEmail(request.email)) {
@@ -47,22 +47,23 @@ class CreateUserService(
         val userId = UUID.randomUUID().toString()
         val passwordHash = BCrypt.hashpw(request.password, BCrypt.gensalt())
 
-        val payload = UserCreatedEvent(
-            userId = userId,
-            email = request.email,
-            name = request.name,
-            passwordHash = passwordHash,
-            status = request.status,
-            createdBy = request.createdBy,
-            createdAt = now,
-            metadata = request.metadata
-        )
+        val payload =
+            UserCreatedEvent(
+                userId = userId,
+                email = request.email,
+                name = request.name,
+                passwordHash = passwordHash,
+                status = request.status,
+                createdBy = request.createdBy,
+                createdAt = now,
+                metadata = request.metadata,
+            )
 
         eventPublisher.publishEvent(
             topicId = SystemTopics.USERS_TOPIC_ID,
             eventType = UserEventType.CREATED,
             payload = payload.toPayload(),
-            timestamp = now
+            timestamp = now,
         )
 
         return User(
@@ -73,8 +74,7 @@ class CreateUserService(
             status = request.status,
             createdAt = now,
             metadata = request.metadata,
-            primaryTenantId = request.primaryTenantId
+            primaryTenantId = request.primaryTenantId,
         )
     }
 }
-

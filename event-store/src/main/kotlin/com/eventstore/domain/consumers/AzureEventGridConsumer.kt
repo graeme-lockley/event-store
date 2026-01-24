@@ -10,9 +10,8 @@ class AzureEventGridConsumer(
     id: String,
     val endpointUrl: String,
     val accessKey: String,
-    topics: Map<UUID, String?>
+    topics: Map<UUID, String?>,
 ) : Consumer(id, topics) {
-
     override fun getType(): ConsumerType = ConsumerType.AZURE_EVENT_GRID
 
     override suspend fun deliver(events: List<Event>): DeliveryResult {
@@ -20,7 +19,7 @@ class AzureEventGridConsumer(
 
         return DeliveryResult(
             success = false,
-            error = "Azure Event Grid delivery not yet implemented"
+            error = "Azure Event Grid delivery not yet implemented",
         )
     }
 
@@ -28,13 +27,15 @@ class AzureEventGridConsumer(
         return "AzureEventGridConsumer(id=$id, endpointUrl=$endpointUrl, topics=$topics)"
     }
 
-    override fun withUpdatedLastEventId(topicId: UUID, eventId: String): Consumer {
+    override fun withUpdatedLastEventId(
+        topicId: UUID,
+        eventId: String,
+    ): Consumer {
         return AzureEventGridConsumer(
             id = id,
             endpointUrl = endpointUrl,
             accessKey = accessKey,
-            topics = topics + (topicId to eventId)
+            topics = topics + (topicId to eventId),
         )
     }
 }
-

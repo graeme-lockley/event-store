@@ -8,6 +8,5 @@ import com.eventstore.Config
  */
 abstract class BaseSystemService(
     protected val config: Config,
-    protected val eventPublisher: SystemEventPublisher
+    protected val eventPublisher: SystemEventPublisher,
 )
-

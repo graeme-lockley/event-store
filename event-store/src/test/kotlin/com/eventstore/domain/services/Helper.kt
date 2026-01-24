@@ -1,6 +1,5 @@
 package com.eventstore.domain.services
 
-import ch.qos.logback.classic.Level as LogbackLevel
 import ch.qos.logback.classic.LoggerContext
 import com.eventstore.Config
 import com.eventstore.domain.Application
@@ -19,45 +18,44 @@ import com.eventstore.infrastructure.persistence.InMemoryTopicRepository
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.*
+import ch.qos.logback.classic.Level as LogbackLevel
 
 data class PopulateEventStoreState(
     val topicName: String = "user-events",
     val topicRepository: TopicRepository = InMemoryTopicRepository(),
     val eventRepository: EventRepository = InMemoryEventRepository(),
     val consumerRepository: ConsumerRepository = InMemoryConsumerRepository(),
-    val schemaValidator: SchemaValidator = JsonSchemaValidator()
+    val schemaValidator: SchemaValidator = JsonSchemaValidator(),
 ) {
     var topicId: UUID? = null
     var namespaceId: UUID? = null
 
-    suspend fun findTopic(topicId: UUID) =
-        topicRepository.getTopic(topicId)
+    suspend fun findTopic(topicId: UUID) = topicRepository.getTopic(topicId)
 
-    fun hasSchema(topicId: UUID, eventType: String) =
-        schemaValidator.hasSchema(topicId, eventType)
+    fun hasSchema(
+        topicId: UUID,
+        eventType: String,
+    ) = schemaValidator.hasSchema(topicId, eventType)
 
-    suspend fun getEvents(topicId: UUID) =
-        eventRepository.getEvents(topicId)
+    suspend fun getEvents(topicId: UUID) = eventRepository.getEvents(topicId)
 
-    suspend fun topicExists(topicId: UUID): Boolean =
-        topicRepository.topicExists(topicId)
+    suspend fun topicExists(topicId: UUID): Boolean = topicRepository.topicExists(topicId)
 
-    suspend fun findConsumer(consumerId: String) =
-        consumerRepository.findById(consumerId)
+    suspend fun findConsumer(consumerId: String) = consumerRepository.findById(consumerId)
 
-    suspend fun findConsumers() =
-        consumerRepository.findAll()
+    suspend fun findConsumers() = consumerRepository.findAll()
 }
 
 suspend fun populateEventStore(state: PopulateEventStoreState) {
-    val topicSchemas = listOf(
-        Schema(
-            eventType = "user.created",
-            properties = mapOf("id" to "string", "name" to "string"),
-            required = listOf("id", "name")
-        ),
-        Schema(eventType = "user.updated", properties = mapOf("id" to "string", "name" to "string")),
-    )
+    val topicSchemas =
+        listOf(
+            Schema(
+                eventType = "user.created",
+                properties = mapOf("id" to "string", "name" to "string"),
+                required = listOf("id", "name"),
+            ),
+            Schema(eventType = "user.updated", properties = mapOf("id" to "string", "name" to "string")),
+        )
 
     val namespaceId = UUID.randomUUID()
     val topicId = UUID.randomUUID()
@@ -68,7 +66,7 @@ suspend fun populateEventStore(state: PopulateEventStoreState) {
         topicId,
         namespaceId,
         state.topicName,
-        topicSchemas
+        topicSchemas,
     )
     state.schemaValidator.registerSchemas(topicId, topicSchemas)
 
@@ -77,20 +75,22 @@ suspend fun populateEventStore(state: PopulateEventStoreState) {
         otherTopicId,
         namespaceId,
         "other-user-events",
-        topicSchemas
+        topicSchemas,
     )
     state.schemaValidator.registerSchemas(otherTopicId, topicSchemas)
 
-    val requests = listOf(
-        EventRequest(topicId, "user.created", mapOf("id" to "1", "name" to "Alice")),
-        EventRequest(topicId, "user.created", mapOf("id" to "2", "name" to "Bob")),
-        EventRequest(topicId, "user.updated", mapOf("id" to "1", "name" to "Alice Smith")),
-    )
+    val requests =
+        listOf(
+            EventRequest(topicId, "user.created", mapOf("id" to "1", "name" to "Alice")),
+            EventRequest(topicId, "user.created", mapOf("id" to "2", "name" to "Bob")),
+            EventRequest(topicId, "user.updated", mapOf("id" to "1", "name" to "Alice Smith")),
+        )
 
     val timestamp = Instant.now()
     for (request in requests) {
-        val topic = state.topicRepository.getTopic(request.topicId)
-            ?: throw TopicNotFoundException(request.topicId.toString())
+        val topic =
+            state.topicRepository.getTopic(request.topicId)
+                ?: throw TopicNotFoundException(request.topicId.toString())
 
         val nextSequence = topic.nextSequence()
         val eventId = EventId.create(request.topicId, nextSequence)
@@ -100,7 +100,7 @@ suspend fun populateEventStore(state: PopulateEventStoreState) {
             type = request.type,
             payload = request.payload,
             eventId = eventId,
-            timestamp = timestamp
+            timestamp = timestamp,
         )
 
         // Update topic sequence
@@ -115,15 +115,16 @@ suspend fun createEventStore(topicName: String = "user-events"): PopulateEventSt
 }
 
 fun createApplication(): Application {
-    val config = Config(
-        port = 0,
-        dataDir = "./data",
-        configDir = "./config",
-        maxBodyBytes = 1024,
-        rateLimitPerMinute = 10,
-        authEnabled = false,
-        silent = true
-    )
+    val config =
+        Config(
+            port = 0,
+            dataDir = "./data",
+            configDir = "./config",
+            maxBodyBytes = 1024,
+            rateLimitPerMinute = 10,
+            authEnabled = false,
+            silent = true,
+        )
 
     // Configure logging levels based on silent mode - must happen BEFORE creating Application
     // because Application's init block runs bootstrap which logs at INFO level
@@ -144,10 +145,11 @@ fun createApplication(): Application {
         }
     }
 
-    val application = Application(
-        bootstrap = true,
-        config = config
-    )
+    val application =
+        Application(
+            bootstrap = true,
+            config = config,
+        )
 
     return application
 }

@@ -12,7 +12,7 @@ import java.util.*
  */
 class AuthorizationService(
     private val permissionProjectionService: PermissionProjectionService,
-    private val resourceResolver: ResourceResolver
+    private val resourceResolver: ResourceResolver,
 ) {
     /**
      * Check if a principal has permission to perform an action.
@@ -29,41 +29,46 @@ class AuthorizationService(
     suspend fun checkPermission(
         principalId: String,
         resourceType: ResourceType,
-        resourceName: String?,  // Human-readable name from URL
+        // Human-readable name from URL
+        resourceName: String?,
         requiredPermission: Permission,
-        tenantName: String,      // Human-readable tenant name from URL
+        // Human-readable tenant name from URL
+        tenantName: String,
         namespaceName: String? = null,
-        topicName: String? = null
+        topicName: String? = null,
     ): Boolean {
         // Resolve human-readable names to resource UUIDs
         val tenantResourceId = resourceResolver.resolveTenantName(tenantName)
-        val namespaceResourceId = namespaceName?.let {
-            resourceResolver.resolveNamespaceName(tenantResourceId, it)
-        }
-        // If topicName is provided, it should be a UUID string (API uses UUIDs)
-        val topicId = topicName?.let {
-            requireNotNull(namespaceResourceId) { "Namespace required for topic" }
-            // topicName is actually a UUID string when provided from API
-            try {
-                UUID.fromString(it)
-            } catch (e: IllegalArgumentException) {
-                throw com.eventstore.domain.exceptions.TopicNotFoundException(it)
+        val namespaceResourceId =
+            namespaceName?.let {
+                resourceResolver.resolveNamespaceName(tenantResourceId, it)
             }
-        }
+        // If topicName is provided, it should be a UUID string (API uses UUIDs)
+        val topicId =
+            topicName?.let {
+                requireNotNull(namespaceResourceId) { "Namespace required for topic" }
+                // topicName is actually a UUID string when provided from API
+                try {
+                    UUID.fromString(it)
+                } catch (e: IllegalArgumentException) {
+                    throw com.eventstore.domain.exceptions.TopicNotFoundException(it)
+                }
+            }
 
         // Determine target resourceId based on resourceType
         // For CREATE operations, resourceId should be null (creating a new resource)
         // For other operations, use the resolved resourceId
-        val targetResourceId = when (resourceType) {
-            ResourceType.TENANT -> {
-                // For tenant operations, if resourceName is null, it's a CREATE operation
-                // Otherwise, use the resolved tenantResourceId
-                if (resourceName == null) null else tenantResourceId
+        val targetResourceId =
+            when (resourceType) {
+                ResourceType.TENANT -> {
+                    // For tenant operations, if resourceName is null, it's a CREATE operation
+                    // Otherwise, use the resolved tenantResourceId
+                    if (resourceName == null) null else tenantResourceId
+                }
+                ResourceType.NAMESPACE -> namespaceResourceId
+                ResourceType.TOPIC -> topicId
+                else -> resourceName?.let { UUID.fromString(it) } // For USER, CONSUMER, etc., resourceId comes from parameter
             }
-            ResourceType.NAMESPACE -> namespaceResourceId
-            ResourceType.TOPIC -> topicId
-            else -> resourceName?.let { UUID.fromString(it) }  // For USER, CONSUMER, etc., resourceId comes from parameter
-        }
 
         return permissionProjectionService.hasPermission(
             principalId = principalId,
@@ -72,7 +77,7 @@ class AuthorizationService(
             permission = requiredPermission,
             tenantResourceId = tenantResourceId,
             namespaceResourceId = namespaceResourceId,
-            topicId = topicId
+            topicId = topicId,
         )
     }
 }

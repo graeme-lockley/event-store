@@ -20,100 +20,110 @@ class GetHealthStatusServiceTest {
     private lateinit var topicId: UUID
 
     @BeforeEach
-    fun setup() = runTest {
-        application = createApplication()
-        // Create tenant and namespace
-        val tenant = application.createTenant("default")
-        val tenantId = tenant.tenantId
-        val namespace = application.createNamespace(tenantId, "default")
-        namespaceId = namespace.namespaceId
-        // Create topic
-        val topic = application.createTopic(
-            name = topicName,
-            schemas = listOf(
-                Schema(
-                    eventType = "user.created",
-                    properties = mapOf("id" to "string", "name" to "string"),
-                    required = listOf("id", "name")
+    fun setup() =
+        runTest {
+            application = createApplication()
+            // Create tenant and namespace
+            val tenant = application.createTenant("default")
+            val tenantId = tenant.tenantId
+            val namespace = application.createNamespace(tenantId, "default")
+            namespaceId = namespace.namespaceId
+            // Create topic
+            val topic =
+                application.createTopic(
+                    name = topicName,
+                    schemas =
+                        listOf(
+                            Schema(
+                                eventType = "user.created",
+                                properties = mapOf("id" to "string", "name" to "string"),
+                                required = listOf("id", "name"),
+                            ),
+                        ),
+                    namespaceId = namespaceId,
                 )
-            ),
-            namespaceId = namespaceId
-        )
-        topicId = topic.topicId
-    }
+            topicId = topic.topicId
+        }
 
     private suspend fun getInitialConsumerCount(): Int {
         return application.consumerRepository.count()
     }
 
     @Test
-    fun `should return health status with consumer count and dispatchers`() = runTest {
-        val initialConsumerCount = getInitialConsumerCount()
+    fun `should return health status with consumer count and dispatchers`() =
+        runTest {
+            val initialConsumerCount = getInitialConsumerCount()
 
-        val request1 = HttpConsumerRegistrationRequest(
-            callbackUrl = "https://example.com/webhook1",
-            topics = mapOf(topicId to null)
-        )
-        val request2 = HttpConsumerRegistrationRequest(
-            callbackUrl = "https://example.com/webhook2",
-            topics = mapOf(topicId to null)
-        )
-        val request3 = HttpConsumerRegistrationRequest(
-            callbackUrl = "https://example.com/webhook3",
-            topics = mapOf(topicId to null)
-        )
-
-        application.registerConsumer(request1)
-        application.registerConsumer(request2)
-        application.registerConsumer(request3)
-
-        // Publish an event to trigger dispatcher processing
-        application.publishEvents(
-            listOf(
-                com.eventstore.domain.services.event.EventRequest(
-                    topicId = topicId,
-                    type = "user.created",
-                    payload = mapOf("id" to "1", "name" to "Alice")
+            val request1 =
+                HttpConsumerRegistrationRequest(
+                    callbackUrl = "https://example.com/webhook1",
+                    topics = mapOf(topicId to null),
                 )
+            val request2 =
+                HttpConsumerRegistrationRequest(
+                    callbackUrl = "https://example.com/webhook2",
+                    topics = mapOf(topicId to null),
+                )
+            val request3 =
+                HttpConsumerRegistrationRequest(
+                    callbackUrl = "https://example.com/webhook3",
+                    topics = mapOf(topicId to null),
+                )
+
+            application.registerConsumer(request1)
+            application.registerConsumer(request2)
+            application.registerConsumer(request3)
+
+            // Publish an event to trigger dispatcher processing
+            application.publishEvents(
+                listOf(
+                    com.eventstore.domain.services.event.EventRequest(
+                        topicId = topicId,
+                        type = "user.created",
+                        payload = mapOf("id" to "1", "name" to "Alice"),
+                    ),
+                ),
             )
-        )
 
-        val result = application.getHealthStatus()
+            val result = application.getHealthStatus()
 
-        assertEquals("healthy", result.status)
-        assertEquals(initialConsumerCount + 3, result.consumers)
-        // Dispatchers should include the topic that was processed
-        assertTrue(result.runningDispatchers.isNotEmpty())
-    }
-
-    @Test
-    fun `should return initial consumer count when no new consumers exist`() = runTest {
-        val initialConsumerCount = getInitialConsumerCount()
-        val result = application.getHealthStatus()
-
-        assertEquals("healthy", result.status)
-        assertEquals(initialConsumerCount, result.consumers)
-        // Bootstrap creates system consumers which trigger dispatchers
-        assertTrue(result.runningDispatchers.isNotEmpty())
-    }
+            assertEquals("healthy", result.status)
+            assertEquals(initialConsumerCount + 3, result.consumers)
+            // Dispatchers should include the topic that was processed
+            assertTrue(result.runningDispatchers.isNotEmpty())
+        }
 
     @Test
-    fun `should include dispatchers for registered consumers`() = runTest {
-        val initialConsumerCount = getInitialConsumerCount()
+    fun `should return initial consumer count when no new consumers exist`() =
+        runTest {
+            val initialConsumerCount = getInitialConsumerCount()
+            val result = application.getHealthStatus()
 
-        // Create a consumer - this triggers ensureDispatchersRunning which adds to processedTopics
-        val request = HttpConsumerRegistrationRequest(
-            callbackUrl = "https://example.com/webhook",
-            topics = mapOf(topicId to null)
-        )
+            assertEquals("healthy", result.status)
+            assertEquals(initialConsumerCount, result.consumers)
+            // Bootstrap creates system consumers which trigger dispatchers
+            assertTrue(result.runningDispatchers.isNotEmpty())
+        }
 
-        application.registerConsumer(request)
+    @Test
+    fun `should include dispatchers for registered consumers`() =
+        runTest {
+            val initialConsumerCount = getInitialConsumerCount()
 
-        val result = application.getHealthStatus()
+            // Create a consumer - this triggers ensureDispatchersRunning which adds to processedTopics
+            val request =
+                HttpConsumerRegistrationRequest(
+                    callbackUrl = "https://example.com/webhook",
+                    topics = mapOf(topicId to null),
+                )
 
-        assertEquals("healthy", result.status)
-        assertEquals(initialConsumerCount + 1, result.consumers)
-        // Registering a consumer triggers ensureDispatchersRunning, so dispatcher is tracked
-        assertTrue(result.runningDispatchers.contains(topicId.toString()))
-    }
+            application.registerConsumer(request)
+
+            val result = application.getHealthStatus()
+
+            assertEquals("healthy", result.status)
+            assertEquals(initialConsumerCount + 1, result.consumers)
+            // Registering a consumer triggers ensureDispatchersRunning, so dispatcher is tracked
+            assertTrue(result.runningDispatchers.contains(topicId.toString()))
+        }
 }

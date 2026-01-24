@@ -13,29 +13,24 @@ interface EventRepository {
         type: String,
         payload: Map<String, Any>,
         eventId: EventId,
-        timestamp: java.time.Instant
+        timestamp: java.time.Instant,
     ): Event
 
     suspend fun storeEvent(event: Event): Event
 
-    suspend fun storeEvents(
-        events: List<Event>
-    ): List<Event>
+    suspend fun storeEvents(events: List<Event>): List<Event>
 
     suspend fun getEvent(
         topicId: UUID,
-        eventId: EventId
+        eventId: EventId,
     ): Event?
 
     suspend fun getEvents(
         topicId: UUID,
         sinceEventId: EventId? = null,
         date: String? = null,
-        limit: Int? = null
+        limit: Int? = null,
     ): List<Event>
 
-    suspend fun getLatestEventId(
-        topicId: UUID
-    ): EventId?
+    suspend fun getLatestEventId(topicId: UUID): EventId?
 }
-

@@ -24,174 +24,188 @@ class RevokePermissionServiceTest {
     private lateinit var userId: String
 
     @BeforeEach
-    fun setup() = runTest {
-        application = createApplication()
-        tenantName = "test-tenant"
-        userId = UUID.randomUUID().toString()
+    fun setup() =
+        runTest {
+            application = createApplication()
+            tenantName = "test-tenant"
+            userId = UUID.randomUUID().toString()
 
-        // Create tenant
-        application.createTenant(tenantName)
-    }
-
-    @Test
-    fun `revokes permission and emits event`() = runTest {
-        val permissions = setOf(Permission.READ, Permission.UPDATE)
-
-        val tenant = application.getTenant(tenantName)!!
-        
-        // First grant permission
-        application.grantPermission(
-            GrantPermissionRequest(
-                principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                tenantId = tenant.tenantId,
-                permissions = permissions,
-                grantedBy = "admin"
-            )
-        )
-
-        // Then revoke permission
-        val event = application.revokePermission(
-            RevokePermissionRequest(
-                principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                tenantId = tenant.tenantId,
-                permissions = permissions,
-                revokedBy = "admin"
-            )
-        )
-
-        assertEquals(userId, event.principalId)
-        assertEquals(PrincipalType.USER, event.principalType)
-        assertEquals(ResourceType.TENANT, event.resourceType)
-        assertEquals(permissions, event.permissions)
-
-        // Verify event was stored
-        val storedEvents = application.getEvents(
-            topicId = SystemTopics.PERMISSIONS_TOPIC_ID
-        )
-        val revokedEvents = storedEvents.filter { it.type == PermissionEventType.REVOKED }
-        assertTrue(revokedEvents.isNotEmpty())
-        assertEquals(PermissionEventType.REVOKED, revokedEvents.last().type)
-    }
+            // Create tenant
+            application.createTenant(tenantName)
+        }
 
     @Test
-    fun `revokes permission for specific resource`() = runTest {
-        val tenant = application.getTenant(tenantName)!!
-        // RevokePermissionService doesn't use resourceName parameter the same way as GrantPermissionService
-        // It resolves resourceId based on resourceType, so we test that it resolves correctly
-        val event = application.revokePermission(
-            RevokePermissionRequest(
-                principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                tenantId = tenant.tenantId,
-                permissions = setOf(Permission.READ),
-                revokedBy = "admin"
-            )
-        )
+    fun `revokes permission and emits event`() =
+        runTest {
+            val permissions = setOf(Permission.READ, Permission.UPDATE)
 
-        // Verify event was created with correct tenant resourceId
-        assertNotNull(event.tenantResourceId)
-        assertEquals(ResourceType.TENANT, event.resourceType)
-    }
+            val tenant = application.getTenant(tenantName)!!
+
+            // First grant permission
+            application.grantPermission(
+                GrantPermissionRequest(
+                    principalId = userId,
+                    principalType = PrincipalType.USER,
+                    resourceType = ResourceType.TENANT,
+                    tenantId = tenant.tenantId,
+                    permissions = permissions,
+                    grantedBy = "admin",
+                ),
+            )
+
+            // Then revoke permission
+            val event =
+                application.revokePermission(
+                    RevokePermissionRequest(
+                        principalId = userId,
+                        principalType = PrincipalType.USER,
+                        resourceType = ResourceType.TENANT,
+                        tenantId = tenant.tenantId,
+                        permissions = permissions,
+                        revokedBy = "admin",
+                    ),
+                )
+
+            assertEquals(userId, event.principalId)
+            assertEquals(PrincipalType.USER, event.principalType)
+            assertEquals(ResourceType.TENANT, event.resourceType)
+            assertEquals(permissions, event.permissions)
+
+            // Verify event was stored
+            val storedEvents =
+                application.getEvents(
+                    topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                )
+            val revokedEvents = storedEvents.filter { it.type == PermissionEventType.REVOKED }
+            assertTrue(revokedEvents.isNotEmpty())
+            assertEquals(PermissionEventType.REVOKED, revokedEvents.last().type)
+        }
 
     @Test
-    fun `revokes permission for namespace`() = runTest {
-        val namespaceName = "test-namespace"
+    fun `revokes permission for specific resource`() =
+        runTest {
+            val tenant = application.getTenant(tenantName)!!
+            // RevokePermissionService doesn't use resourceName parameter the same way as GrantPermissionService
+            // It resolves resourceId based on resourceType, so we test that it resolves correctly
+            val event =
+                application.revokePermission(
+                    RevokePermissionRequest(
+                        principalId = userId,
+                        principalType = PrincipalType.USER,
+                        resourceType = ResourceType.TENANT,
+                        tenantId = tenant.tenantId,
+                        permissions = setOf(Permission.READ),
+                        revokedBy = "admin",
+                    ),
+                )
 
-        // Create namespace
-        val tenant = application.getTenant(tenantName)!!
-        val namespace = application.createNamespace(tenant.tenantId, namespaceName)
-
-        val event = application.revokePermission(
-            RevokePermissionRequest(
-                principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.NAMESPACE,
-                tenantId = tenant.tenantId,
-                resourceId = namespace.namespaceId.toString(),
-                permissions = setOf(Permission.READ),
-                revokedBy = "admin"
-            )
-        )
-
-        assertEquals(ResourceType.NAMESPACE, event.resourceType)
-        assertNotNull(event.namespaceResourceId)
-        assertEquals(namespace.namespaceId.toString(), event.namespaceResourceId)
-    }
+            // Verify event was created with correct tenant resourceId
+            assertNotNull(event.tenantResourceId)
+            assertEquals(ResourceType.TENANT, event.resourceType)
+        }
 
     @Test
-    fun `revokes permission for topic`() = runTest {
-        val namespaceName = "test-namespace"
-        val topicName = "test-topic"
+    fun `revokes permission for namespace`() =
+        runTest {
+            val namespaceName = "test-namespace"
 
-        // Create namespace and topic
-        val tenant = application.getTenant(tenantName)!!
-        val namespace = application.createNamespace(tenant.tenantId, namespaceName)
-        val topic = application.createTopic(
-            name = topicName,
-            schemas = listOf(Schema(eventType = "test.event")),
-            namespaceId = namespace.namespaceId
-        )
+            // Create namespace
+            val tenant = application.getTenant(tenantName)!!
+            val namespace = application.createNamespace(tenant.tenantId, namespaceName)
 
-        val event = application.revokePermission(
-            RevokePermissionRequest(
-                principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TOPIC,
-                tenantId = tenant.tenantId,
-                resourceId = topic.topicId.toString(),
-                permissions = setOf(Permission.READ),
-                revokedBy = "admin"
-            )
-        )
+            val event =
+                application.revokePermission(
+                    RevokePermissionRequest(
+                        principalId = userId,
+                        principalType = PrincipalType.USER,
+                        resourceType = ResourceType.NAMESPACE,
+                        tenantId = tenant.tenantId,
+                        resourceId = namespace.namespaceId.toString(),
+                        permissions = setOf(Permission.READ),
+                        revokedBy = "admin",
+                    ),
+                )
 
-        assertEquals(ResourceType.TOPIC, event.resourceType)
-        assertNotNull(event.topicId)
-        assertEquals(topic.topicId.toString(), event.topicId)
-    }
+            assertEquals(ResourceType.NAMESPACE, event.resourceType)
+            assertNotNull(event.namespaceResourceId)
+            assertEquals(namespace.namespaceId.toString(), event.namespaceResourceId)
+        }
 
     @Test
-    fun `revokes permission with reason`() = runTest {
-        val tenant = application.getTenant(tenantName)!!
-        val reason = "Access no longer needed"
+    fun `revokes permission for topic`() =
+        runTest {
+            val namespaceName = "test-namespace"
+            val topicName = "test-topic"
 
-        val event = application.revokePermission(
-            RevokePermissionRequest(
-                principalId = userId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                tenantId = tenant.tenantId,
-                permissions = setOf(Permission.READ),
-                revokedBy = "admin",
-                reason = reason
-            )
-        )
+            // Create namespace and topic
+            val tenant = application.getTenant(tenantName)!!
+            val namespace = application.createNamespace(tenant.tenantId, namespaceName)
+            val topic =
+                application.createTopic(
+                    name = topicName,
+                    schemas = listOf(Schema(eventType = "test.event")),
+                    namespaceId = namespace.namespaceId,
+                )
 
-        assertEquals(reason, event.reason)
-    }
+            val event =
+                application.revokePermission(
+                    RevokePermissionRequest(
+                        principalId = userId,
+                        principalType = PrincipalType.USER,
+                        resourceType = ResourceType.TOPIC,
+                        tenantId = tenant.tenantId,
+                        resourceId = topic.topicId.toString(),
+                        permissions = setOf(Permission.READ),
+                        revokedBy = "admin",
+                    ),
+                )
+
+            assertEquals(ResourceType.TOPIC, event.resourceType)
+            assertNotNull(event.topicId)
+            assertEquals(topic.topicId.toString(), event.topicId)
+        }
 
     @Test
-    fun `revokes permission for API key principal`() = runTest {
-        val tenant = application.getTenant(tenantName)!!
-        val apiKeyId = UUID.randomUUID().toString()
+    fun `revokes permission with reason`() =
+        runTest {
+            val tenant = application.getTenant(tenantName)!!
+            val reason = "Access no longer needed"
 
-        val event = application.revokePermission(
-            RevokePermissionRequest(
-                principalId = apiKeyId,
-                principalType = PrincipalType.API_KEY,
-                resourceType = ResourceType.TENANT,
-                tenantId = tenant.tenantId,
-                permissions = setOf(Permission.READ),
-                revokedBy = "admin"
-            )
-        )
+            val event =
+                application.revokePermission(
+                    RevokePermissionRequest(
+                        principalId = userId,
+                        principalType = PrincipalType.USER,
+                        resourceType = ResourceType.TENANT,
+                        tenantId = tenant.tenantId,
+                        permissions = setOf(Permission.READ),
+                        revokedBy = "admin",
+                        reason = reason,
+                    ),
+                )
 
-        assertEquals(apiKeyId, event.principalId)
-        assertEquals(PrincipalType.API_KEY, event.principalType)
-    }
+            assertEquals(reason, event.reason)
+        }
+
+    @Test
+    fun `revokes permission for API key principal`() =
+        runTest {
+            val tenant = application.getTenant(tenantName)!!
+            val apiKeyId = UUID.randomUUID().toString()
+
+            val event =
+                application.revokePermission(
+                    RevokePermissionRequest(
+                        principalId = apiKeyId,
+                        principalType = PrincipalType.API_KEY,
+                        resourceType = ResourceType.TENANT,
+                        tenantId = tenant.tenantId,
+                        permissions = setOf(Permission.READ),
+                        revokedBy = "admin",
+                    ),
+                )
+
+            assertEquals(apiKeyId, event.principalId)
+            assertEquals(PrincipalType.API_KEY, event.principalType)
+        }
 }
-

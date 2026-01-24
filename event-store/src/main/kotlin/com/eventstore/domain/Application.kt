@@ -4,6 +4,7 @@ import com.eventstore.Config
 import com.eventstore.domain.events.PermissionGrantedEvent
 import com.eventstore.domain.events.PermissionRevokedEvent
 import com.eventstore.domain.ports.outbound.*
+import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.domain.services.SystemEventPublisher
 import com.eventstore.domain.services.apikey.*
 import com.eventstore.domain.services.auth.ResourceResolverImpl
@@ -24,7 +25,6 @@ import com.eventstore.domain.services.topic.GetTopicsService
 import com.eventstore.domain.services.topic.UpdateTopicSchemasService
 import com.eventstore.domain.services.user.*
 import com.eventstore.domain.tenants.SystemTopics
-import com.eventstore.domain.ports.outbound.EventDispatcher
 import com.eventstore.infrastructure.background.AsyncDispatcherManager
 import com.eventstore.infrastructure.background.SyncDispatcherManager
 import com.eventstore.infrastructure.bootstrap.BootstrapServiceImpl
@@ -52,12 +52,13 @@ class Application(
     val consumerFactory: ConsumerFactory = ConsumerFactoryImpl(),
     val schemaValidator: SchemaValidator = JsonSchemaValidator(),
     val config: Config = Config.fromEnvironment(),
-    providedDispatcherManager: EventDispatcher? = null
+    providedDispatcherManager: EventDispatcher? = null,
 ) {
-    val dispatcherManager: EventDispatcher = providedDispatcherManager ?: SyncDispatcherManager(
-        consumerRepository = consumerRepository,
-        eventRepository = eventRepository
-    )
+    val dispatcherManager: EventDispatcher =
+        providedDispatcherManager ?: SyncDispatcherManager(
+            consumerRepository = consumerRepository,
+            eventRepository = eventRepository,
+        )
 
     val tenantProjectionService = TenantProjectionService(tenantRepository)
     val namespaceProjectionService =
@@ -91,10 +92,10 @@ class Application(
         CreateNamespaceService(tenantProjectionService, namespaceProjectionService, tenantUsageService, config, systemEventPublisher)
 
     private val deleteNamespaceService: DeleteNamespaceService =
-        DeleteNamespaceService( namespaceProjectionService, config, systemEventPublisher)
+        DeleteNamespaceService(namespaceProjectionService, config, systemEventPublisher)
 
     private val updateNamespaceService: UpdateNamespaceService =
-        UpdateNamespaceService( namespaceProjectionService, config, systemEventPublisher)
+        UpdateNamespaceService(namespaceProjectionService, config, systemEventPublisher)
 
     val getNamespaceService: GetNamespaceService =
         GetNamespaceService(namespaceProjectionService)
@@ -162,7 +163,7 @@ class Application(
     private val grantPermissionService: GrantPermissionService =
         GrantPermissionService(
             config,
-            systemEventPublisher
+            systemEventPublisher,
         )
 
     private val revokePermissionService: RevokePermissionService =
@@ -179,7 +180,7 @@ class Application(
                     eventRepository,
                     topicRepository,
                     schemaValidator,
-                    objectMapper
+                    objectMapper,
                 ).run()
             }
 
@@ -188,32 +189,32 @@ class Application(
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> tenantProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.TENANTS_TOPIC_ID to null)
-                )
+                    topics = mapOf(SystemTopics.TENANTS_TOPIC_ID to null),
+                ),
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> namespaceProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.NAMESPACES_TOPIC_ID to null)
-                )
+                    topics = mapOf(SystemTopics.NAMESPACES_TOPIC_ID to null),
+                ),
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> userProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.USERS_TOPIC_ID to null)
-                )
+                    topics = mapOf(SystemTopics.USERS_TOPIC_ID to null),
+                ),
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> permissionProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.PERMISSIONS_TOPIC_ID to null)
-                )
+                    topics = mapOf(SystemTopics.PERMISSIONS_TOPIC_ID to null),
+                ),
             )
             registerConsumerService.execute(
                 InMemoryConsumerRegistrationRequest(
                     handler = { events -> apiKeyProjectionService.handleEvents(events) },
-                    topics = mapOf(SystemTopics.API_KEYS_TOPIC_ID to null)
-                )
+                    topics = mapOf(SystemTopics.API_KEYS_TOPIC_ID to null),
+                ),
             )
         }
     }
@@ -222,28 +223,28 @@ class Application(
         name: String,
         quota: Quota? = null,
         metadata: Map<String, Any> = emptyMap(),
-        createdBy: String = "system"
+        createdBy: String = "system",
     ): Tenant =
         createTenantService.execute(
             CreateTenantRequest(
                 name = name,
                 quota = quota,
                 metadata = metadata,
-                createdBy = createdBy
-            )
+                createdBy = createdBy,
+            ),
         )
 
     suspend fun deleteTenant(
         tenantId: UUID,
         deletedBy: String = "system",
-        reason: String? = null
+        reason: String? = null,
     ): Boolean =
         deleteTenantService.execute(
             DeleteTenantRequest(
                 tenantId = tenantId,
                 deletedBy = deletedBy,
-                reason = reason
-            )
+                reason = reason,
+            ),
         )
 
     suspend fun updateTenant(
@@ -251,7 +252,7 @@ class Application(
         name: String? = null,
         quota: Quota? = null,
         metadata: Map<String, Any>? = null,
-        updatedBy: String = "system"
+        updatedBy: String = "system",
     ): Tenant =
         updateTenantService.execute(
             UpdateTenantRequest(
@@ -259,44 +260,41 @@ class Application(
                 name = name,
                 quota = quota,
                 metadata = metadata,
-                updatedBy = updatedBy
-            )
+                updatedBy = updatedBy,
+            ),
         )
 
-    suspend fun getTenant(tenantName: String): Tenant? =
-        getTenantService.getTenantByName(tenantName)
+    suspend fun getTenant(tenantName: String): Tenant? = getTenantService.getTenantByName(tenantName)
 
-    suspend fun listTenants(): List<Tenant> =
-        getTenantService.listTenants()
+    suspend fun listTenants(): List<Tenant> = getTenantService.listTenants()
 
     suspend fun createNamespace(
         tenantId: UUID,
         namespaceName: String = "default",
         description: String? = null,
         metadata: Map<String, Any> = emptyMap(),
-        createdBy: String = "system"
-    ) =
-        createNamespaceService.execute(
-            CreateNamespaceRequest(
-                tenantId = tenantId,
-                name = namespaceName,
-                description = description,
-                metadata = metadata,
-                createdBy = createdBy
-            )
-        )
+        createdBy: String = "system",
+    ) = createNamespaceService.execute(
+        CreateNamespaceRequest(
+            tenantId = tenantId,
+            name = namespaceName,
+            description = description,
+            metadata = metadata,
+            createdBy = createdBy,
+        ),
+    )
 
     suspend fun deleteNamespace(
         namespaceId: UUID,
         deletedBy: String = "system",
-        reason: String? = null
+        reason: String? = null,
     ): Boolean =
         deleteNamespaceService.execute(
             DeleteNamespaceRequest(
                 namespaceId = namespaceId,
                 deletedBy = deletedBy,
-                reason = reason
-            )
+                reason = reason,
+            ),
         )
 
     suspend fun updateNamespace(
@@ -304,7 +302,7 @@ class Application(
         name: String? = null,
         description: String? = null,
         metadata: Map<String, Any>? = null,
-        updatedBy: String = "system"
+        updatedBy: String = "system",
     ): Namespace =
         updateNamespaceService.execute(
             UpdateNamespaceRequest(
@@ -312,23 +310,23 @@ class Application(
                 name = name,
                 description = description,
                 metadata = metadata,
-                updatedBy = updatedBy
-            )
+                updatedBy = updatedBy,
+            ),
         )
 
-    suspend fun getNamespace(namespaceId: UUID): Namespace? =
-        getNamespaceService.getNamespace(namespaceId)
+    suspend fun getNamespace(namespaceId: UUID): Namespace? = getNamespaceService.getNamespace(namespaceId)
 
-    suspend fun getNamespaceByName(tenantName: String, namespaceName: String): Namespace? =
-        getNamespaceService.getNamespaceByName(tenantName, namespaceName)
+    suspend fun getNamespaceByName(
+        tenantName: String,
+        namespaceName: String,
+    ): Namespace? = getNamespaceService.getNamespaceByName(tenantName, namespaceName)
 
-    suspend fun listNamespaces(tenantId: UUID? = null): List<Namespace> =
-        getNamespaceService.listNamespaces(tenantId)
+    suspend fun listNamespaces(tenantId: UUID? = null): List<Namespace> = getNamespaceService.listNamespaces(tenantId)
 
     suspend fun createTopic(
         name: String,
         schemas: List<Schema>,
-        namespaceId: UUID
+        namespaceId: UUID,
     ): Topic {
         val topic = createTopicService.execute(name, schemas, namespaceId)
         // Start dispatcher for the topic if using AsyncDispatcherManager
@@ -338,17 +336,14 @@ class Application(
         return topic
     }
 
-    suspend fun getTopic(topicId: UUID): Topic =
-        getTopicsService.get(topicId)
+    suspend fun getTopic(topicId: UUID): Topic = getTopicsService.get(topicId)
 
-    suspend fun listTopics(namespaceId: UUID? = null): List<Topic> =
-        getTopicsService.list(namespaceId)
+    suspend fun listTopics(namespaceId: UUID? = null): List<Topic> = getTopicsService.list(namespaceId)
 
     suspend fun updateTopicSchemas(
         topicId: UUID,
-        schemas: List<Schema>
-    ): Topic =
-        updateTopicSchemasService.execute(topicId, schemas)
+        schemas: List<Schema>,
+    ): Topic = updateTopicSchemasService.execute(topicId, schemas)
 
     suspend fun createUser(
         email: String,
@@ -357,7 +352,7 @@ class Application(
         status: UserStatus = UserStatus.ACTIVE,
         createdBy: String = "system",
         metadata: Map<String, Any> = emptyMap(),
-        primaryTenantId: String? = null
+        primaryTenantId: String? = null,
     ): User =
         createUserService.execute(
             CreateUserRequest(
@@ -367,25 +362,22 @@ class Application(
                 status = status,
                 createdBy = createdBy,
                 metadata = metadata,
-                primaryTenantId = primaryTenantId
-            )
+                primaryTenantId = primaryTenantId,
+            ),
         )
 
-    suspend fun getUserById(userId: String): User? =
-        getUserService.getById(userId)
+    suspend fun getUserById(userId: String): User? = getUserService.getById(userId)
 
-    suspend fun getUserByEmail(email: String): User? =
-        getUserService.getByEmail(email)
+    suspend fun getUserByEmail(email: String): User? = getUserService.getByEmail(email)
 
-    suspend fun listUsers(): List<User> =
-        getUserService.list()
+    suspend fun listUsers(): List<User> = getUserService.list()
 
     suspend fun updateUser(
         userId: String,
         email: String? = null,
         name: String? = null,
         metadata: Map<String, Any>? = null,
-        updatedBy: String = "system"
+        updatedBy: String = "system",
     ): User =
         updateUserService.execute(
             UpdateUserRequest(
@@ -393,21 +385,21 @@ class Application(
                 email = email,
                 name = name,
                 metadata = metadata,
-                updatedBy = updatedBy
-            )
+                updatedBy = updatedBy,
+            ),
         )
 
     suspend fun deleteUser(
         userId: String,
         deletedBy: String = "system",
-        reason: String? = null
+        reason: String? = null,
     ): User =
         deleteUserService.execute(
             DeleteUserRequest(
                 userId = userId,
                 deletedBy = deletedBy,
-                reason = reason
-            )
+                reason = reason,
+            ),
         )
 
     suspend fun assignUserToTenant(
@@ -415,7 +407,7 @@ class Application(
         tenantId: String,
         role: String? = null,
         isPrimary: Boolean = false,
-        assignedBy: String = "system"
+        assignedBy: String = "system",
     ): Boolean =
         assignUserToTenantService.execute(
             AssignUserRequest(
@@ -423,38 +415,38 @@ class Application(
                 tenantId = tenantId,
                 role = role,
                 isPrimary = isPrimary,
-                assignedBy = assignedBy
-            )
+                assignedBy = assignedBy,
+            ),
         )
 
     suspend fun removeUserFromTenant(
         userId: String,
         tenantId: String,
         removedBy: String = "system",
-        reason: String? = null
+        reason: String? = null,
     ): Boolean =
         removeUserFromTenantService.execute(
             RemoveUserTenantRequest(
                 userId = userId,
                 tenantId = tenantId,
                 removedBy = removedBy,
-                reason = reason
-            )
+                reason = reason,
+            ),
         )
 
     suspend fun changePassword(
         userId: String,
         oldPassword: String,
         newPassword: String,
-        changedBy: String = "self"
+        changedBy: String = "self",
     ): Boolean =
         changePasswordService.execute(
             ChangePasswordRequest(
                 userId = userId,
                 oldPassword = oldPassword,
                 newPassword = newPassword,
-                changedBy = changedBy
-            )
+                changedBy = changedBy,
+            ),
         )
 
     suspend fun createApiKey(
@@ -462,7 +454,7 @@ class Application(
         name: String,
         description: String? = null,
         expiresAt: Instant? = null,
-        scopes: Set<String>? = null
+        scopes: Set<String>? = null,
     ): Pair<ApiKey, String> =
         createApiKeyService.execute(
             CreateApiKeyRequest(
@@ -470,52 +462,36 @@ class Application(
                 name = name,
                 description = description,
                 expiresAt = expiresAt,
-                scopes = scopes
-            )
+                scopes = scopes,
+            ),
         )
 
-    suspend fun getApiKey(keyId: String): ApiKey? =
-        getApiKeyService.getById(keyId)
+    suspend fun getApiKey(keyId: String): ApiKey? = getApiKeyService.getById(keyId)
 
-    suspend fun getApiKeysByUserId(userId: String): List<ApiKey> =
-        getApiKeyService.getByUserId(userId)
+    suspend fun getApiKeysByUserId(userId: String): List<ApiKey> = getApiKeyService.getByUserId(userId)
 
-    suspend fun revokeApiKey(keyId: String) =
-        revokeApiKeyService.execute(RevokeApiKeyRequest(keyId = keyId))
+    suspend fun revokeApiKey(keyId: String) = revokeApiKeyService.execute(RevokeApiKeyRequest(keyId = keyId))
 
-    suspend fun registerConsumer(
-        request: ConsumerRegistrationRequest
-    ): String =
-        registerConsumerService.execute(request)
+    suspend fun registerConsumer(request: ConsumerRegistrationRequest): String = registerConsumerService.execute(request)
 
-    suspend fun unregisterConsumer(consumerId: String): Boolean =
-        unregisterConsumerService.execute(consumerId)
+    suspend fun unregisterConsumer(consumerId: String): Boolean = unregisterConsumerService.execute(consumerId)
 
-    suspend fun listConsumers(): List<Consumer> =
-        consumerRepository.findAll()
+    suspend fun listConsumers(): List<Consumer> = consumerRepository.findAll()
 
-    suspend fun publishEvents(
-        requests: List<EventRequest>
-    ): List<String> =
-        publishEventsService.execute(requests)
+    suspend fun publishEvents(requests: List<EventRequest>): List<String> = publishEventsService.execute(requests)
 
     suspend fun getEvents(
         topicId: UUID,
         sinceEventId: String? = null,
         date: String? = null,
-        limit: Int? = null
-    ): List<Event> =
-        getEventsService.execute(topicId, sinceEventId, date, limit)
+        limit: Int? = null,
+    ): List<Event> = getEventsService.execute(topicId, sinceEventId, date, limit)
 
-    suspend fun getHealthStatus(): HealthStatus =
-        getHealthStatusService.execute()
+    suspend fun getHealthStatus(): HealthStatus = getHealthStatusService.execute()
 
-    suspend fun grantPermission(request: GrantPermissionRequest): PermissionGrantedEvent =
-        grantPermissionService.execute(request)
+    suspend fun grantPermission(request: GrantPermissionRequest): PermissionGrantedEvent = grantPermissionService.execute(request)
 
-    suspend fun revokePermission(request: RevokePermissionRequest): PermissionRevokedEvent =
-        revokePermissionService.execute(request)
+    suspend fun revokePermission(request: RevokePermissionRequest): PermissionRevokedEvent = revokePermissionService.execute(request)
 
-    suspend fun getPermissions(request: GetPermissionsRequest): List<PermissionGrant> =
-        getPermissionsService.execute(request)
+    suspend fun getPermissions(request: GetPermissionsRequest): List<PermissionGrant> = getPermissionsService.execute(request)
 }

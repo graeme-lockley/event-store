@@ -9,11 +9,15 @@ import org.mindrot.jbcrypt.BCrypt
 
 class AuthenticationService(
     private val userProjectionService: UserProjectionService,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
 ) {
-    suspend fun login(email: String, password: String): Pair<Session, List<String>> {
-        val user = userProjectionService.getUserByEmail(email)
-            ?: throw InvalidCredentialsException()
+    suspend fun login(
+        email: String,
+        password: String,
+    ): Pair<Session, List<String>> {
+        val user =
+            userProjectionService.getUserByEmail(email)
+                ?: throw InvalidCredentialsException()
         if (user.status != UserStatus.ACTIVE) {
             throw InvalidCredentialsException()
         }

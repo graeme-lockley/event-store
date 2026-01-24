@@ -3,12 +3,6 @@ package com.eventstore.interfaces.http.dto
 import com.eventstore.domain.services.consumer.AzureEventGridConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.ConsumerRegistrationRequest
 import com.eventstore.domain.services.consumer.HttpConsumerRegistrationRequest
-
-/**
- * Mapper to convert HTTP DTOs to domain registration requests.
- * Note: InMemoryConsumerRegistrationRequest cannot be created from HTTP
- * as closures/functions cannot be serialized. It's only available programmatically.
- */
 import java.util.*
 
 object ConsumerRegistrationRequestMapper {
@@ -29,7 +23,7 @@ object ConsumerRegistrationRequestMapper {
             is HttpConsumerRegistrationRequestDto -> {
                 HttpConsumerRegistrationRequest(
                     callbackUrl = dto.callback,
-                    topics = normalizeTopics(dto.topics)
+                    topics = normalizeTopics(dto.topics),
                 )
             }
 
@@ -37,10 +31,9 @@ object ConsumerRegistrationRequestMapper {
                 AzureEventGridConsumerRegistrationRequest(
                     endpointUrl = dto.endpointUrl,
                     accessKey = dto.accessKey,
-                    topics = normalizeTopics(dto.topics)
+                    topics = normalizeTopics(dto.topics),
                 )
             }
         }
     }
 }
-

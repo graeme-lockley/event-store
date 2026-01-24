@@ -8,15 +8,14 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.slf4j.LoggerFactory
-import java.util.concurrent.ConcurrentHashMap
-
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 class TopicDispatcher(
     private val topicId: UUID,
     private val consumerRepository: ConsumerRepository,
     private val eventRepository: EventRepository,
-    private val checkIntervalMs: Long = 500
+    private val checkIntervalMs: Long = 500,
 ) {
     private val logger = LoggerFactory.getLogger(TopicDispatcher::class.java)
     private var job: Job? = null
@@ -29,7 +28,7 @@ class TopicDispatcher(
 
     data class RetryState(
         val attempts: Int,
-        val nextRetryAt: Long
+        val nextRetryAt: Long,
     )
 
     fun start(scope: CoroutineScope) {
@@ -37,24 +36,25 @@ class TopicDispatcher(
             return
         }
 
-        job = scope.launch {
-            _isRunning.value = true
-            try {
-                while (isActive) {
-                    checkAndDeliverEvents()
-                    delay(checkIntervalMs)
+        job =
+            scope.launch {
+                _isRunning.value = true
+                try {
+                    while (isActive) {
+                        checkAndDeliverEvents()
+                        delay(checkIntervalMs)
+                    }
+                } catch (e: Exception) {
+                    // JobCancellationException is expected during graceful shutdown - don't log with stack trace
+                    if (e is CancellationException) {
+                        // Skip logging for expected cancellation during shutdown
+                        return@launch
+                    }
+                    logger.error("Dispatcher for topic $topicId encountered an error and will stop", e)
+                } finally {
+                    _isRunning.value = false
                 }
-            } catch (e: Exception) {
-                // JobCancellationException is expected during graceful shutdown - don't log with stack trace
-                if (e is CancellationException) {
-                    // Skip logging for expected cancellation during shutdown
-                    return@launch
-                }
-                logger.error("Dispatcher for topic $topicId encountered an error and will stop", e)
-            } finally {
-                _isRunning.value = false
             }
-        }
     }
 
     fun stop() {
@@ -97,10 +97,11 @@ class TopicDispatcher(
                 // so lastEventIdStr will be either null or a valid EventId string.
                 // If EventId construction fails, it indicates data corruption and should not be silently ignored.
                 val lastEventId = lastEventIdStr?.let { EventId.fromString(it) }
-                val events = eventRepository.getEvents(
-                    topicId = topicId,
-                    sinceEventId = lastEventId
-                )
+                val events =
+                    eventRepository.getEvents(
+                        topicId = topicId,
+                        sinceEventId = lastEventId,
+                    )
 
                 if (events.isNotEmpty()) {
                     eventsToDeliver.addAll(events)
@@ -133,10 +134,11 @@ class TopicDispatcher(
             // Apply exponential backoff
             val current = retryState[consumer.id] ?: RetryState(0, 0)
             val attempts = current.attempts + 1
-            val delay = minOf(
-                baseRetryDelayMs * (1L shl (attempts - 1)),
-                60_000L
-            )
+            val delay =
+                minOf(
+                    baseRetryDelayMs * (1L shl (attempts - 1)),
+                    60_000L,
+                )
             val nextRetryAt = System.currentTimeMillis() + delay
             retryState[consumer.id] = RetryState(attempts, nextRetryAt)
 

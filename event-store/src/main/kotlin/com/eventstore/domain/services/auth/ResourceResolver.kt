@@ -2,7 +2,6 @@ package com.eventstore.domain.services.auth
 
 import com.eventstore.domain.exceptions.NamespaceNotFoundException
 import com.eventstore.domain.exceptions.TenantNameNotFoundException
-import com.eventstore.domain.exceptions.TopicNotFoundException
 import com.eventstore.domain.ports.outbound.ResourceResolver
 import com.eventstore.domain.ports.outbound.TopicRepository
 import com.eventstore.infrastructure.projections.NamespaceProjectionService
@@ -15,27 +14,32 @@ import java.util.*
 class ResourceResolverImpl(
     private val tenantProjectionService: TenantProjectionService,
     private val namespaceProjectionService: NamespaceProjectionService,
-    private val topicRepository: TopicRepository
+    private val topicRepository: TopicRepository,
 ) : ResourceResolver {
-
     override suspend fun resolveTenantName(tenantName: String): UUID {
-        val tenant = tenantProjectionService.getTenantByName(tenantName)
-            ?: throw TenantNameNotFoundException(tenantName)
+        val tenant =
+            tenantProjectionService.getTenantByName(tenantName)
+                ?: throw TenantNameNotFoundException(tenantName)
         return tenant.tenantId
     }
 
-    override suspend fun resolveNamespaceName(tenantId: UUID, namespaceName: String): UUID {
-        val tenant = tenantProjectionService.getTenantById(tenantId)
-            ?: throw TenantNameNotFoundException("tenantId: $tenantId")
-        val namespace = namespaceProjectionService.getNamespaceByName(tenant.name, namespaceName)
-            ?: throw NamespaceNotFoundException(namespaceName)
+    override suspend fun resolveNamespaceName(
+        tenantId: UUID,
+        namespaceName: String,
+    ): UUID {
+        val tenant =
+            tenantProjectionService.getTenantById(tenantId)
+                ?: throw TenantNameNotFoundException("tenantId: $tenantId")
+        val namespace =
+            namespaceProjectionService.getNamespaceByName(tenant.name, namespaceName)
+                ?: throw NamespaceNotFoundException(namespaceName)
         return namespace.namespaceId
     }
 
     override suspend fun resolveTopicName(
         tenantId: UUID,
         namespaceId: UUID,
-        topicName: String
+        topicName: String,
     ): UUID {
         tenantProjectionService.getTenantById(tenantId)
             ?: throw TenantNameNotFoundException("tenantId: $tenantId")
@@ -50,7 +54,3 @@ class ResourceResolverImpl(
         throw UnsupportedOperationException("Topic lookup by name is no longer supported. Use topicId UUID instead.")
     }
 }
-
-
-
-

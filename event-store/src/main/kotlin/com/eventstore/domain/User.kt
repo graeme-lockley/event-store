@@ -13,14 +13,14 @@ data class User(
     val lastLoginAt: Instant? = null,
     val emailVerified: Boolean = false,
     val primaryTenantId: String? = null,
-    val metadata: Map<String, Any> = emptyMap()
+    val metadata: Map<String, Any> = emptyMap(),
 )
 
 enum class UserStatus {
     ACTIVE,
     SUSPENDED,
     DELETED,
-    PENDING_ACTIVATION
+    PENDING_ACTIVATION,
 }
 
 data class UserTenantAssociation(
@@ -29,5 +29,5 @@ data class UserTenantAssociation(
     val role: String? = null,
     val assignedAt: Instant,
     val assignedBy: String,
-    val isPrimary: Boolean = false
+    val isPrimary: Boolean = false,
 )

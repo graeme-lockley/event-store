@@ -15,18 +15,18 @@ enum class Permission {
     ADMIN,
 
     // Resource-specific permissions
-    PERMISSION_GRANT,      // For tenants, namespaces, topics
-    PERMISSION_REVOKE,     // For tenants, namespaces, topics
-    SCHEMA_MANAGE,         // For topics (can also be granted at namespace/tenant level)
-    READ_HISTORY,          // For events only
-    READ_EXPORT,           // For events only
-    WRITE_ADMIN,           // For events only
-    REPLAY,                // For events only
-    PURGE,                 // For events only
-    ACTIVATE,              // For users only
-    SUSPEND,               // For users only
-    PASSWORD_RESET,        // For users only
-    MANAGE                 // For consumers only
+    PERMISSION_GRANT, // For tenants, namespaces, topics
+    PERMISSION_REVOKE, // For tenants, namespaces, topics
+    SCHEMA_MANAGE, // For topics (can also be granted at namespace/tenant level)
+    READ_HISTORY, // For events only
+    READ_EXPORT, // For events only
+    WRITE_ADMIN, // For events only
+    REPLAY, // For events only
+    PURGE, // For events only
+    ACTIVATE, // For users only
+    SUSPEND, // For users only
+    PASSWORD_RESET, // For users only
+    MANAGE, // For consumers only
 }
 
 /**
@@ -36,7 +36,7 @@ enum class PrincipalType {
     USER,
     API_KEY,
     ROLE,
-    GROUP
+    GROUP,
 }
 
 /**
@@ -48,7 +48,7 @@ enum class ResourceType {
     TOPIC,
     EVENT,
     CONSUMER,
-    USER
+    USER,
 }
 
 /**
@@ -60,16 +60,23 @@ enum class ResourceType {
  * - topicId: UUID of topic (for context and inheritance)
  */
 data class PermissionGrant(
-    val principalId: String,              // UUID of user/API key/role/group
-    val principalType: PrincipalType,     // USER, API_KEY, ROLE, GROUP
-    val resourceType: ResourceType,       // TENANT, NAMESPACE, TOPIC, EVENT, CONSUMER, USER
-    val resourceId: String? = null,       // UUID of specific resource, or null for all resources of this type
-    val tenantResourceId: String,         // UUID of tenant (for context and inheritance)
-    val namespaceResourceId: String? = null, // UUID of namespace (for context and inheritance)
-    val topicId: String? = null,   // UUID of topic (for context and inheritance)
+    // UUID of user/API key/role/group
+    val principalId: String,
+    // USER, API_KEY, ROLE, GROUP
+    val principalType: PrincipalType,
+    // TENANT, NAMESPACE, TOPIC, EVENT, CONSUMER, USER
+    val resourceType: ResourceType,
+    // UUID of specific resource, or null for all resources of this type
+    val resourceId: String? = null,
+    // UUID of tenant (for context and inheritance)
+    val tenantResourceId: String,
+    // UUID of namespace (for context and inheritance)
+    val namespaceResourceId: String? = null,
+    // UUID of topic (for context and inheritance)
+    val topicId: String? = null,
     val permissions: Set<Permission>,
-    val grantedBy: String,                // UUID of user who granted permission
+    // UUID of user who granted permission
+    val grantedBy: String,
     val grantedAt: java.time.Instant,
-    val expiresAt: java.time.Instant? = null
+    val expiresAt: java.time.Instant? = null,
 )
-

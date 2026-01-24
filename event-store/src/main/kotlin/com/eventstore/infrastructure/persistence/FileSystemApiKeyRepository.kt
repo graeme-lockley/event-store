@@ -15,7 +15,7 @@ import java.nio.file.StandardCopyOption
 
 class FileSystemApiKeyRepository(
     private val configDir: Path,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) : ApiKeyRepository {
     private val logger = LoggerFactory.getLogger(FileSystemApiKeyRepository::class.java)
     private val mutex = Mutex()
@@ -25,42 +25,44 @@ class FileSystemApiKeyRepository(
         try {
             Files.createDirectories(configDir)
         } catch (e: Exception) {
-            throw RuntimeException("Failed to create config directory: ${configDir}", e)
+            throw RuntimeException("Failed to create config directory: $configDir", e)
         }
     }
 
-    private suspend fun loadApiKeys(): MutableList<ApiKey> = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            if (!Files.exists(apiKeysFile)) {
-                return@withLock mutableListOf()
-            }
-            try {
-                val content = Files.readString(apiKeysFile)
-                if (content.isBlank()) {
+    private suspend fun loadApiKeys(): MutableList<ApiKey> =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                if (!Files.exists(apiKeysFile)) {
                     return@withLock mutableListOf()
                 }
-                val list: List<ApiKey> = objectMapper.readValue(content)
-                list.toMutableList()
-            } catch (e: Exception) {
-                logger.error("Failed to load API keys from file", e)
-                mutableListOf()
+                try {
+                    val content = Files.readString(apiKeysFile)
+                    if (content.isBlank()) {
+                        return@withLock mutableListOf()
+                    }
+                    val list: List<ApiKey> = objectMapper.readValue(content)
+                    list.toMutableList()
+                } catch (e: Exception) {
+                    logger.error("Failed to load API keys from file", e)
+                    mutableListOf()
+                }
             }
         }
-    }
 
-    private suspend fun saveApiKeys(apiKeys: List<ApiKey>) = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            try {
-                val tempFile = apiKeysFile.resolveSibling("${apiKeysFile.fileName}.tmp")
-                val json = objectMapper.writeValueAsString(apiKeys)
-                Files.writeString(tempFile, json)
-                Files.move(tempFile, apiKeysFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-            } catch (e: Exception) {
-                logger.error("Failed to save API keys to file", e)
-                throw RuntimeException("Failed to save API keys", e)
+    private suspend fun saveApiKeys(apiKeys: List<ApiKey>) =
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                try {
+                    val tempFile = apiKeysFile.resolveSibling("${apiKeysFile.fileName}.tmp")
+                    val json = objectMapper.writeValueAsString(apiKeys)
+                    Files.writeString(tempFile, json)
+                    Files.move(tempFile, apiKeysFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+                } catch (e: Exception) {
+                    logger.error("Failed to save API keys to file", e)
+                    throw RuntimeException("Failed to save API keys", e)
+                }
             }
         }
-    }
 
     override suspend fun save(apiKey: ApiKey) {
         val apiKeys = loadApiKeys()
@@ -94,7 +96,3 @@ class FileSystemApiKeyRepository(
         saveApiKeys(apiKeys)
     }
 }
-
-
-
-

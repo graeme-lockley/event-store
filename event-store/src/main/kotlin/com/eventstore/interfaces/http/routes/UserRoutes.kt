@@ -17,20 +17,21 @@ fun Route.userRoutes(application: Application) {
         post {
             try {
                 val body = call.receive<UserCreateRequest>()
-                val created = application.createUser(
-                    email = body.email,
-                    name = body.name,
-                    password = body.password,
-                    metadata = body.metadata,
-                    primaryTenantId = body.primaryTenantId
-                )
+                val created =
+                    application.createUser(
+                        email = body.email,
+                        name = body.name,
+                        password = body.password,
+                        metadata = body.metadata,
+                        primaryTenantId = body.primaryTenantId,
+                    )
 
                 // Optionally assign to tenant if provided
                 body.primaryTenantId?.let { tenantId ->
                     application.assignUserToTenant(
                         userId = created.id,
                         tenantId = tenantId,
-                        isPrimary = true
+                        isPrimary = true,
                     )
                 }
 
@@ -40,7 +41,7 @@ fun Route.userRoutes(application: Application) {
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to create user", "USER_CREATE_FAILED")
+                    ErrorResponse(e.message ?: "Failed to create user", "USER_CREATE_FAILED"),
                 )
             }
         }
@@ -60,7 +61,7 @@ fun Route.userRoutes(application: Application) {
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to fetch user", "USER_GET_FAILED")
+                    ErrorResponse(e.message ?: "Failed to fetch user", "USER_GET_FAILED"),
                 )
             }
         }
@@ -69,19 +70,20 @@ fun Route.userRoutes(application: Application) {
             try {
                 val userId = call.parameters["userId"] ?: throw IllegalArgumentException("userId is required")
                 val body = call.receive<UserUpdateRequest>()
-                val updated = application.updateUser(
-                    userId = userId,
-                    email = body.email,
-                    name = body.name,
-                    metadata = body.metadata
-                )
+                val updated =
+                    application.updateUser(
+                        userId = userId,
+                        email = body.email,
+                        name = body.name,
+                        metadata = body.metadata,
+                    )
                 call.respond(HttpStatusCode.OK, updated.toResponse())
             } catch (e: UserNotFoundException) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(e.message ?: "User not found", "USER_NOT_FOUND"))
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to update user", "USER_UPDATE_FAILED")
+                    ErrorResponse(e.message ?: "Failed to update user", "USER_UPDATE_FAILED"),
                 )
             }
         }
@@ -96,7 +98,7 @@ fun Route.userRoutes(application: Application) {
             } catch (e: Exception) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(e.message ?: "Failed to delete user", "USER_DELETE_FAILED")
+                    ErrorResponse(e.message ?: "Failed to delete user", "USER_DELETE_FAILED"),
                 )
             }
         }
@@ -113,16 +115,16 @@ fun Route.userRoutes(application: Application) {
                 userId = userId,
                 tenantId = tenantId,
                 role = body?.role,
-                isPrimary = body?.isPrimary ?: false
+                isPrimary = body?.isPrimary ?: false,
             )
             call.respond(
                 HttpStatusCode.OK,
-                mapOf("message" to "User '$userId' assigned to tenant '$tenantId'")
+                mapOf("message" to "User '$userId' assigned to tenant '$tenantId'"),
             )
         } catch (e: Exception) {
             call.respond(
                 HttpStatusCode.BadRequest,
-                ErrorResponse(e.message ?: "Failed to assign tenant", "USER_ASSIGN_TENANT_FAILED")
+                ErrorResponse(e.message ?: "Failed to assign tenant", "USER_ASSIGN_TENANT_FAILED"),
             )
         }
     }
@@ -133,27 +135,28 @@ fun Route.userRoutes(application: Application) {
             val tenantId = call.parameters["tenantId"] ?: throw IllegalArgumentException("tenantId is required")
             application.removeUserFromTenant(
                 userId = userId,
-                tenantId = tenantId
+                tenantId = tenantId,
             )
             call.respond(HttpStatusCode.OK, mapOf("message" to "User '$userId' removed from tenant '$tenantId'"))
         } catch (e: Exception) {
             call.respond(
                 HttpStatusCode.BadRequest,
-                ErrorResponse(e.message ?: "Failed to remove tenant", "USER_REMOVE_TENANT_FAILED")
+                ErrorResponse(e.message ?: "Failed to remove tenant", "USER_REMOVE_TENANT_FAILED"),
             )
         }
     }
 }
 
-private fun User.toResponse(): UserResponse = UserResponse(
-    id = id,
-    email = email,
-    name = name,
-    status = status.name,
-    createdAt = createdAt.toString(),
-    updatedAt = updatedAt?.toString(),
-    lastLoginAt = lastLoginAt?.toString(),
-    emailVerified = emailVerified,
-    primaryTenantId = primaryTenantId,
-    metadata = metadata
-)
+private fun User.toResponse(): UserResponse =
+    UserResponse(
+        id = id,
+        email = email,
+        name = name,
+        status = status.name,
+        createdAt = createdAt.toString(),
+        updatedAt = updatedAt?.toString(),
+        lastLoginAt = lastLoginAt?.toString(),
+        emailVerified = emailVerified,
+        primaryTenantId = primaryTenantId,
+        metadata = metadata,
+    )

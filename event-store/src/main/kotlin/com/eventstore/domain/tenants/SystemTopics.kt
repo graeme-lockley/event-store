@@ -20,7 +20,3 @@ object SystemTopics {
     const val API_KEYS_TOPIC_NAME = "api-keys"
     val API_KEYS_TOPIC_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000014")
 }
-
-
-
-

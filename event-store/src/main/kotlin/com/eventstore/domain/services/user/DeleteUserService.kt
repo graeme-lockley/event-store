@@ -15,31 +15,33 @@ import java.time.Instant
 data class DeleteUserRequest(
     val userId: String,
     val deletedBy: String = "system",
-    val reason: String? = null
+    val reason: String? = null,
 )
 
 class DeleteUserService(
     private val userProjectionService: UserProjectionService,
     config: Config,
-    eventPublisher: SystemEventPublisher
+    eventPublisher: SystemEventPublisher,
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: DeleteUserRequest): User {
-        val existing = userProjectionService.getUser(request.userId)
-            ?: throw UserNotFoundException(request.userId)
+        val existing =
+            userProjectionService.getUser(request.userId)
+                ?: throw UserNotFoundException(request.userId)
 
         val now = Instant.now()
-        val payload = UserStatusChangedEvent(
-            userId = request.userId,
-            status = UserStatus.DELETED,
-            changedBy = request.deletedBy,
-            changedAt = now
-        )
+        val payload =
+            UserStatusChangedEvent(
+                userId = request.userId,
+                status = UserStatus.DELETED,
+                changedBy = request.deletedBy,
+                changedAt = now,
+            )
 
         eventPublisher.publishEvent(
             topicId = SystemTopics.USERS_TOPIC_ID,
             eventType = UserEventType.STATUS_CHANGED,
             payload = payload.toPayload(),
-            timestamp = now
+            timestamp = now,
         )
 
         return existing.copy(status = UserStatus.DELETED, updatedAt = now)

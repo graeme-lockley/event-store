@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test
 import java.time.Instant
 
 class ApiKeyAuthenticatorTest {
-
     private lateinit var apiKeyRepository: InMemoryApiKeyRepository
     private lateinit var apiKeyProjectionService: ApiKeyProjectionService
     private lateinit var apiKeyAuthenticator: ApiKeyAuthenticator
@@ -23,110 +22,118 @@ class ApiKeyAuthenticatorTest {
     }
 
     @Test
-    fun `authenticates valid API key`() = runBlocking {
-        val plainKey = ApiKeyGenerator.generate()
-        val keyHash = ApiKeyHasher.hash(plainKey)
+    fun `authenticates valid API key`() =
+        runBlocking {
+            val plainKey = ApiKeyGenerator.generate()
+            val keyHash = ApiKeyHasher.hash(plainKey)
 
-        val apiKey = com.eventstore.domain.ApiKey(
-            id = "test-id",
-            userId = "user-id",
-            keyHash = keyHash,
-            name = "Test Key",
-            createdAt = Instant.now()
-        )
+            val apiKey =
+                com.eventstore.domain.ApiKey(
+                    id = "test-id",
+                    userId = "user-id",
+                    keyHash = keyHash,
+                    name = "Test Key",
+                    createdAt = Instant.now(),
+                )
 
-        apiKeyRepository.save(apiKey)
+            apiKeyRepository.save(apiKey)
 
-        val result = apiKeyAuthenticator.authenticate(plainKey)
+            val result = apiKeyAuthenticator.authenticate(plainKey)
 
-        assertEquals("user-id", result.userId)
-        assertEquals("test-id", result.apiKeyId)
-    }
-
-    @Test
-    fun `throws exception for invalid API key`() = runBlocking {
-        try {
-            apiKeyAuthenticator.authenticate("es_invalidkey")
-            fail("Should have thrown InvalidApiKeyException")
-        } catch (e: InvalidApiKeyException) {
-            // Expected
+            assertEquals("user-id", result.userId)
+            assertEquals("test-id", result.apiKeyId)
         }
-    }
 
     @Test
-    fun `throws exception for revoked API key`() = runBlocking {
-        val plainKey = ApiKeyGenerator.generate()
-        val keyHash = ApiKeyHasher.hash(plainKey)
+    fun `throws exception for invalid API key`() =
+        runBlocking {
+            try {
+                apiKeyAuthenticator.authenticate("es_invalidkey")
+                fail("Should have thrown InvalidApiKeyException")
+            } catch (e: InvalidApiKeyException) {
+                // Expected
+            }
+        }
 
-        val apiKey = com.eventstore.domain.ApiKey(
-            id = "test-id",
-            userId = "user-id",
-            keyHash = keyHash,
-            name = "Test Key",
-            createdAt = Instant.now(),
-            revokedAt = Instant.now()
-        )
+    @Test
+    fun `throws exception for revoked API key`() =
+        runBlocking {
+            val plainKey = ApiKeyGenerator.generate()
+            val keyHash = ApiKeyHasher.hash(plainKey)
 
-        apiKeyRepository.save(apiKey)
+            val apiKey =
+                com.eventstore.domain.ApiKey(
+                    id = "test-id",
+                    userId = "user-id",
+                    keyHash = keyHash,
+                    name = "Test Key",
+                    createdAt = Instant.now(),
+                    revokedAt = Instant.now(),
+                )
 
-        try {
+            apiKeyRepository.save(apiKey)
+
+            try {
+                apiKeyAuthenticator.authenticate(plainKey)
+                fail("Should have thrown InvalidApiKeyException")
+            } catch (e: InvalidApiKeyException) {
+                // Expected
+            }
+        }
+
+    @Test
+    fun `throws exception for expired API key`() =
+        runBlocking {
+            val plainKey = ApiKeyGenerator.generate()
+            val keyHash = ApiKeyHasher.hash(plainKey)
+
+            val apiKey =
+                com.eventstore.domain.ApiKey(
+                    id = "test-id",
+                    userId = "user-id",
+                    keyHash = keyHash,
+                    name = "Test Key",
+                    createdAt = Instant.now().minusSeconds(7200),
+                    expiresAt = Instant.now().minusSeconds(3600),
+                )
+
+            apiKeyRepository.save(apiKey)
+
+            try {
+                apiKeyAuthenticator.authenticate(plainKey)
+                fail("Should have thrown InvalidApiKeyException")
+            } catch (e: InvalidApiKeyException) {
+                // Expected
+            }
+        }
+
+    @Test
+    fun `updates lastUsedAt timestamp`() =
+        runBlocking {
+            val plainKey = ApiKeyGenerator.generate()
+            val keyHash = ApiKeyHasher.hash(plainKey)
+
+            val apiKey =
+                com.eventstore.domain.ApiKey(
+                    id = "test-id",
+                    userId = "user-id",
+                    keyHash = keyHash,
+                    name = "Test Key",
+                    createdAt = Instant.now(),
+                    lastUsedAt = null,
+                )
+
+            apiKeyRepository.save(apiKey)
+
+            // Wait a bit to ensure timestamp difference
+            Thread.sleep(10)
+
             apiKeyAuthenticator.authenticate(plainKey)
-            fail("Should have thrown InvalidApiKeyException")
-        } catch (e: InvalidApiKeyException) {
-            // Expected
+
+            // Wait for async update
+            Thread.sleep(100)
+
+            val retrieved = apiKeyRepository.findById("test-id")
+            assertNotNull(retrieved?.lastUsedAt)
         }
-    }
-
-    @Test
-    fun `throws exception for expired API key`() = runBlocking {
-        val plainKey = ApiKeyGenerator.generate()
-        val keyHash = ApiKeyHasher.hash(plainKey)
-
-        val apiKey = com.eventstore.domain.ApiKey(
-            id = "test-id",
-            userId = "user-id",
-            keyHash = keyHash,
-            name = "Test Key",
-            createdAt = Instant.now().minusSeconds(7200),
-            expiresAt = Instant.now().minusSeconds(3600)
-        )
-
-        apiKeyRepository.save(apiKey)
-
-        try {
-            apiKeyAuthenticator.authenticate(plainKey)
-            fail("Should have thrown InvalidApiKeyException")
-        } catch (e: InvalidApiKeyException) {
-            // Expected
-        }
-    }
-
-    @Test
-    fun `updates lastUsedAt timestamp`() = runBlocking {
-        val plainKey = ApiKeyGenerator.generate()
-        val keyHash = ApiKeyHasher.hash(plainKey)
-
-        val apiKey = com.eventstore.domain.ApiKey(
-            id = "test-id",
-            userId = "user-id",
-            keyHash = keyHash,
-            name = "Test Key",
-            createdAt = Instant.now(),
-            lastUsedAt = null
-        )
-
-        apiKeyRepository.save(apiKey)
-
-        // Wait a bit to ensure timestamp difference
-        Thread.sleep(10)
-
-        apiKeyAuthenticator.authenticate(plainKey)
-
-        // Wait for async update
-        Thread.sleep(100)
-
-        val retrieved = apiKeyRepository.findById("test-id")
-        assertNotNull(retrieved?.lastUsedAt)
-    }
 }
-

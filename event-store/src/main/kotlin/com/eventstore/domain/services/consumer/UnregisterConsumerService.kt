@@ -4,7 +4,7 @@ import com.eventstore.domain.exceptions.ConsumerNotFoundException
 import com.eventstore.domain.ports.outbound.ConsumerRepository
 
 class UnregisterConsumerService(
-    private val consumerRepository: ConsumerRepository
+    private val consumerRepository: ConsumerRepository,
 ) {
     suspend fun execute(consumerId: String): Boolean {
         // Verify consumer exists
@@ -20,4 +20,3 @@ class UnregisterConsumerService(
         return true
     }
 }
-

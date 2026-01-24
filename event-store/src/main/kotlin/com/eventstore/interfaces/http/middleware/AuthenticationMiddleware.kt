@@ -14,7 +14,7 @@ import kotlinx.coroutines.runBlocking
 
 class AuthenticationMiddleware(
     private val authenticationService: AuthenticationService,
-    private val apiKeyAuthenticator: ApiKeyAuthenticator? = null
+    private val apiKeyAuthenticator: ApiKeyAuthenticator? = null,
 ) {
     companion object {
         val UserIdKey = AttributeKey<String>("userId")
@@ -44,9 +44,10 @@ class AuthenticationMiddleware(
             if (bearerToken != null && bearerToken.startsWith("es_") && apiKeyAuthenticator != null) {
                 try {
                     // Use runBlocking to call suspend function from interceptor
-                    val authResult = runBlocking {
-                        apiKeyAuthenticator.authenticate(bearerToken)
-                    }
+                    val authResult =
+                        runBlocking {
+                            apiKeyAuthenticator.authenticate(bearerToken)
+                        }
                     call.attributes.put(UserIdKey, authResult.userId)
                     call.attributes.put(ApiKeyIdKey, authResult.apiKeyId)
                     proceed()
@@ -54,14 +55,14 @@ class AuthenticationMiddleware(
                 } catch (e: InvalidApiKeyException) {
                     call.respond(
                         HttpStatusCode.Unauthorized,
-                        ErrorResponse(e.message ?: "Invalid API key", "INVALID_API_KEY")
+                        ErrorResponse(e.message ?: "Invalid API key", "INVALID_API_KEY"),
                     )
                     finish()
                     return@intercept
                 } catch (e: Exception) {
                     call.respond(
                         HttpStatusCode.Unauthorized,
-                        ErrorResponse("Authentication failed: ${e.message}", "AUTH_FAILED")
+                        ErrorResponse("Authentication failed: ${e.message}", "AUTH_FAILED"),
                     )
                     finish()
                     return@intercept
@@ -82,10 +83,9 @@ class AuthenticationMiddleware(
 
     private fun isPublicEndpoint(path: String): Boolean {
         return path.startsWith("/auth/login") ||
-                path.startsWith("/auth/logout") ||
-                path.startsWith("/health") ||
-                path == "/" ||
-                path == "/favicon.ico"
+            path.startsWith("/auth/logout") ||
+            path.startsWith("/health") ||
+            path == "/" ||
+            path == "/favicon.ico"
     }
 }
-

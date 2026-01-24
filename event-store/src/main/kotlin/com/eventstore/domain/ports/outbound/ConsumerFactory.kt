@@ -15,4 +15,3 @@ interface ConsumerFactory {
      */
     fun create(request: ConsumerRegistrationRequest): Consumer
 }
-

@@ -25,344 +25,375 @@ class PermissionProjectionServiceTest {
     }
 
     @Test
-    fun `applies granted event and stores permission`() = runTest {
-        val principalId = UUID.randomUUID().toString()
-        val tenantResourceId = UUID.randomUUID()
-        val resourceId = UUID.randomUUID()
-        val grantedAt = Instant.now()
+    fun `applies granted event and stores permission`() =
+        runTest {
+            val principalId = UUID.randomUUID().toString()
+            val tenantResourceId = UUID.randomUUID()
+            val resourceId = UUID.randomUUID()
+            val grantedAt = Instant.now()
 
-        val event = Event(
-            id = EventId.create(
-                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
-                sequence = 1
-            ),
-            timestamp = grantedAt,
-            type = PermissionEventType.GRANTED,
-            payload = PermissionGrantedEvent(
-                principalId = principalId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId.toString(),
-                tenantResourceId = tenantResourceId.toString(),
-                permissions = setOf(Permission.READ, Permission.UPDATE),
-                grantedBy = "admin",
-                grantedAt = grantedAt
-            ).toPayload()
-        )
+            val event =
+                Event(
+                    id =
+                        EventId.create(
+                            topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                            sequence = 1,
+                        ),
+                    timestamp = grantedAt,
+                    type = PermissionEventType.GRANTED,
+                    payload =
+                        PermissionGrantedEvent(
+                            principalId = principalId,
+                            principalType = PrincipalType.USER,
+                            resourceType = ResourceType.TENANT,
+                            resourceId = resourceId.toString(),
+                            tenantResourceId = tenantResourceId.toString(),
+                            permissions = setOf(Permission.READ, Permission.UPDATE),
+                            grantedBy = "admin",
+                            grantedAt = grantedAt,
+                        ).toPayload(),
+                )
 
-        service.handleEvents(listOf(event))
+            service.handleEvents(listOf(event))
 
-        // First verify the grant was stored by checking the repository directly
-        val allGrants = repository.findByPrincipal(principalId)
-        assertEquals(1, allGrants.size, "Grant should be stored in repository")
+            // First verify the grant was stored by checking the repository directly
+            val allGrants = repository.findByPrincipal(principalId)
+            assertEquals(1, allGrants.size, "Grant should be stored in repository")
 
-        val grants = service.getPermissionGrants(principalId, tenantResourceId, null, null)
-        assertEquals(1, grants.size, "Grant should be returned by getPermissionGrants")
-        assertEquals(principalId, grants.first().principalId)
-        assertEquals(ResourceType.TENANT, grants.first().resourceType)
-        assertEquals(resourceId.toString(), grants.first().resourceId)
-        assertEquals(setOf(Permission.READ, Permission.UPDATE), grants.first().permissions)
-    }
-
-    @Test
-    fun `applies revoked event and removes permission`() = runTest {
-        val principalId = UUID.randomUUID().toString()
-        val tenantResourceId = UUID.randomUUID()
-        val resourceId = UUID.randomUUID()
-        val grantedAt = Instant.now()
-
-        // First grant permission
-        val grantEvent = Event(
-            id = EventId.create(
-                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
-                sequence = 1
-            ),
-            timestamp = grantedAt,
-            type = PermissionEventType.GRANTED,
-            payload = PermissionGrantedEvent(
-                principalId = principalId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId.toString(),
-                tenantResourceId = tenantResourceId.toString(),
-                permissions = setOf(Permission.READ, Permission.UPDATE),
-                grantedBy = "admin",
-                grantedAt = grantedAt
-            ).toPayload()
-        )
-
-        // Then revoke one permission
-        val revokeAt = grantedAt.plusSeconds(10)
-        val revokeEvent = Event(
-            id = EventId.create(
-                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
-                sequence = 2
-            ),
-            timestamp = revokeAt,
-            type = PermissionEventType.REVOKED,
-            payload = PermissionRevokedEvent(
-                principalId = principalId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId.toString(),
-                tenantResourceId = tenantResourceId.toString(),
-                permissions = setOf(Permission.UPDATE),
-                revokedBy = "admin",
-                revokedAt = revokeAt
-            ).toPayload()
-        )
-
-        service.handleEvents(listOf(grantEvent, revokeEvent))
-
-        val grants = service.getPermissionGrants(principalId, tenantResourceId, null, null)
-        assertEquals(1, grants.size)
-        assertEquals(setOf(Permission.READ), grants.first().permissions)
-    }
+            val grants = service.getPermissionGrants(principalId, tenantResourceId, null, null)
+            assertEquals(1, grants.size, "Grant should be returned by getPermissionGrants")
+            assertEquals(principalId, grants.first().principalId)
+            assertEquals(ResourceType.TENANT, grants.first().resourceType)
+            assertEquals(resourceId.toString(), grants.first().resourceId)
+            assertEquals(setOf(Permission.READ, Permission.UPDATE), grants.first().permissions)
+        }
 
     @Test
-    fun `hasPermission returns true when permission granted`() = runTest {
-        val principalId = UUID.randomUUID().toString()
-        val tenantResourceId = UUID.randomUUID()
-        val resourceId = UUID.randomUUID()
-        val grantedAt = Instant.now()
+    fun `applies revoked event and removes permission`() =
+        runTest {
+            val principalId = UUID.randomUUID().toString()
+            val tenantResourceId = UUID.randomUUID()
+            val resourceId = UUID.randomUUID()
+            val grantedAt = Instant.now()
 
-        val event = Event(
-            id = EventId.create(
-                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
-                sequence = 1
-            ),
-            timestamp = grantedAt,
-            type = PermissionEventType.GRANTED,
-            payload = PermissionGrantedEvent(
-                principalId = principalId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId.toString(),
-                tenantResourceId = tenantResourceId.toString(),
-                permissions = setOf(Permission.READ, Permission.UPDATE),
-                grantedBy = "admin",
-                grantedAt = grantedAt
-            ).toPayload()
-        )
+            // First grant permission
+            val grantEvent =
+                Event(
+                    id =
+                        EventId.create(
+                            topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                            sequence = 1,
+                        ),
+                    timestamp = grantedAt,
+                    type = PermissionEventType.GRANTED,
+                    payload =
+                        PermissionGrantedEvent(
+                            principalId = principalId,
+                            principalType = PrincipalType.USER,
+                            resourceType = ResourceType.TENANT,
+                            resourceId = resourceId.toString(),
+                            tenantResourceId = tenantResourceId.toString(),
+                            permissions = setOf(Permission.READ, Permission.UPDATE),
+                            grantedBy = "admin",
+                            grantedAt = grantedAt,
+                        ).toPayload(),
+                )
 
-        service.handleEvents(listOf(event))
+            // Then revoke one permission
+            val revokeAt = grantedAt.plusSeconds(10)
+            val revokeEvent =
+                Event(
+                    id =
+                        EventId.create(
+                            topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                            sequence = 2,
+                        ),
+                    timestamp = revokeAt,
+                    type = PermissionEventType.REVOKED,
+                    payload =
+                        PermissionRevokedEvent(
+                            principalId = principalId,
+                            principalType = PrincipalType.USER,
+                            resourceType = ResourceType.TENANT,
+                            resourceId = resourceId.toString(),
+                            tenantResourceId = tenantResourceId.toString(),
+                            permissions = setOf(Permission.UPDATE),
+                            revokedBy = "admin",
+                            revokedAt = revokeAt,
+                        ).toPayload(),
+                )
 
-        assertTrue(
-            service.hasPermission(
-                principalId = principalId,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId,
-                permission = Permission.READ,
-                tenantResourceId = tenantResourceId
-            )
-        )
-        assertTrue(
-            service.hasPermission(
-                principalId = principalId,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId,
-                permission = Permission.UPDATE,
-                tenantResourceId = tenantResourceId
-            )
-        )
-        assertFalse(
-            service.hasPermission(
-                principalId = principalId,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId,
-                permission = Permission.DELETE,
-                tenantResourceId = tenantResourceId
-            )
-        )
-    }
+            service.handleEvents(listOf(grantEvent, revokeEvent))
 
-    @Test
-    fun `hasPermission returns true for ADMIN permission`() = runTest {
-        val principalId = UUID.randomUUID().toString()
-        val tenantResourceId = UUID.randomUUID()
-        val resourceId = UUID.randomUUID()
-        val grantedAt = Instant.now()
-
-        val event = Event(
-            id = EventId.create(
-                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
-                sequence = 1
-            ),
-            timestamp = grantedAt,
-            type = PermissionEventType.GRANTED,
-            payload = PermissionGrantedEvent(
-                principalId = principalId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId.toString(),
-                tenantResourceId = tenantResourceId.toString(),
-                permissions = setOf(Permission.ADMIN),
-                grantedBy = "admin",
-                grantedAt = grantedAt
-            ).toPayload()
-        )
-
-        service.handleEvents(listOf(event))
-
-        // ADMIN permission grants all permissions
-        assertTrue(
-            service.hasPermission(
-                principalId = principalId,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId,
-                permission = Permission.READ,
-                tenantResourceId = tenantResourceId
-            )
-        )
-        assertTrue(
-            service.hasPermission(
-                principalId = principalId,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId,
-                permission = Permission.DELETE,
-                tenantResourceId = tenantResourceId
-            )
-        )
-    }
+            val grants = service.getPermissionGrants(principalId, tenantResourceId, null, null)
+            assertEquals(1, grants.size)
+            assertEquals(setOf(Permission.READ), grants.first().permissions)
+        }
 
     @Test
-    fun `hasPermission returns true for global permission when resourceId is null`() = runTest {
-        val principalId = UUID.randomUUID().toString()
-        val tenantResourceId = UUID.randomUUID()
-        val grantedAt = Instant.now()
+    fun `hasPermission returns true when permission granted`() =
+        runTest {
+            val principalId = UUID.randomUUID().toString()
+            val tenantResourceId = UUID.randomUUID()
+            val resourceId = UUID.randomUUID()
+            val grantedAt = Instant.now()
 
-        // Grant permission for all tenants (resourceId = null)
-        val event = Event(
-            id = EventId.create(
-                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
-                sequence = 1
-            ),
-            timestamp = grantedAt,
-            type = PermissionEventType.GRANTED,
-            payload = PermissionGrantedEvent(
-                principalId = principalId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                resourceId = null, // null = all tenants
-                tenantResourceId = tenantResourceId.toString(),
-                permissions = setOf(Permission.READ),
-                grantedBy = "admin",
-                grantedAt = grantedAt
-            ).toPayload()
-        )
+            val event =
+                Event(
+                    id =
+                        EventId.create(
+                            topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                            sequence = 1,
+                        ),
+                    timestamp = grantedAt,
+                    type = PermissionEventType.GRANTED,
+                    payload =
+                        PermissionGrantedEvent(
+                            principalId = principalId,
+                            principalType = PrincipalType.USER,
+                            resourceType = ResourceType.TENANT,
+                            resourceId = resourceId.toString(),
+                            tenantResourceId = tenantResourceId.toString(),
+                            permissions = setOf(Permission.READ, Permission.UPDATE),
+                            grantedBy = "admin",
+                            grantedAt = grantedAt,
+                        ).toPayload(),
+                )
 
-        service.handleEvents(listOf(event))
+            service.handleEvents(listOf(event))
 
-        // Should have permission for any tenant resourceId
-        val anyTenantId = UUID.randomUUID()
-        assertTrue(
-            service.hasPermission(
-                principalId = principalId,
-                resourceType = ResourceType.TENANT,
-                resourceId = anyTenantId,
-                permission = Permission.READ,
-                tenantResourceId = tenantResourceId
+            assertTrue(
+                service.hasPermission(
+                    principalId = principalId,
+                    resourceType = ResourceType.TENANT,
+                    resourceId = resourceId,
+                    permission = Permission.READ,
+                    tenantResourceId = tenantResourceId,
+                ),
             )
-        )
-    }
+            assertTrue(
+                service.hasPermission(
+                    principalId = principalId,
+                    resourceType = ResourceType.TENANT,
+                    resourceId = resourceId,
+                    permission = Permission.UPDATE,
+                    tenantResourceId = tenantResourceId,
+                ),
+            )
+            assertFalse(
+                service.hasPermission(
+                    principalId = principalId,
+                    resourceType = ResourceType.TENANT,
+                    resourceId = resourceId,
+                    permission = Permission.DELETE,
+                    tenantResourceId = tenantResourceId,
+                ),
+            )
+        }
 
     @Test
-    fun `filters expired permissions`() = runTest {
-        val principalId = UUID.randomUUID().toString()
-        val tenantResourceId = UUID.randomUUID()
-        val resourceId = UUID.randomUUID()
-        val grantedAt = Instant.now()
-        val expiresAt = grantedAt.plusSeconds(5)
+    fun `hasPermission returns true for ADMIN permission`() =
+        runTest {
+            val principalId = UUID.randomUUID().toString()
+            val tenantResourceId = UUID.randomUUID()
+            val resourceId = UUID.randomUUID()
+            val grantedAt = Instant.now()
 
-        val event = Event(
-            id = EventId.create(
-                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
-                sequence = 1
-            ),
-            timestamp = grantedAt,
-            type = PermissionEventType.GRANTED,
-            payload = PermissionGrantedEvent(
-                principalId = principalId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId.toString(),
-                tenantResourceId = tenantResourceId.toString(),
-                permissions = setOf(Permission.READ),
-                grantedBy = "admin",
-                grantedAt = grantedAt,
-                expiresAt = expiresAt
-            ).toPayload()
-        )
+            val event =
+                Event(
+                    id =
+                        EventId.create(
+                            topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                            sequence = 1,
+                        ),
+                    timestamp = grantedAt,
+                    type = PermissionEventType.GRANTED,
+                    payload =
+                        PermissionGrantedEvent(
+                            principalId = principalId,
+                            principalType = PrincipalType.USER,
+                            resourceType = ResourceType.TENANT,
+                            resourceId = resourceId.toString(),
+                            tenantResourceId = tenantResourceId.toString(),
+                            permissions = setOf(Permission.ADMIN),
+                            grantedBy = "admin",
+                            grantedAt = grantedAt,
+                        ).toPayload(),
+                )
 
-        service.handleEvents(listOf(event))
+            service.handleEvents(listOf(event))
 
-        // Before expiration - should have permission
-        assertTrue(
-            service.hasPermission(
-                principalId = principalId,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId,
-                permission = Permission.READ,
-                tenantResourceId = tenantResourceId
+            // ADMIN permission grants all permissions
+            assertTrue(
+                service.hasPermission(
+                    principalId = principalId,
+                    resourceType = ResourceType.TENANT,
+                    resourceId = resourceId,
+                    permission = Permission.READ,
+                    tenantResourceId = tenantResourceId,
+                ),
             )
-        )
-
-        // After expiration - permission should be filtered out
-        // Note: This test assumes the service checks expiration at query time
-        // In a real scenario, you might need to advance time or mock Instant.now()
-    }
+            assertTrue(
+                service.hasPermission(
+                    principalId = principalId,
+                    resourceType = ResourceType.TENANT,
+                    resourceId = resourceId,
+                    permission = Permission.DELETE,
+                    tenantResourceId = tenantResourceId,
+                ),
+            )
+        }
 
     @Test
-    fun `filters permissions by tenant context`() = runTest {
-        val principalId = UUID.randomUUID().toString()
-        val tenant1ResourceId = UUID.randomUUID()
-        val tenant2ResourceId = UUID.randomUUID()
-        val resourceId = UUID.randomUUID()
-        val grantedAt = Instant.now()
+    fun `hasPermission returns true for global permission when resourceId is null`() =
+        runTest {
+            val principalId = UUID.randomUUID().toString()
+            val tenantResourceId = UUID.randomUUID()
+            val grantedAt = Instant.now()
 
-        // Grant permission in tenant1
-        val event = Event(
-            id = EventId.create(
-                topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
-                sequence = 1
-            ),
-            timestamp = grantedAt,
-            type = PermissionEventType.GRANTED,
-            payload = PermissionGrantedEvent(
-                principalId = principalId,
-                principalType = PrincipalType.USER,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId.toString(),
-                tenantResourceId = tenant1ResourceId.toString(),
-                permissions = setOf(Permission.READ),
-                grantedBy = "admin",
-                grantedAt = grantedAt
-            ).toPayload()
-        )
+            // Grant permission for all tenants (resourceId = null)
+            val event =
+                Event(
+                    id =
+                        EventId.create(
+                            topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                            sequence = 1,
+                        ),
+                    timestamp = grantedAt,
+                    type = PermissionEventType.GRANTED,
+                    payload =
+                        PermissionGrantedEvent(
+                            principalId = principalId,
+                            principalType = PrincipalType.USER,
+                            resourceType = ResourceType.TENANT,
+                            // null = all tenants
+                            resourceId = null,
+                            tenantResourceId = tenantResourceId.toString(),
+                            permissions = setOf(Permission.READ),
+                            grantedBy = "admin",
+                            grantedAt = grantedAt,
+                        ).toPayload(),
+                )
 
-        service.handleEvents(listOf(event))
+            service.handleEvents(listOf(event))
 
-        // Should have permission in tenant1
-        assertTrue(
-            service.hasPermission(
-                principalId = principalId,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId,
-                permission = Permission.READ,
-                tenantResourceId = tenant1ResourceId
+            // Should have permission for any tenant resourceId
+            val anyTenantId = UUID.randomUUID()
+            assertTrue(
+                service.hasPermission(
+                    principalId = principalId,
+                    resourceType = ResourceType.TENANT,
+                    resourceId = anyTenantId,
+                    permission = Permission.READ,
+                    tenantResourceId = tenantResourceId,
+                ),
             )
-        )
+        }
 
-        // Should not have permission in tenant2
-        assertFalse(
-            service.hasPermission(
-                principalId = principalId,
-                resourceType = ResourceType.TENANT,
-                resourceId = resourceId,
-                permission = Permission.READ,
-                tenantResourceId = tenant2ResourceId
+    @Test
+    fun `filters expired permissions`() =
+        runTest {
+            val principalId = UUID.randomUUID().toString()
+            val tenantResourceId = UUID.randomUUID()
+            val resourceId = UUID.randomUUID()
+            val grantedAt = Instant.now()
+            val expiresAt = grantedAt.plusSeconds(5)
+
+            val event =
+                Event(
+                    id =
+                        EventId.create(
+                            topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                            sequence = 1,
+                        ),
+                    timestamp = grantedAt,
+                    type = PermissionEventType.GRANTED,
+                    payload =
+                        PermissionGrantedEvent(
+                            principalId = principalId,
+                            principalType = PrincipalType.USER,
+                            resourceType = ResourceType.TENANT,
+                            resourceId = resourceId.toString(),
+                            tenantResourceId = tenantResourceId.toString(),
+                            permissions = setOf(Permission.READ),
+                            grantedBy = "admin",
+                            grantedAt = grantedAt,
+                            expiresAt = expiresAt,
+                        ).toPayload(),
+                )
+
+            service.handleEvents(listOf(event))
+
+            // Before expiration - should have permission
+            assertTrue(
+                service.hasPermission(
+                    principalId = principalId,
+                    resourceType = ResourceType.TENANT,
+                    resourceId = resourceId,
+                    permission = Permission.READ,
+                    tenantResourceId = tenantResourceId,
+                ),
             )
-        )
-    }
+
+            // After expiration - permission should be filtered out
+            // Note: This test assumes the service checks expiration at query time
+            // In a real scenario, you might need to advance time or mock Instant.now()
+        }
+
+    @Test
+    fun `filters permissions by tenant context`() =
+        runTest {
+            val principalId = UUID.randomUUID().toString()
+            val tenant1ResourceId = UUID.randomUUID()
+            val tenant2ResourceId = UUID.randomUUID()
+            val resourceId = UUID.randomUUID()
+            val grantedAt = Instant.now()
+
+            // Grant permission in tenant1
+            val event =
+                Event(
+                    id =
+                        EventId.create(
+                            topicId = SystemTopics.PERMISSIONS_TOPIC_ID,
+                            sequence = 1,
+                        ),
+                    timestamp = grantedAt,
+                    type = PermissionEventType.GRANTED,
+                    payload =
+                        PermissionGrantedEvent(
+                            principalId = principalId,
+                            principalType = PrincipalType.USER,
+                            resourceType = ResourceType.TENANT,
+                            resourceId = resourceId.toString(),
+                            tenantResourceId = tenant1ResourceId.toString(),
+                            permissions = setOf(Permission.READ),
+                            grantedBy = "admin",
+                            grantedAt = grantedAt,
+                        ).toPayload(),
+                )
+
+            service.handleEvents(listOf(event))
+
+            // Should have permission in tenant1
+            assertTrue(
+                service.hasPermission(
+                    principalId = principalId,
+                    resourceType = ResourceType.TENANT,
+                    resourceId = resourceId,
+                    permission = Permission.READ,
+                    tenantResourceId = tenant1ResourceId,
+                ),
+            )
+
+            // Should not have permission in tenant2
+            assertFalse(
+                service.hasPermission(
+                    principalId = principalId,
+                    resourceType = ResourceType.TENANT,
+                    resourceId = resourceId,
+                    permission = Permission.READ,
+                    tenantResourceId = tenant2ResourceId,
+                ),
+            )
+        }
 }
-

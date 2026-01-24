@@ -15,7 +15,3 @@ object ApiKeyGenerator {
         return "$PREFIX$encoded"
     }
 }
-
-
-
-

@@ -8,7 +8,6 @@ import java.util.*
 import kotlin.test.assertEquals
 
 class ConsumerTest {
-
     @Test
     fun `should create valid HTTP consumer`() {
         val callback = URI("https://example.com/webhook").toURL()
@@ -62,10 +61,11 @@ class ConsumerTest {
         val callback = URI("https://example.com/webhook").toURL()
         val topicId1 = UUID.randomUUID()
         val topicId2 = UUID.randomUUID()
-        val topics = mapOf(
-            topicId1 to null,
-            topicId2 to "event-10"
-        )
+        val topics =
+            mapOf(
+                topicId1 to null,
+                topicId2 to "event-10",
+            )
 
         val consumer = HttpConsumer("consumer-123", callback, topics)
 
@@ -79,10 +79,11 @@ class ConsumerTest {
         val callback = URI("https://example.com/webhook").toURL()
         val topicId1 = UUID.randomUUID()
         val topicId2 = UUID.randomUUID()
-        val topics = mapOf(
-            topicId1 to "event-4",
-            topicId2 to "event-10"
-        )
+        val topics =
+            mapOf(
+                topicId1 to "event-4",
+                topicId2 to "event-10",
+            )
         val consumer = HttpConsumer("consumer-123", callback, topics)
 
         val updated = consumer.withUpdatedLastEventId(topicId1, "event-5")

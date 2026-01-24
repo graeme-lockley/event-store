@@ -17,103 +17,115 @@ class AssignUserToTenantServiceTest {
     private lateinit var application: Application
 
     @BeforeEach
-    fun setup() = runTest {
-        application = createApplication()
-    }
-
-    @Test
-    fun `assigns user to tenant and emits event`() = runTest {
-        val tenantName = "acme"
-        application.createTenant(tenantName)
-
-        val user = application.createUser(
-            email = "alice@example.com",
-            name = "Alice",
-            password = "secret"
-        )
-
-        val result = application.assignUserToTenant(
-            userId = user.id,
-            tenantId = tenantName
-        )
-
-        assertEquals(true, result)
-
-        val storedEvents = application.getEvents(
-            topicId = SystemTopics.USERS_TOPIC_ID
-        )
-        val assignedEvents = storedEvents.filter { it.type == UserEventType.TENANT_ASSIGNED }
-        assertTrue(assignedEvents.isNotEmpty())
-    }
-
-    @Test
-    fun `assigns user to tenant with role`() = runTest {
-        val tenantName = "acme"
-        application.createTenant(tenantName)
-
-        val user = application.createUser(
-            email = "alice@example.com",
-            name = "Alice",
-            password = "secret"
-        )
-
-        val result = application.assignUserToTenant(
-            userId = user.id,
-            tenantId = tenantName,
-            role = "admin"
-        )
-
-        assertEquals(true, result)
-    }
-
-    @Test
-    fun `assigns user to tenant as primary`() = runTest {
-        val tenantName = "acme"
-        application.createTenant(tenantName)
-
-        val user = application.createUser(
-            email = "alice@example.com",
-            name = "Alice",
-            password = "secret"
-        )
-
-        val result = application.assignUserToTenant(
-            userId = user.id,
-            tenantId = tenantName,
-            isPrimary = true
-        )
-
-        assertEquals(true, result)
-    }
-
-    @Test
-    fun `throws exception when user not found`() = runTest {
-        val tenantName = "acme"
-        application.createTenant(tenantName)
-
-        assertThrows<com.eventstore.domain.exceptions.UserNotFoundException> {
-            application.assignUserToTenant(
-                userId = "nonexistent-id",
-                tenantId = tenantName
-            )
+    fun setup() =
+        runTest {
+            application = createApplication()
         }
-    }
 
     @Test
-    fun `throws exception when tenant not found`() = runTest {
-        val user = application.createUser(
-            email = "alice@example.com",
-            name = "Alice",
-            password = "secret"
-        )
+    fun `assigns user to tenant and emits event`() =
+        runTest {
+            val tenantName = "acme"
+            application.createTenant(tenantName)
 
-        assertThrows<com.eventstore.domain.exceptions.TenantNameNotFoundException> {
-            application.assignUserToTenant(
-                userId = user.id,
-                tenantId = "nonexistent-tenant"
-            )
+            val user =
+                application.createUser(
+                    email = "alice@example.com",
+                    name = "Alice",
+                    password = "secret",
+                )
+
+            val result =
+                application.assignUserToTenant(
+                    userId = user.id,
+                    tenantId = tenantName,
+                )
+
+            assertEquals(true, result)
+
+            val storedEvents =
+                application.getEvents(
+                    topicId = SystemTopics.USERS_TOPIC_ID,
+                )
+            val assignedEvents = storedEvents.filter { it.type == UserEventType.TENANT_ASSIGNED }
+            assertTrue(assignedEvents.isNotEmpty())
         }
-    }
 
+    @Test
+    fun `assigns user to tenant with role`() =
+        runTest {
+            val tenantName = "acme"
+            application.createTenant(tenantName)
+
+            val user =
+                application.createUser(
+                    email = "alice@example.com",
+                    name = "Alice",
+                    password = "secret",
+                )
+
+            val result =
+                application.assignUserToTenant(
+                    userId = user.id,
+                    tenantId = tenantName,
+                    role = "admin",
+                )
+
+            assertEquals(true, result)
+        }
+
+    @Test
+    fun `assigns user to tenant as primary`() =
+        runTest {
+            val tenantName = "acme"
+            application.createTenant(tenantName)
+
+            val user =
+                application.createUser(
+                    email = "alice@example.com",
+                    name = "Alice",
+                    password = "secret",
+                )
+
+            val result =
+                application.assignUserToTenant(
+                    userId = user.id,
+                    tenantId = tenantName,
+                    isPrimary = true,
+                )
+
+            assertEquals(true, result)
+        }
+
+    @Test
+    fun `throws exception when user not found`() =
+        runTest {
+            val tenantName = "acme"
+            application.createTenant(tenantName)
+
+            assertThrows<com.eventstore.domain.exceptions.UserNotFoundException> {
+                application.assignUserToTenant(
+                    userId = "nonexistent-id",
+                    tenantId = tenantName,
+                )
+            }
+        }
+
+    @Test
+    fun `throws exception when tenant not found`() =
+        runTest {
+            val user =
+                application.createUser(
+                    email = "alice@example.com",
+                    name = "Alice",
+                    password = "secret",
+                )
+
+            assertThrows<com.eventstore.domain.exceptions.TenantNameNotFoundException> {
+                application.assignUserToTenant(
+                    userId = user.id,
+                    tenantId = "nonexistent-tenant",
+                )
+            }
+        }
 }
-

@@ -20,13 +20,13 @@ data class CreateApiKeyRequest(
     val description: String? = null,
     val expiresAt: Instant? = null,
     val scopes: Set<String>? = null,
-    val createdBy: String = "system"
+    val createdBy: String = "system",
 )
 
 class CreateApiKeyService(
     private val userProjectionService: UserProjectionService,
     config: Config,
-    eventPublisher: SystemEventPublisher
+    eventPublisher: SystemEventPublisher,
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateApiKeyRequest): Pair<ApiKey, String> {
         // Validate user exists
@@ -40,35 +40,37 @@ class CreateApiKeyService(
         // Create API key domain object
         val now = Instant.now()
         val apiKeyId = UUID.randomUUID().toString()
-        val apiKey = ApiKey(
-            id = apiKeyId,
-            userId = request.userId,
-            keyHash = keyHash,
-            name = request.name,
-            description = request.description,
-            createdAt = now,
-            expiresAt = request.expiresAt,
-            scopes = request.scopes
-        )
+        val apiKey =
+            ApiKey(
+                id = apiKeyId,
+                userId = request.userId,
+                keyHash = keyHash,
+                name = request.name,
+                description = request.description,
+                createdAt = now,
+                expiresAt = request.expiresAt,
+                scopes = request.scopes,
+            )
 
         // Publish event
-        val payload = ApiKeyCreatedEvent(
-            apiKeyId = apiKeyId,
-            userId = request.userId,
-            keyHash = keyHash,
-            name = request.name,
-            description = request.description,
-            createdAt = now,
-            expiresAt = request.expiresAt,
-            scopes = request.scopes,
-            createdBy = request.createdBy
-        )
+        val payload =
+            ApiKeyCreatedEvent(
+                apiKeyId = apiKeyId,
+                userId = request.userId,
+                keyHash = keyHash,
+                name = request.name,
+                description = request.description,
+                createdAt = now,
+                expiresAt = request.expiresAt,
+                scopes = request.scopes,
+                createdBy = request.createdBy,
+            )
 
         eventPublisher.publishEvent(
             topicId = SystemTopics.API_KEYS_TOPIC_ID,
             eventType = ApiKeyEventType.CREATED,
             payload = payload.toPayload(),
-            timestamp = now
+            timestamp = now,
         )
 
         // Return both domain object and plain key (only time plain key is returned)

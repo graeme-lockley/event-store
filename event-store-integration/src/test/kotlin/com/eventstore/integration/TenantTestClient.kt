@@ -1,13 +1,30 @@
 package com.eventstore.integration
 
 import com.eventstore.domain.tenants.SystemTopics
-import com.eventstore.interfaces.http.dto.*
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.request.*
-import io.ktor.http.*
+import com.eventstore.interfaces.http.dto.ErrorResponse
+import com.eventstore.interfaces.http.dto.EventDto
+import com.eventstore.interfaces.http.dto.EventsResponse
+import com.eventstore.interfaces.http.dto.LoginRequest
+import com.eventstore.interfaces.http.dto.LoginResponse
+import com.eventstore.interfaces.http.dto.QuotaDto
+import com.eventstore.interfaces.http.dto.TenantCreateRequest
+import com.eventstore.interfaces.http.dto.TenantListResponse
+import com.eventstore.interfaces.http.dto.TenantResponse
+import com.eventstore.interfaces.http.dto.TenantUpdateRequest
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.request.cookie
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import kotlinx.coroutines.delay
-import java.util.*
+import java.util.UUID
 
 /**
  * HTTP client utility for tenant integration tests.
@@ -16,7 +33,7 @@ import java.util.*
 class TenantTestClient(
     private val httpClient: HttpClient,
     private val baseUrl: String,
-    var sessionId: String? = null
+    var sessionId: String? = null,
 ) {
     /**
      * Creates a new tenant via POST /tenants
@@ -24,20 +41,23 @@ class TenantTestClient(
     suspend fun createTenant(
         name: String,
         quota: QuotaDto? = null,
-        metadata: Map<String, Any> = emptyMap()
+        metadata: Map<String, Any> = emptyMap(),
     ): TenantResponse {
-        val request = TenantCreateRequest(
-            id = name, // For backward compatibility
-            name = name,
-            quota = quota,
-            metadata = metadata
-        )
+        val request =
+            TenantCreateRequest(
+                // For backward compatibility
+                id = name,
+                name = name,
+                quota = quota,
+                metadata = metadata,
+            )
 
-        val response = httpClient.post("$baseUrl/tenants") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-            sessionId?.let { cookie("sessionId", it) }
-        }
+        val response =
+            httpClient.post("$baseUrl/tenants") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+                sessionId?.let { cookie("sessionId", it) }
+            }
 
         return when (response.status) {
             HttpStatusCode.Created -> response.body()
@@ -52,10 +72,11 @@ class TenantTestClient(
      * Gets a tenant by UUID via GET /tenants/{tenantId}
      */
     suspend fun getTenant(tenantId: UUID): TenantResponse {
-        val response = httpClient.get("$baseUrl/tenants/${tenantId}") {
-            contentType(ContentType.Application.Json)
-            sessionId?.let { cookie("sessionId", it) }
-        }
+        val response =
+            httpClient.get("$baseUrl/tenants/$tenantId") {
+                contentType(ContentType.Application.Json)
+                sessionId?.let { cookie("sessionId", it) }
+            }
 
         return when (response.status) {
             HttpStatusCode.OK -> response.body()
@@ -71,10 +92,11 @@ class TenantTestClient(
      * Lists all tenants via GET /tenants
      */
     suspend fun listTenants(): List<TenantResponse> {
-        val response = httpClient.get("$baseUrl/tenants") {
-            contentType(ContentType.Application.Json)
-            sessionId?.let { cookie("sessionId", it) }
-        }
+        val response =
+            httpClient.get("$baseUrl/tenants") {
+                contentType(ContentType.Application.Json)
+                sessionId?.let { cookie("sessionId", it) }
+            }
 
         return when (response.status) {
             HttpStatusCode.OK -> response.body<TenantListResponse>().tenants
@@ -92,19 +114,21 @@ class TenantTestClient(
         tenantId: UUID,
         name: String? = null,
         quota: QuotaDto? = null,
-        metadata: Map<String, Any>? = null
+        metadata: Map<String, Any>? = null,
     ): TenantResponse {
-        val request = TenantUpdateRequest(
-            name = name,
-            quota = quota,
-            metadata = metadata
-        )
+        val request =
+            TenantUpdateRequest(
+                name = name,
+                quota = quota,
+                metadata = metadata,
+            )
 
-        val response = httpClient.put("$baseUrl/tenants/${tenantId}") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-            sessionId?.let { cookie("sessionId", it) }
-        }
+        val response =
+            httpClient.put("$baseUrl/tenants/$tenantId") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+                sessionId?.let { cookie("sessionId", it) }
+            }
 
         return when (response.status) {
             HttpStatusCode.OK -> response.body()
@@ -119,14 +143,18 @@ class TenantTestClient(
     /**
      * Deletes a tenant via DELETE /tenants/{tenantId}
      */
-    suspend fun deleteTenant(tenantId: UUID, reason: String? = null) {
-        val response = httpClient.delete("$baseUrl/tenants/${tenantId}") {
-            contentType(ContentType.Application.Json)
-            sessionId?.let { cookie("sessionId", it) }
-            reason?.let {
-                setBody(mapOf("reason" to it))
+    suspend fun deleteTenant(
+        tenantId: UUID,
+        reason: String? = null,
+    ) {
+        val response =
+            httpClient.delete("$baseUrl/tenants/$tenantId") {
+                contentType(ContentType.Application.Json)
+                sessionId?.let { cookie("sessionId", it) }
+                reason?.let {
+                    setBody(mapOf("reason" to it))
+                }
             }
-        }
 
         when (response.status) {
             HttpStatusCode.OK -> Unit
@@ -143,11 +171,12 @@ class TenantTestClient(
      */
     suspend fun getTenantEvents(limit: Int? = null): List<EventDto> {
         val topicId = SystemTopics.TENANTS_TOPIC_ID
-        val response = httpClient.get("$baseUrl/topics/${topicId}/events") {
-            contentType(ContentType.Application.Json)
-            limit?.let { parameter("limit", it) }
-            sessionId?.let { cookie("sessionId", it) }
-        }
+        val response =
+            httpClient.get("$baseUrl/topics/$topicId/events") {
+                contentType(ContentType.Application.Json)
+                limit?.let { parameter("limit", it) }
+                sessionId?.let { cookie("sessionId", it) }
+            }
 
         return when (response.status) {
             HttpStatusCode.OK -> response.body<EventsResponse>().events
@@ -161,12 +190,16 @@ class TenantTestClient(
     /**
      * Authenticates and stores session ID
      */
-    suspend fun authenticate(email: String, password: String): String {
+    suspend fun authenticate(
+        email: String,
+        password: String,
+    ): String {
         val loginRequest = LoginRequest(email = email, password = password)
-        val response = httpClient.post("$baseUrl/auth/login") {
-            contentType(ContentType.Application.Json)
-            setBody(loginRequest)
-        }
+        val response =
+            httpClient.post("$baseUrl/auth/login") {
+                contentType(ContentType.Application.Json)
+                setBody(loginRequest)
+            }
 
         val loginResponse = response.body<LoginResponse>()
         sessionId = loginResponse.sessionId
@@ -179,7 +212,7 @@ class TenantTestClient(
     suspend fun waitForProjection(
         maxAttempts: Int = 10,
         delayMs: Long = 100,
-        condition: suspend () -> Boolean
+        condition: suspend () -> Boolean,
     ) {
         for (attempt in 0 until maxAttempts) {
             if (condition()) {
@@ -214,11 +247,12 @@ class TenantTestClient(
     suspend fun getTenantUuidByName(name: String): UUID? {
         val events = getTenantEvents()
         // Find the tenant.created event for this tenant name
-        val createdEvent = events.find { event ->
-            event.type == "tenant.created" && 
-            (event.payload["name"] as? String) == name
-        }
-        
+        val createdEvent =
+            events.find { event ->
+                event.type == "tenant.created" &&
+                    (event.payload["name"] as? String) == name
+            }
+
         return createdEvent?.let { event ->
             val tenantIdStr = event.payload["tenantId"] as? String
             tenantIdStr?.let { UUID.fromString(it) }
@@ -240,7 +274,7 @@ class TenantTestClient(
 class TenantApiException(
     val statusCode: HttpStatusCode,
     message: String,
-    val errorCode: String?
+    val errorCode: String?,
 ) : RuntimeException("API error ($statusCode): $message (code: $errorCode)")
 
 /**

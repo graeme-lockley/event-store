@@ -7,14 +7,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class TopicTest {
-
     @Test
     fun `should create valid topic`() {
         val topicId = UUID.randomUUID()
         val namespaceId = UUID.randomUUID()
-        val schemas = listOf(
-            Schema(eventType = "user.created", properties = mapOf("id" to "string"))
-        )
+        val schemas =
+            listOf(
+                Schema(eventType = "user.created", properties = mapOf("id" to "string")),
+            )
         val topic = Topic(topicId, namespaceId, "user-events", 0L, schemas)
 
         assertEquals(topicId, topic.topicId)
@@ -61,10 +61,11 @@ class TopicTest {
     @Test
     fun `should update schemas`() {
         val originalSchemas = listOf(Schema(eventType = "user.created"))
-        val newSchemas = listOf(
-            Schema(eventType = "user.created"),
-            Schema(eventType = "user.updated")
-        )
+        val newSchemas =
+            listOf(
+                Schema(eventType = "user.created"),
+                Schema(eventType = "user.updated"),
+            )
 
         val topic = Topic(UUID.randomUUID(), UUID.randomUUID(), "user-events", 0L, originalSchemas)
         val updated = topic.updateSchemas(newSchemas)

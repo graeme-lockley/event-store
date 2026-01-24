@@ -15,11 +15,11 @@ class InMemoryPermissionRepository : PermissionRepository {
             // Remove existing grant if it matches (to update)
             grants.removeAll {
                 it.principalId == grant.principalId &&
-                        it.resourceType == grant.resourceType &&
-                        it.resourceId == grant.resourceId &&
-                        it.tenantResourceId == grant.tenantResourceId &&
-                        it.namespaceResourceId == grant.namespaceResourceId &&
-                        it.topicId == grant.topicId
+                    it.resourceType == grant.resourceType &&
+                    it.resourceId == grant.resourceId &&
+                    it.tenantResourceId == grant.tenantResourceId &&
+                    it.namespaceResourceId == grant.namespaceResourceId &&
+                    it.topicId == grant.topicId
             }
             grants.add(grant)
         }
@@ -31,11 +31,14 @@ class InMemoryPermissionRepository : PermissionRepository {
         }
     }
 
-    override suspend fun findByPrincipalAndTenant(principalId: String, tenantResourceId: UUID): List<PermissionGrant> {
+    override suspend fun findByPrincipalAndTenant(
+        principalId: String,
+        tenantResourceId: UUID,
+    ): List<PermissionGrant> {
         return mutex.withLock {
             grants.filter {
                 it.principalId == principalId &&
-                        it.tenantResourceId == tenantResourceId.toString()
+                    it.tenantResourceId == tenantResourceId.toString()
             }
         }
     }
@@ -50,18 +53,14 @@ class InMemoryPermissionRepository : PermissionRepository {
         mutex.withLock {
             grants.removeAll {
                 it.principalId == grant.principalId &&
-                        it.resourceType == grant.resourceType &&
-                        it.resourceId == grant.resourceId &&
-                        it.tenantResourceId == grant.tenantResourceId &&
-                        it.namespaceResourceId == grant.namespaceResourceId &&
-                        it.topicId == grant.topicId &&
-                        it.permissions == grant.permissions &&
-                        it.grantedAt == grant.grantedAt
+                    it.resourceType == grant.resourceType &&
+                    it.resourceId == grant.resourceId &&
+                    it.tenantResourceId == grant.tenantResourceId &&
+                    it.namespaceResourceId == grant.namespaceResourceId &&
+                    it.topicId == grant.topicId &&
+                    it.permissions == grant.permissions &&
+                    it.grantedAt == grant.grantedAt
             }
         }
     }
 }
-
-
-
-

@@ -32,7 +32,3 @@ class InMemoryUserRepository : UserRepository {
     override suspend fun getAssociations(userId: String): List<UserTenantAssociation> =
         mutex.withLock { associations[userId]?.toList() ?: emptyList() }
 }
-
-
-
-

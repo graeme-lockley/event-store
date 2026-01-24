@@ -34,4 +34,3 @@ interface EventDispatcher {
      */
     suspend fun ensureDispatchersRunning(topicIds: Set<UUID>)
 }
-

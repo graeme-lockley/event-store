@@ -4,7 +4,7 @@ import com.eventstore.domain.ApiKey
 import com.eventstore.infrastructure.projections.ApiKeyProjectionService
 
 class GetApiKeyService(
-    private val apiKeyProjectionService: ApiKeyProjectionService
+    private val apiKeyProjectionService: ApiKeyProjectionService,
 ) {
     suspend fun getById(keyId: String): ApiKey? {
         return apiKeyProjectionService.getApiKey(keyId)
@@ -14,6 +14,3 @@ class GetApiKeyService(
         return apiKeyProjectionService.getApiKeysByUserId(userId)
     }
 }
-
-
-

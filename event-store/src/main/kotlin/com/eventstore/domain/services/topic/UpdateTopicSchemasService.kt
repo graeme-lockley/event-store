@@ -9,11 +9,11 @@ import java.util.*
 
 class UpdateTopicSchemasService(
     private val topicRepository: TopicRepository,
-    private val schemaValidator: SchemaValidator
+    private val schemaValidator: SchemaValidator,
 ) {
     suspend fun execute(
         topicId: UUID,
-        newSchemas: List<Schema>
+        newSchemas: List<Schema>,
     ): Topic {
         Schema.unique(newSchemas)
 
@@ -28,8 +28,9 @@ class UpdateTopicSchemasService(
         }
 
         // Load current topic
-        val currentTopic = topicRepository.getTopic(topicId)
-            ?: throw TopicNotFoundException(topicId.toString())
+        val currentTopic =
+            topicRepository.getTopic(topicId)
+                ?: throw TopicNotFoundException(topicId.toString())
 
         // Extract existing eventTypes
         val existingTypes = currentTopic.schemas.map { it.eventType }.toSet()
@@ -39,7 +40,7 @@ class UpdateTopicSchemasService(
         val missingTypes = existingTypes - newTypes
         if (missingTypes.isNotEmpty()) {
             throw IllegalArgumentException(
-                "Cannot remove schemas. Missing eventTypes: ${missingTypes.joinToString(", ")}"
+                "Cannot remove schemas. Missing eventTypes: ${missingTypes.joinToString(", ")}",
             )
         }
 
@@ -52,4 +53,3 @@ class UpdateTopicSchemasService(
         return updatedTopic
     }
 }
-

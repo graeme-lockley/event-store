@@ -16,16 +16,18 @@ import java.nio.file.Path
 import java.util.*
 
 data class TopicConfig(
-    val topicId: String,          // UUID as string
-    val namespaceId: String,      // UUID as string
+    // UUID as string
+    val topicId: String,
+    // UUID as string
+    val namespaceId: String,
     val name: String,
     val sequence: Long,
-    val schemas: List<Schema>
+    val schemas: List<Schema>,
 )
 
 class FileSystemTopicRepository(
     private val configDir: Path,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) : TopicRepository {
     private val logger = LoggerFactory.getLogger(FileSystemTopicRepository::class.java)
     private val mutexes = mutableMapOf<UUID, Mutex>()
@@ -34,7 +36,7 @@ class FileSystemTopicRepository(
         try {
             Files.createDirectories(configDir)
         } catch (e: Exception) {
-            throw TopicConfigException("Failed to create config directory: ${configDir}", e)
+            throw TopicConfigException("Failed to create config directory: $configDir", e)
         }
     }
 
@@ -58,7 +60,7 @@ class FileSystemTopicRepository(
         topicId: UUID,
         namespaceId: UUID,
         name: String,
-        schemas: List<Schema>
+        schemas: List<Schema>,
     ): Topic {
         return withContext(Dispatchers.IO) {
             try {
@@ -68,13 +70,14 @@ class FileSystemTopicRepository(
                     throw com.eventstore.domain.exceptions.TopicAlreadyExistsException(name)
                 }
 
-                val config = TopicConfig(
-                    topicId = topicId.toString(),
-                    namespaceId = namespaceId.toString(),
-                    name = name,
-                    sequence = 0,
-                    schemas = schemas
-                )
+                val config =
+                    TopicConfig(
+                        topicId = topicId.toString(),
+                        namespaceId = namespaceId.toString(),
+                        name = name,
+                        sequence = 0,
+                        schemas = schemas,
+                    )
                 val json = objectMapper.writeValueAsString(config)
                 Files.writeString(configPath, json)
 
@@ -83,7 +86,7 @@ class FileSystemTopicRepository(
                     namespaceId = namespaceId,
                     name = name,
                     sequence = 0,
-                    schemas = schemas
+                    schemas = schemas,
                 )
             } catch (e: com.eventstore.domain.exceptions.TopicAlreadyExistsException) {
                 throw e
@@ -108,7 +111,7 @@ class FileSystemTopicRepository(
                     namespaceId = UUID.fromString(config.namespaceId),
                     name = config.name,
                     sequence = config.sequence,
-                    schemas = config.schemas
+                    schemas = config.schemas,
                 )
             } catch (e: Exception) {
                 throw TopicConfigException("Failed to read topic configuration for $topicId", e)
@@ -122,21 +125,26 @@ class FileSystemTopicRepository(
         }
     }
 
-    override suspend fun updateSequence(topicId: UUID, sequence: Long) {
+    override suspend fun updateSequence(
+        topicId: UUID,
+        sequence: Long,
+    ) {
         val mutex = getMutex(topicId)
         mutex.withLock {
             withContext(Dispatchers.IO) {
                 try {
-                    val topic = getTopic(topicId)
-                        ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicId.toString())
+                    val topic =
+                        getTopic(topicId)
+                            ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicId.toString())
 
-                    val updatedConfig = TopicConfig(
-                        topicId = topic.topicId.toString(),
-                        namespaceId = topic.namespaceId.toString(),
-                        name = topic.name,
-                        sequence = sequence,
-                        schemas = topic.schemas
-                    )
+                    val updatedConfig =
+                        TopicConfig(
+                            topicId = topic.topicId.toString(),
+                            namespaceId = topic.namespaceId.toString(),
+                            name = topic.name,
+                            sequence = sequence,
+                            schemas = topic.schemas,
+                        )
                     val json = objectMapper.writeValueAsString(updatedConfig)
                     val configPath = getConfigPath(topicId)
                     Files.writeString(configPath, json)
@@ -154,17 +162,19 @@ class FileSystemTopicRepository(
         return mutex.withLock {
             withContext(Dispatchers.IO) {
                 try {
-                    val topic = getTopic(topicId)
-                        ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicId.toString())
+                    val topic =
+                        getTopic(topicId)
+                            ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicId.toString())
 
                     val nextSequence = topic.sequence + 1
-                    val updatedConfig = TopicConfig(
-                        topicId = topic.topicId.toString(),
-                        namespaceId = topic.namespaceId.toString(),
-                        name = topic.name,
-                        sequence = nextSequence,
-                        schemas = topic.schemas
-                    )
+                    val updatedConfig =
+                        TopicConfig(
+                            topicId = topic.topicId.toString(),
+                            namespaceId = topic.namespaceId.toString(),
+                            name = topic.name,
+                            sequence = nextSequence,
+                            schemas = topic.schemas,
+                        )
                     val json = objectMapper.writeValueAsString(updatedConfig)
                     val configPath = getConfigPath(topicId)
                     Files.writeString(configPath, json)
@@ -181,22 +191,24 @@ class FileSystemTopicRepository(
 
     override suspend fun updateSchemas(
         topicId: UUID,
-        schemas: List<Schema>
+        schemas: List<Schema>,
     ): Topic {
         val mutex = getMutex(topicId)
         return mutex.withLock {
             withContext(Dispatchers.IO) {
                 try {
-                    val current = getTopic(topicId)
-                        ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicId.toString())
+                    val current =
+                        getTopic(topicId)
+                            ?: throw com.eventstore.domain.exceptions.TopicNotFoundException(topicId.toString())
 
-                    val updatedConfig = TopicConfig(
-                        topicId = current.topicId.toString(),
-                        namespaceId = current.namespaceId.toString(),
-                        name = current.name,
-                        sequence = current.sequence,
-                        schemas = schemas
-                    )
+                    val updatedConfig =
+                        TopicConfig(
+                            topicId = current.topicId.toString(),
+                            namespaceId = current.namespaceId.toString(),
+                            name = current.name,
+                            sequence = current.sequence,
+                            schemas = schemas,
+                        )
                     val json = objectMapper.writeValueAsString(updatedConfig)
                     val configPath = getConfigPath(topicId)
                     Files.writeString(configPath, json)
@@ -229,10 +241,10 @@ class FileSystemTopicRepository(
                                 namespaceId = UUID.fromString(config.namespaceId),
                                 name = config.name,
                                 sequence = config.sequence,
-                                schemas = config.schemas
+                                schemas = config.schemas,
                             )
                         } catch (e: Exception) {
-                            logger.warn("Failed to read topic configuration from ${path}: ${e.message}", e)
+                            logger.warn("Failed to read topic configuration from $path: ${e.message}", e)
                             null
                         }
                     }
@@ -243,4 +255,3 @@ class FileSystemTopicRepository(
         }
     }
 }
-

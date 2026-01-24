@@ -5,7 +5,3 @@ class NamespaceAlreadyExistsException(namespaceId: String) :
 
 class NamespaceNotFoundException(namespaceId: String) :
     RuntimeException("Namespace with id '$namespaceId' not found")
-
-
-
-

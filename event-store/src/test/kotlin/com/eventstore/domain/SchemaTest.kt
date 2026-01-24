@@ -5,7 +5,6 @@ import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 
 class SchemaTest {
-
     @Test
     fun `should create valid schema with defaults`() {
         val schema = Schema(eventType = "user.created")
@@ -19,21 +18,23 @@ class SchemaTest {
 
     @Test
     fun `should create schema with all properties`() {
-        val properties = mapOf(
-            "id" to mapOf("type" to "string"),
-            "name" to mapOf("type" to "string")
-        )
+        val properties =
+            mapOf(
+                "id" to mapOf("type" to "string"),
+                "name" to mapOf("type" to "string"),
+            )
         val required = listOf("id", "name")
         val additional = mapOf("description" to "User creation event")
 
-        val schema = Schema(
-            eventType = "user.created",
-            type = "object",
-            schema = "https://json-schema.org/draft/2020-12/schema",
-            properties = properties,
-            required = required,
-            additionalProperties = additional
-        )
+        val schema =
+            Schema(
+                eventType = "user.created",
+                type = "object",
+                schema = "https://json-schema.org/draft/2020-12/schema",
+                properties = properties,
+                required = required,
+                additionalProperties = additional,
+            )
 
         assertEquals("user.created", schema.eventType)
         assertEquals(properties, schema.properties)
@@ -57,12 +58,12 @@ class SchemaTest {
 
     @Test
     fun `should accept custom schema URL`() {
-        val schema = Schema(
-            eventType = "user.created",
-            schema = "https://json-schema.org/draft/2019-09/schema"
-        )
+        val schema =
+            Schema(
+                eventType = "user.created",
+                schema = "https://json-schema.org/draft/2019-09/schema",
+            )
 
         assertEquals("https://json-schema.org/draft/2019-09/schema", schema.schema)
     }
 }
-

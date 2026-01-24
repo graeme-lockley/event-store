@@ -8,7 +8,7 @@ data class Config(
     val rateLimitPerMinute: Int,
     val authEnabled: Boolean = false,
     val createTestApiKey: Boolean = false,
-    val silent: Boolean = false
+    val silent: Boolean = false,
 ) {
     companion object {
         fun fromEnvironment(): Config {
@@ -20,9 +20,8 @@ data class Config(
                 rateLimitPerMinute = System.getenv("RATE_LIMIT_PER_MINUTE")?.toIntOrNull() ?: 600,
                 authEnabled = System.getenv("AUTH_ENABLED")?.toBoolean() ?: false,
                 createTestApiKey = System.getenv("CREATE_TEST_API_KEY")?.toBoolean() ?: false,
-                silent = System.getenv("SILENT")?.toBoolean() ?: false
+                silent = System.getenv("SILENT")?.toBoolean() ?: false,
             )
         }
     }
 }
-

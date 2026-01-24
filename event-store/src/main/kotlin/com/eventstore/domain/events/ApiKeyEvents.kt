@@ -9,6 +9,7 @@ object ApiKeyEventType {
 
 sealed interface ApiKeyEventPayload {
     val type: String
+
     fun toPayload(): Map<String, Any>
 }
 
@@ -21,21 +22,22 @@ data class ApiKeyCreatedEvent(
     val createdAt: Instant,
     val expiresAt: Instant? = null,
     val scopes: Set<String>? = null,
-    val createdBy: String = "system"
+    val createdBy: String = "system",
 ) : ApiKeyEventPayload {
     override val type: String = ApiKeyEventType.CREATED
 
-    override fun toPayload(): Map<String, Any> = buildMap {
-        put("apiKeyId", apiKeyId)
-        put("userId", userId)
-        put("keyHash", keyHash)
-        put("name", name)
-        description?.let { put("description", it) }
-        put("createdAt", createdAt.toString())
-        expiresAt?.let { put("expiresAt", it.toString()) }
-        scopes?.let { put("scopes", it.toList()) }
-        put("createdBy", createdBy)
-    }
+    override fun toPayload(): Map<String, Any> =
+        buildMap {
+            put("apiKeyId", apiKeyId)
+            put("userId", userId)
+            put("keyHash", keyHash)
+            put("name", name)
+            description?.let { put("description", it) }
+            put("createdAt", createdAt.toString())
+            expiresAt?.let { put("expiresAt", it.toString()) }
+            scopes?.let { put("scopes", it.toList()) }
+            put("createdBy", createdBy)
+        }
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): ApiKeyCreatedEvent {
@@ -57,7 +59,7 @@ data class ApiKeyCreatedEvent(
                 createdAt = createdAt,
                 expiresAt = expiresAt,
                 scopes = scopes,
-                createdBy = createdBy
+                createdBy = createdBy,
             )
         }
     }
@@ -67,16 +69,17 @@ data class ApiKeyRevokedEvent(
     val apiKeyId: String,
     val revokedBy: String = "system",
     val revokedAt: Instant,
-    val reason: String? = null
+    val reason: String? = null,
 ) : ApiKeyEventPayload {
     override val type: String = ApiKeyEventType.REVOKED
 
-    override fun toPayload(): Map<String, Any> = buildMap {
-        put("apiKeyId", apiKeyId)
-        put("revokedBy", revokedBy)
-        put("revokedAt", revokedAt.toString())
-        reason?.let { put("reason", it) }
-    }
+    override fun toPayload(): Map<String, Any> =
+        buildMap {
+            put("apiKeyId", apiKeyId)
+            put("revokedBy", revokedBy)
+            put("revokedAt", revokedAt.toString())
+            reason?.let { put("reason", it) }
+        }
 
     companion object {
         fun fromPayload(payload: Map<String, Any?>): ApiKeyRevokedEvent {
@@ -88,7 +91,7 @@ data class ApiKeyRevokedEvent(
                 apiKeyId = apiKeyId,
                 revokedBy = revokedBy,
                 revokedAt = revokedAt,
-                reason = reason
+                reason = reason,
             )
         }
     }
@@ -98,4 +101,3 @@ private fun parseInstant(value: Any?): Instant {
     val text = value as? String ?: error("timestamp value is required")
     return Instant.parse(text)
 }
-

@@ -18,7 +18,6 @@ import kotlin.test.*
  * These tests verify common behavior that should be consistent across all implementations.
  */
 class TopicRepositoryTest {
-
     @TempDir
     lateinit var sharedTempDir: Path
 
@@ -26,18 +25,19 @@ class TopicRepositoryTest {
     fun `test repository implementations`(): List<DynamicTest> {
         data class RepoWithCleanup(val repository: TopicRepository, val cleanup: (() -> Unit)?)
 
-        val implementations = listOf(
-            "InMemoryTopicRepository" to {
-                RepoWithCleanup(InMemoryTopicRepository(), null)
-            },
-            "FileSystemTopicRepository" to {
-                // Create a unique subdirectory for each test to avoid conflicts
-                val tempDir = Files.createTempDirectory(sharedTempDir, "topic-repo-test")
-                val objectMapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
-                val repo = FileSystemTopicRepository(tempDir, objectMapper)
-                RepoWithCleanup(repo) { cleanupDirectory(tempDir) }
-            }
-        )
+        val implementations =
+            listOf(
+                "InMemoryTopicRepository" to {
+                    RepoWithCleanup(InMemoryTopicRepository(), null)
+                },
+                "FileSystemTopicRepository" to {
+                    // Create a unique subdirectory for each test to avoid conflicts
+                    val tempDir = Files.createTempDirectory(sharedTempDir, "topic-repo-test")
+                    val objectMapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+                    val repo = FileSystemTopicRepository(tempDir, objectMapper)
+                    RepoWithCleanup(repo) { cleanupDirectory(tempDir) }
+                },
+            )
 
         return implementations.flatMap { (name, factory) ->
             listOf(
@@ -168,7 +168,7 @@ class TopicRepositoryTest {
                     } finally {
                         repoWithCleanup.cleanup?.invoke()
                     }
-                }
+                },
             )
         }
     }
@@ -177,16 +177,18 @@ class TopicRepositoryTest {
         val topicId = UUID.randomUUID()
         val namespaceId = UUID.randomUUID()
         val name = "test-topic"
-        val schemas = listOf(
-            Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string")))
-        )
+        val schemas =
+            listOf(
+                Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string"))),
+            )
 
-        val topic = repository.createTopic(
-            topicId = topicId,
-            namespaceId = namespaceId,
-            name = name,
-            schemas = schemas
-        )
+        val topic =
+            repository.createTopic(
+                topicId = topicId,
+                namespaceId = namespaceId,
+                name = name,
+                schemas = schemas,
+            )
 
         assertEquals(topicId, topic.topicId)
         assertEquals(namespaceId, topic.namespaceId)
@@ -216,9 +218,10 @@ class TopicRepositoryTest {
         val topicId = UUID.randomUUID()
         val namespaceId = UUID.randomUUID()
         val name = "get-topic"
-        val schemas = listOf(
-            Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string")))
-        )
+        val schemas =
+            listOf(
+                Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string"))),
+            )
 
         val created = repository.createTopic(topicId, namespaceId, name, schemas)
         val retrieved = repository.getTopic(topicId)
@@ -272,10 +275,11 @@ class TopicRepositoryTest {
         val namespaceId = UUID.randomUUID()
         val name = "schemas-topic"
         val initialSchemas = listOf(Schema(eventType = "user.created"))
-        val updatedSchemas = listOf(
-            Schema(eventType = "user.created"),
-            Schema(eventType = "user.updated")
-        )
+        val updatedSchemas =
+            listOf(
+                Schema(eventType = "user.created"),
+                Schema(eventType = "user.updated"),
+            )
 
         repository.createTopic(topicId, namespaceId, name, initialSchemas)
         val updated = repository.updateSchemas(topicId, updatedSchemas)
@@ -297,24 +301,27 @@ class TopicRepositoryTest {
 
     private suspend fun testGetAllTopics(repository: TopicRepository) {
         val namespaceId = UUID.randomUUID()
-        val topic1 = repository.createTopic(
-            UUID.randomUUID(),
-            namespaceId,
-            "topic-1",
-            listOf(Schema(eventType = "event1"))
-        )
-        val topic2 = repository.createTopic(
-            UUID.randomUUID(),
-            namespaceId,
-            "topic-2",
-            listOf(Schema(eventType = "event2"))
-        )
-        val topic3 = repository.createTopic(
-            UUID.randomUUID(),
-            namespaceId,
-            "topic-3",
-            listOf(Schema(eventType = "event3"))
-        )
+        val topic1 =
+            repository.createTopic(
+                UUID.randomUUID(),
+                namespaceId,
+                "topic-1",
+                listOf(Schema(eventType = "event1")),
+            )
+        val topic2 =
+            repository.createTopic(
+                UUID.randomUUID(),
+                namespaceId,
+                "topic-2",
+                listOf(Schema(eventType = "event2")),
+            )
+        val topic3 =
+            repository.createTopic(
+                UUID.randomUUID(),
+                namespaceId,
+                "topic-3",
+                listOf(Schema(eventType = "event3")),
+            )
 
         val allTopics = repository.getAllTopics()
 
@@ -331,14 +338,15 @@ class TopicRepositoryTest {
 
     private suspend fun testMultipleTopics(repository: TopicRepository) {
         val namespaceId = UUID.randomUUID()
-        val topics = (1..5).map { i ->
-            repository.createTopic(
-                UUID.randomUUID(),
-                namespaceId,
-                "topic-$i",
-                listOf(Schema(eventType = "event$i"))
-            )
-        }
+        val topics =
+            (1..5).map { i ->
+                repository.createTopic(
+                    UUID.randomUUID(),
+                    namespaceId,
+                    "topic-$i",
+                    listOf(Schema(eventType = "event$i")),
+                )
+            }
 
         val allTopics = repository.getAllTopics()
         assertEquals(5, allTopics.size)
@@ -366,11 +374,12 @@ class TopicRepositoryTest {
         val topicId = UUID.randomUUID()
         val namespaceId = UUID.randomUUID()
         val name = "multiple-schemas-topic"
-        val schemas = listOf(
-            Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string"))),
-            Schema(eventType = "user.updated", properties = mapOf("id" to mapOf("type" to "string"))),
-            Schema(eventType = "user.deleted", properties = mapOf("id" to mapOf("type" to "string")))
-        )
+        val schemas =
+            listOf(
+                Schema(eventType = "user.created", properties = mapOf("id" to mapOf("type" to "string"))),
+                Schema(eventType = "user.updated", properties = mapOf("id" to mapOf("type" to "string"))),
+                Schema(eventType = "user.deleted", properties = mapOf("id" to mapOf("type" to "string"))),
+            )
 
         val topic = repository.createTopic(topicId, namespaceId, name, schemas)
         assertEquals(3, topic.schemas.size)
@@ -415,10 +424,11 @@ class TopicRepositoryTest {
         repository.createTopic(topicId, namespaceId, name, initialSchemas)
 
         // Update schemas multiple times
-        val schemas1 = listOf(
-            Schema(eventType = "user.created"),
-            Schema(eventType = "user.updated")
-        )
+        val schemas1 =
+            listOf(
+                Schema(eventType = "user.created"),
+                Schema(eventType = "user.updated"),
+            )
         repository.updateSchemas(topicId, schemas1)
         var topic = repository.getTopic(topicId)
         assertNotNull(topic)

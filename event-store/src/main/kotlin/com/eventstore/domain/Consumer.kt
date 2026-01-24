@@ -8,7 +8,8 @@ import java.util.*
  */
 abstract class Consumer(
     val id: String,
-    val topics: Map<UUID, String?> // topicId -> lastEventId (null if starting from beginning)
+    // topicId -> lastEventId (null if starting from beginning)
+    val topics: Map<UUID, String?>,
 ) {
     init {
         require(id.isNotBlank()) { "Consumer ID is required" }
@@ -34,5 +35,8 @@ abstract class Consumer(
      * Creates a copy with updated last event ID.
      * Subclasses must implement this to return their specific type.
      */
-    abstract fun withUpdatedLastEventId(topicId: UUID, eventId: String): Consumer
+    abstract fun withUpdatedLastEventId(
+        topicId: UUID,
+        eventId: String,
+    ): Consumer
 }

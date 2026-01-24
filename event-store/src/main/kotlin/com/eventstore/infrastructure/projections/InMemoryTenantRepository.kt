@@ -45,4 +45,3 @@ class InMemoryTenantRepository : TenantRepository {
         return findByName(id)
     }
 }
-

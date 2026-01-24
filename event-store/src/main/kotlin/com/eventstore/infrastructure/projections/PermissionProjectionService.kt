@@ -21,7 +21,7 @@ import java.util.*
  * Implements caching and permission inheritance (tenant → namespace → topic).
  */
 class PermissionProjectionService(
-    private val permissionRepository: PermissionRepository
+    private val permissionRepository: PermissionRepository,
 ) {
     private val logger = LoggerFactory.getLogger(PermissionProjectionService::class.java)
     private val mutex = Mutex()
@@ -54,7 +54,7 @@ class PermissionProjectionService(
         principalId: String,
         tenantResourceId: UUID?,
         namespaceResourceId: UUID?,
-        topicId: UUID?
+        topicId: UUID?,
     ): List<PermissionGrant> {
         val cacheKey = buildCacheKey(principalId, tenantResourceId, namespaceResourceId, topicId)
 
@@ -78,15 +78,15 @@ class PermissionProjectionService(
         permission: Permission,
         tenantResourceId: UUID,
         namespaceResourceId: UUID? = null,
-        topicId: UUID? = null
+        topicId: UUID? = null,
     ): Boolean {
         val grants = getPermissionGrants(principalId, tenantResourceId, namespaceResourceId, topicId)
 
         return grants.any { grant ->
             grant.resourceType == resourceType &&
-                    (grant.permissions.contains(permission) || grant.permissions.contains(Permission.ADMIN)) &&
-                    // Check resource scope: null = all resources, or specific match
-                    (grant.resourceId == null || grant.resourceId == resourceId?.toString())
+                (grant.permissions.contains(permission) || grant.permissions.contains(Permission.ADMIN)) &&
+                // Check resource scope: null = all resources, or specific match
+                (grant.resourceId == null || grant.resourceId == resourceId?.toString())
         }
     }
 
@@ -94,7 +94,7 @@ class PermissionProjectionService(
         principalId: String,
         tenantResourceId: UUID?,
         namespaceResourceId: UUID?,
-        topicId: UUID?
+        topicId: UUID?,
     ): List<PermissionGrant> {
         val allGrants = permissionRepository.findByPrincipal(principalId)
         val now = Instant.now()
@@ -112,20 +112,24 @@ class PermissionProjectionService(
             // Otherwise, grant's tenantResourceId must match the query's tenantResourceId
             // Special case: If grant has resourceId=null (global admin) and is for system tenant,
             // treat it as global admin that applies to all tenants
-            val isGlobalAdminGrant = grant.resourceId == null &&
+            val isGlobalAdminGrant =
+                grant.resourceId == null &&
                     grant.resourceType == ResourceType.TENANT &&
                     grant.tenantResourceId == com.eventstore.domain.tenants.SystemTopics.SYSTEM_TENANT_ID.toString()
-            val tenantMatches = tenantResourceId == null ||
+            val tenantMatches =
+                tenantResourceId == null ||
                     grant.tenantResourceId == tenantResourceId.toString() ||
                     isGlobalAdminGrant
 
             // Check namespace match (if namespace context provided)
-            val namespaceMatches = namespaceResourceId == null ||
+            val namespaceMatches =
+                namespaceResourceId == null ||
                     grant.namespaceResourceId == null ||
                     grant.namespaceResourceId == namespaceResourceId.toString()
 
             // Check topic match (if topic context provided)
-            val topicMatches = topicId == null ||
+            val topicMatches =
+                topicId == null ||
                     grant.topicId == null ||
                     grant.topicId == topicId.toString()
 
@@ -137,9 +141,9 @@ class PermissionProjectionService(
         principalId: String,
         tenantResourceId: UUID?,
         namespaceResourceId: UUID?,
-        topicId: UUID?
+        topicId: UUID?,
     ): String {
-        return "$principalId:${tenantResourceId}:${namespaceResourceId}:${topicId}"
+        return "$principalId:$tenantResourceId:$namespaceResourceId:$topicId"
     }
 
     private suspend fun invalidateCache(principalId: String) {
@@ -152,19 +156,20 @@ class PermissionProjectionService(
         when (event.type) {
             PermissionEventType.GRANTED -> {
                 val payload = PermissionGrantedEvent.fromPayload(event.payload)
-                val grant = PermissionGrant(
-                    principalId = payload.principalId,
-                    principalType = payload.principalType,
-                    resourceType = payload.resourceType,
-                    resourceId = payload.resourceId,
-                    tenantResourceId = payload.tenantResourceId,
-                    namespaceResourceId = payload.namespaceResourceId,
-                    topicId = payload.topicId,
-                    permissions = payload.permissions,
-                    grantedBy = payload.grantedBy,
-                    grantedAt = payload.grantedAt,
-                    expiresAt = payload.expiresAt
-                )
+                val grant =
+                    PermissionGrant(
+                        principalId = payload.principalId,
+                        principalType = payload.principalType,
+                        resourceType = payload.resourceType,
+                        resourceId = payload.resourceId,
+                        tenantResourceId = payload.tenantResourceId,
+                        namespaceResourceId = payload.namespaceResourceId,
+                        topicId = payload.topicId,
+                        permissions = payload.permissions,
+                        grantedBy = payload.grantedBy,
+                        grantedAt = payload.grantedAt,
+                        expiresAt = payload.expiresAt,
+                    )
                 permissionRepository.save(grant)
                 invalidateCache(payload.principalId)
             }
@@ -175,11 +180,11 @@ class PermissionProjectionService(
                 val grants = permissionRepository.findByPrincipal(payload.principalId)
                 grants.filter { grant ->
                     grant.resourceType == payload.resourceType &&
-                            grant.resourceId == payload.resourceId &&
-                            grant.tenantResourceId == payload.tenantResourceId &&
-                            grant.namespaceResourceId == payload.namespaceResourceId &&
-                            grant.topicId == payload.topicId &&
-                            grant.permissions.intersect(payload.permissions).isNotEmpty()
+                        grant.resourceId == payload.resourceId &&
+                        grant.tenantResourceId == payload.tenantResourceId &&
+                        grant.namespaceResourceId == payload.namespaceResourceId &&
+                        grant.topicId == payload.topicId &&
+                        grant.permissions.intersect(payload.permissions).isNotEmpty()
                 }.forEach { grant ->
                     // Remove revoked permissions from the grant
                     val remainingPermissions = grant.permissions - payload.permissions
@@ -201,4 +206,3 @@ class PermissionProjectionService(
         }
     }
 }
-

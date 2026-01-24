@@ -12,7 +12,7 @@ import java.util.*
 
 class AsyncDispatcherManager(
     private val consumerRepository: ConsumerRepository,
-    private val eventRepository: EventRepository
+    private val eventRepository: EventRepository,
 ) : EventDispatcher {
     private val dispatchers = mutableMapOf<UUID, TopicDispatcher>()
     private val mutex = Mutex()
@@ -24,11 +24,12 @@ class AsyncDispatcherManager(
                 return false // Dispatcher already existed
             }
 
-            val dispatcher = TopicDispatcher(
-                topicId = topicId,
-                consumerRepository = consumerRepository,
-                eventRepository = eventRepository
-            )
+            val dispatcher =
+                TopicDispatcher(
+                    topicId = topicId,
+                    consumerRepository = consumerRepository,
+                    eventRepository = eventRepository,
+                )
 
             dispatcher.start(scope)
             dispatchers[topicId] = dispatcher

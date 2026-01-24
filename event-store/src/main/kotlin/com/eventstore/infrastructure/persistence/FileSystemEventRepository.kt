@@ -19,12 +19,12 @@ data class EventFile(
     val id: String,
     val timestamp: String,
     val type: String,
-    val payload: Map<String, Any>
+    val payload: Map<String, Any>,
 )
 
 class FileSystemEventRepository(
     private val dataDir: Path,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) : EventRepository {
     private val logger = LoggerFactory.getLogger(FileSystemEventRepository::class.java)
 
@@ -32,7 +32,7 @@ class FileSystemEventRepository(
         try {
             Files.createDirectories(dataDir)
         } catch (e: Exception) {
-            throw EventStorageException("Failed to create data directory: ${dataDir}", e)
+            throw EventStorageException("Failed to create data directory: $dataDir", e)
         }
     }
 
@@ -42,7 +42,7 @@ class FileSystemEventRepository(
 
     private fun getEventFilePath(
         topicId: UUID,
-        eventId: EventId
+        eventId: EventId,
     ): Path {
         val sequence = eventId.sequence
 
@@ -69,7 +69,7 @@ class FileSystemEventRepository(
         type: String,
         payload: Map<String, Any>,
         eventId: EventId,
-        timestamp: Instant
+        timestamp: Instant,
     ): Event {
         return withContext(Dispatchers.IO) {
             try {
@@ -78,12 +78,13 @@ class FileSystemEventRepository(
 
                 Files.createDirectories(filePath.parent)
 
-                val eventFile = EventFile(
-                    id = eventId.value,
-                    timestamp = timestamp.toString(),
-                    type = type,
-                    payload = payload
-                )
+                val eventFile =
+                    EventFile(
+                        id = eventId.value,
+                        timestamp = timestamp.toString(),
+                        type = type,
+                        payload = payload,
+                    )
                 val json = objectMapper.writeValueAsString(eventFile)
                 Files.writeString(filePath, json)
 
@@ -103,12 +104,13 @@ class FileSystemEventRepository(
 
                 Files.createDirectories(filePath.parent)
 
-                val eventFile = EventFile(
-                    id = event.id.value,
-                    timestamp = event.timestamp.toString(),
-                    type = event.type,
-                    payload = event.payload
-                )
+                val eventFile =
+                    EventFile(
+                        id = event.id.value,
+                        timestamp = event.timestamp.toString(),
+                        type = event.type,
+                        payload = event.payload,
+                    )
                 val json = objectMapper.writeValueAsString(eventFile)
                 Files.writeString(filePath, json)
 
@@ -121,9 +123,7 @@ class FileSystemEventRepository(
         }
     }
 
-    override suspend fun storeEvents(
-        events: List<Event>
-    ): List<Event> {
+    override suspend fun storeEvents(events: List<Event>): List<Event> {
         if (events.isEmpty()) {
             return emptyList()
         }
@@ -138,12 +138,13 @@ class FileSystemEventRepository(
 
                     Files.createDirectories(filePath.parent)
 
-                    val eventFile = EventFile(
-                        id = event.id.value,
-                        timestamp = event.timestamp.toString(),
-                        type = event.type,
-                        payload = event.payload
-                    )
+                    val eventFile =
+                        EventFile(
+                            id = event.id.value,
+                            timestamp = event.timestamp.toString(),
+                            type = event.type,
+                            payload = event.payload,
+                        )
                     val json = objectMapper.writeValueAsString(eventFile)
                     Files.writeString(filePath, json)
 
@@ -163,7 +164,7 @@ class FileSystemEventRepository(
                 }
                 throw EventStorageException(
                     "Failed to store ${events.size} events (${storedEvents.size} stored before failure)",
-                    e
+                    e,
                 )
             }
         }
@@ -171,7 +172,7 @@ class FileSystemEventRepository(
 
     override suspend fun getEvent(
         topicId: UUID,
-        eventId: EventId
+        eventId: EventId,
     ): Event? {
         return withContext(Dispatchers.IO) {
             try {
@@ -187,7 +188,7 @@ class FileSystemEventRepository(
                     id = EventId.fromString(eventFile.id),
                     timestamp = Instant.parse(eventFile.timestamp),
                     type = eventFile.type,
-                    payload = eventFile.payload
+                    payload = eventFile.payload,
                 )
             } catch (e: Exception) {
                 logger.warn("Failed to read event file for ${eventId.value}: ${e.message}")
@@ -200,7 +201,7 @@ class FileSystemEventRepository(
         topicId: UUID,
         sinceEventId: EventId?,
         date: String?,
-        limit: Int?
+        limit: Int?,
     ): List<Event> {
         return withContext(Dispatchers.IO) {
             val topicDir = resolveBaseDir(topicId)
@@ -209,11 +210,12 @@ class FileSystemEventRepository(
                 return@withContext emptyList()
             }
 
-            val eventCollection: MutableCollection<Event> = if (limit != null && limit > 0) {
-                PriorityQueue(limit + 1) { a, b -> compareEventIds(b.id, a.id) }
-            } else {
-                mutableListOf()
-            }
+            val eventCollection: MutableCollection<Event> =
+                if (limit != null && limit > 0) {
+                    PriorityQueue(limit + 1) { a, b -> compareEventIds(b.id, a.id) }
+                } else {
+                    mutableListOf()
+                }
 
             val startSequence = sinceEventId?.sequence ?: 0L
             val startGroup1 = (startSequence / 1_000_000).toInt()
@@ -251,12 +253,14 @@ class FileSystemEventRepository(
                                                 if (group1 == startGroup1 &&
                                                     group2 == startGroup2 &&
                                                     group3 < startGroup3
-                                                ) return@group3Loop
+                                                ) {
+                                                    return@group3Loop
+                                                }
 
                                                 Files.list(group3Dir).use { files ->
                                                     files.filter {
                                                         Files.isRegularFile(it) &&
-                                                                it.fileName.toString().endsWith(".json")
+                                                            it.fileName.toString().endsWith(".json")
                                                     }
                                                         .sorted()
                                                         .forEach fileLoop@{ path ->
@@ -273,19 +277,20 @@ class FileSystemEventRepository(
                                                                 val json = Files.readString(path)
                                                                 val eventFile: EventFile = objectMapper.readValue(json)
                                                                 val parsedEventId = EventId.fromString(eventFile.id)
-                                                                
+
                                                                 // Verify the EventId matches the expected topicId
                                                                 // This ensures we only return events that belong to the queried topic
                                                                 if (parsedEventId.topicId != topicId) {
                                                                     return@fileLoop
                                                                 }
-                                                                
-                                                                val event = Event(
-                                                                    id = parsedEventId,
-                                                                    timestamp = Instant.parse(eventFile.timestamp),
-                                                                    type = eventFile.type,
-                                                                    payload = eventFile.payload
-                                                                )
+
+                                                                val event =
+                                                                    Event(
+                                                                        id = parsedEventId,
+                                                                        timestamp = Instant.parse(eventFile.timestamp),
+                                                                        type = eventFile.type,
+                                                                        payload = eventFile.payload,
+                                                                    )
 
                                                                 if (sinceEventId != null &&
                                                                     compareEventIds(event.id, sinceEventId) <= 0
@@ -294,9 +299,10 @@ class FileSystemEventRepository(
                                                                 }
 
                                                                 if (date != null) {
-                                                                    val eventDate = event.timestamp
-                                                                        .atZone(java.time.ZoneId.systemDefault())
-                                                                        .format(DateTimeFormatter.ISO_LOCAL_DATE)
+                                                                    val eventDate =
+                                                                        event.timestamp
+                                                                            .atZone(java.time.ZoneId.systemDefault())
+                                                                            .format(DateTimeFormatter.ISO_LOCAL_DATE)
                                                                     if (eventDate != date) {
                                                                         return@fileLoop
                                                                     }
@@ -316,8 +322,8 @@ class FileSystemEventRepository(
                                                                 }
                                                             } catch (e: Exception) {
                                                                 logger.warn(
-                                                                    "Failed to read event file ${path}: ${e.message}",
-                                                                    e
+                                                                    "Failed to read event file $path: ${e.message}",
+                                                                    e,
                                                                 )
                                                                 // Skip invalid event files (e.g., legacy format or parsing errors)
                                                                 return@fileLoop
@@ -331,26 +337,28 @@ class FileSystemEventRepository(
                     }
             }
 
-            val sortedEvents = if (eventCollection is PriorityQueue) {
-                eventCollection.sortedWith { a, b -> compareEventIds(a.id, b.id) }
-            } else if (date != null) {
-                (eventCollection as MutableList<Event>).sortedWith { a, b -> compareEventIds(a.id, b.id) }
-            } else {
-                eventCollection.toList()
-            }
+            val sortedEvents =
+                if (eventCollection is PriorityQueue) {
+                    eventCollection.sortedWith { a, b -> compareEventIds(a.id, b.id) }
+                } else if (date != null) {
+                    (eventCollection as MutableList<Event>).sortedWith { a, b -> compareEventIds(a.id, b.id) }
+                } else {
+                    eventCollection.toList()
+                }
 
             sortedEvents
         }
     }
 
-    override suspend fun getLatestEventId(
-        topicId: UUID
-    ): EventId? {
+    override suspend fun getLatestEventId(topicId: UUID): EventId? {
         val events = getEvents(topicId)
         return events.lastOrNull()?.id
     }
 
-    private fun compareEventIds(id1: EventId, id2: EventId): Int {
+    private fun compareEventIds(
+        id1: EventId,
+        id2: EventId,
+    ): Int {
         val topicComparison = id1.topicId.compareTo(id2.topicId)
         return if (topicComparison != 0) {
             topicComparison
@@ -359,4 +367,3 @@ class FileSystemEventRepository(
         }
     }
 }
- 

@@ -21,11 +21,7 @@ class QuotaExceededException(
     tenantId: UUID,
     resourceType: String,
     currentUsage: Int,
-    requestedQuota: Int
+    requestedQuota: Int,
 ) : RuntimeException(
-    "Quota violation for tenant '$tenantId': current $resourceType usage ($currentUsage) exceeds requested quota ($requestedQuota)"
-)
-
-
-
-
+        "Quota violation for tenant '$tenantId': current $resourceType usage ($currentUsage) exceeds requested quota ($requestedQuota)",
+    )

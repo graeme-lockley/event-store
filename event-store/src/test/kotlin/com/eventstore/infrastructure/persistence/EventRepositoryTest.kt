@@ -20,7 +20,6 @@ import kotlin.test.assertTrue
  * These tests verify common behavior that should be consistent across all implementations.
  */
 class EventRepositoryTest {
-
     @TempDir
     lateinit var sharedTempDir: Path
 
@@ -28,18 +27,19 @@ class EventRepositoryTest {
     fun `test repository implementations`(): List<DynamicTest> {
         data class RepoWithCleanup(val repository: EventRepository, val cleanup: (() -> Unit)?)
 
-        val implementations = listOf(
-            "InMemoryEventRepository" to {
-                RepoWithCleanup(InMemoryEventRepository(), null)
-            },
-            "FileSystemEventRepository" to {
-                // Create a unique subdirectory for each test to avoid conflicts
-                val tempDir = Files.createTempDirectory(sharedTempDir, "event-repo-test")
-                val objectMapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
-                val repo = FileSystemEventRepository(tempDir, objectMapper)
-                RepoWithCleanup(repo) { cleanupDirectory(tempDir) }
-            }
-        )
+        val implementations =
+            listOf(
+                "InMemoryEventRepository" to {
+                    RepoWithCleanup(InMemoryEventRepository(), null)
+                },
+                "FileSystemEventRepository" to {
+                    // Create a unique subdirectory for each test to avoid conflicts
+                    val tempDir = Files.createTempDirectory(sharedTempDir, "event-repo-test")
+                    val objectMapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+                    val repo = FileSystemEventRepository(tempDir, objectMapper)
+                    RepoWithCleanup(repo) { cleanupDirectory(tempDir) }
+                },
+            )
 
         return implementations.flatMap { (name, factory) ->
             listOf(
@@ -146,7 +146,7 @@ class EventRepositoryTest {
                     } finally {
                         repoWithCleanup.cleanup?.invoke()
                     }
-                }
+                },
             )
         }
     }
@@ -192,18 +192,30 @@ class EventRepositoryTest {
         val topicId = UUID.randomUUID()
         val timestamp = Instant.now()
 
-        val event1 = repository.storeEvent(
-            topicId, "user.created", mapOf("id" to "1"),
-            EventId.create(topicId, 1L), timestamp
-        )
-        val event2 = repository.storeEvent(
-            topicId, "user.updated", mapOf("id" to "2"),
-            EventId.create(topicId, 2L), timestamp
-        )
-        val event3 = repository.storeEvent(
-            topicId, "user.deleted", mapOf("id" to "3"),
-            EventId.create(topicId, 3L), timestamp
-        )
+        val event1 =
+            repository.storeEvent(
+                topicId,
+                "user.created",
+                mapOf("id" to "1"),
+                EventId.create(topicId, 1L),
+                timestamp,
+            )
+        val event2 =
+            repository.storeEvent(
+                topicId,
+                "user.updated",
+                mapOf("id" to "2"),
+                EventId.create(topicId, 2L),
+                timestamp,
+            )
+        val event3 =
+            repository.storeEvent(
+                topicId,
+                "user.deleted",
+                mapOf("id" to "3"),
+                EventId.create(topicId, 3L),
+                timestamp,
+            )
 
         val events = repository.getEvents(topicId)
 
@@ -251,10 +263,12 @@ class EventRepositoryTest {
         val events = repository.getEvents(topicId, date = todayDate)
 
         assertEquals(2, events.size)
-        assertTrue(events.all { event ->
-            val eventDate = event.timestamp.atZone(java.time.ZoneId.systemDefault()).format(dateFormatter)
-            eventDate == todayDate
-        })
+        assertTrue(
+            events.all { event ->
+                val eventDate = event.timestamp.atZone(java.time.ZoneId.systemDefault()).format(dateFormatter)
+                eventDate == todayDate
+            },
+        )
     }
 
     private suspend fun testGetEventsWithLimit(repository: EventRepository) {
@@ -263,8 +277,11 @@ class EventRepositoryTest {
 
         repeat(10) { i ->
             repository.storeEvent(
-                topicId, "event$i", mapOf("id" to i.toString()),
-                EventId.create(topicId, (i + 1).toLong()), timestamp
+                topicId,
+                "event$i",
+                mapOf("id" to i.toString()),
+                EventId.create(topicId, (i + 1).toLong()),
+                timestamp,
             )
         }
 
@@ -295,14 +312,22 @@ class EventRepositoryTest {
         val topicId2 = UUID.randomUUID()
         val timestamp = Instant.now()
 
-        val event1 = repository.storeEvent(
-            topicId1, "event1", mapOf("id" to "1"),
-            EventId.create(topicId1, 1L), timestamp
-        )
-        val event2 = repository.storeEvent(
-            topicId2, "event2", mapOf("id" to "2"),
-            EventId.create(topicId2, 1L), timestamp
-        )
+        val event1 =
+            repository.storeEvent(
+                topicId1,
+                "event1",
+                mapOf("id" to "1"),
+                EventId.create(topicId1, 1L),
+                timestamp,
+            )
+        val event2 =
+            repository.storeEvent(
+                topicId2,
+                "event2",
+                mapOf("id" to "2"),
+                EventId.create(topicId2, 1L),
+                timestamp,
+            )
 
         val events1 = repository.getEvents(topicId1)
         val events2 = repository.getEvents(topicId2)
@@ -330,14 +355,15 @@ class EventRepositoryTest {
         val topicId = UUID.randomUUID()
         val eventId = EventId.create(topicId, 1L)
         val timestamp = Instant.now()
-        val payload = mapOf(
-            "id" to "123",
-            "name" to "Alice",
-            "age" to 30,
-            "active" to true,
-            "tags" to listOf("admin", "user"),
-            "metadata" to mapOf("source" to "api", "version" to "1.0")
-        )
+        val payload =
+            mapOf(
+                "id" to "123",
+                "name" to "Alice",
+                "age" to 30,
+                "active" to true,
+                "tags" to listOf("admin", "user"),
+                "metadata" to mapOf("source" to "api", "version" to "1.0"),
+            )
 
         val event = repository.storeEvent(topicId, "user.created", payload, eventId, timestamp)
 
@@ -353,8 +379,11 @@ class EventRepositoryTest {
 
         (1..5).forEach { i ->
             repository.storeEvent(
-                topicId, "event$i", mapOf("id" to i.toString()),
-                EventId.create(topicId, i.toLong()), timestamp
+                topicId,
+                "event$i",
+                mapOf("id" to i.toString()),
+                EventId.create(topicId, i.toLong()),
+                timestamp,
             )
         }
 

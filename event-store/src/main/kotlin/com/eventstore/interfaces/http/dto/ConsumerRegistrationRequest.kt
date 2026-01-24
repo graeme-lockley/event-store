@@ -12,11 +12,11 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
     use = JsonTypeInfo.Id.NAME,
     include = JsonTypeInfo.As.PROPERTY,
     property = "type",
-    defaultImpl = HttpConsumerRegistrationRequestDto::class
+    defaultImpl = HttpConsumerRegistrationRequestDto::class,
 )
 @JsonSubTypes(
     JsonSubTypes.Type(value = HttpConsumerRegistrationRequestDto::class, name = "http"),
-    JsonSubTypes.Type(value = AzureEventGridConsumerRegistrationRequestDto::class, name = "azure-event-grid")
+    JsonSubTypes.Type(value = AzureEventGridConsumerRegistrationRequestDto::class, name = "azure-event-grid"),
 )
 sealed interface ConsumerRegistrationRequestDto {
     val topics: Map<String, String?>
@@ -28,7 +28,7 @@ sealed interface ConsumerRegistrationRequestDto {
  */
 data class HttpConsumerRegistrationRequestDto(
     val callback: String,
-    override val topics: Map<String, String?>
+    override val topics: Map<String, String?>,
 ) : ConsumerRegistrationRequestDto
 
 /**
@@ -37,5 +37,5 @@ data class HttpConsumerRegistrationRequestDto(
 data class AzureEventGridConsumerRegistrationRequestDto(
     val endpointUrl: String,
     val accessKey: String,
-    override val topics: Map<String, String?>
+    override val topics: Map<String, String?>,
 ) : ConsumerRegistrationRequestDto

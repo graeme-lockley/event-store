@@ -12,7 +12,7 @@ import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 
 class ApiKeyProjectionService(
-    private val apiKeyRepository: ApiKeyRepository
+    private val apiKeyRepository: ApiKeyRepository,
 ) {
     private val logger = LoggerFactory.getLogger(ApiKeyProjectionService::class.java)
     private val mutex = Mutex()
@@ -38,27 +38,29 @@ class ApiKeyProjectionService(
         when (event.type) {
             ApiKeyEventType.CREATED -> {
                 val payload = ApiKeyCreatedEvent.fromPayload(event.payload)
-                val apiKey = ApiKey(
-                    id = payload.apiKeyId,
-                    userId = payload.userId,
-                    keyHash = payload.keyHash,
-                    name = payload.name,
-                    description = payload.description,
-                    createdAt = payload.createdAt,
-                    expiresAt = payload.expiresAt,
-                    lastUsedAt = null,
-                    revokedAt = null,
-                    scopes = payload.scopes
-                )
+                val apiKey =
+                    ApiKey(
+                        id = payload.apiKeyId,
+                        userId = payload.userId,
+                        keyHash = payload.keyHash,
+                        name = payload.name,
+                        description = payload.description,
+                        createdAt = payload.createdAt,
+                        expiresAt = payload.expiresAt,
+                        lastUsedAt = null,
+                        revokedAt = null,
+                        scopes = payload.scopes,
+                    )
                 apiKeyRepository.save(apiKey)
             }
 
             ApiKeyEventType.REVOKED -> {
                 val payload = ApiKeyRevokedEvent.fromPayload(event.payload)
                 val existing = apiKeyRepository.findById(payload.apiKeyId) ?: return
-                val updated = existing.copy(
-                    revokedAt = payload.revokedAt
-                )
+                val updated =
+                    existing.copy(
+                        revokedAt = payload.revokedAt,
+                    )
                 apiKeyRepository.save(updated)
             }
 
@@ -66,4 +68,3 @@ class ApiKeyProjectionService(
         }
     }
 }
-

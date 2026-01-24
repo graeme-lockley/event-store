@@ -19,53 +19,56 @@ import java.time.Instant
 import kotlin.test.assertFailsWith
 
 class AuthenticationServiceTest {
-
     private fun buildProjection(password: String): UserProjectionService {
         val repo = InMemoryUserRepository()
         val projection = UserProjectionService(repo)
         val now = Instant.now()
-        val event = Event(
-            id = EventId.create(
-                topicId = SystemTopics.USERS_TOPIC_ID,
-                sequence = 1
-            ),
-            timestamp = now,
-            type = UserEventType.CREATED,
-            payload = UserCreatedEvent(
-                userId = "u1",
-                email = "user@example.com",
-                name = "Test User",
-                passwordHash = BCrypt.hashpw(password, BCrypt.gensalt()),
-                status = UserStatus.ACTIVE,
-                createdBy = "test",
-                createdAt = now,
-                metadata = emptyMap()
-            ).toPayload()
-        )
+        val event =
+            Event(
+                id =
+                    EventId.create(
+                        topicId = SystemTopics.USERS_TOPIC_ID,
+                        sequence = 1,
+                    ),
+                timestamp = now,
+                type = UserEventType.CREATED,
+                payload =
+                    UserCreatedEvent(
+                        userId = "u1",
+                        email = "user@example.com",
+                        name = "Test User",
+                        passwordHash = BCrypt.hashpw(password, BCrypt.gensalt()),
+                        status = UserStatus.ACTIVE,
+                        createdBy = "test",
+                        createdAt = now,
+                        metadata = emptyMap(),
+                    ).toPayload(),
+            )
         runBlocking { projection.handleEvents(listOf(event)) }
         return projection
     }
 
     @Test
-    fun `login succeeds for active user`() = runTest {
-        val projection = buildProjection("secret")
-        val authService = AuthenticationService(projection, SessionManager())
+    fun `login succeeds for active user`() =
+        runTest {
+            val projection = buildProjection("secret")
+            val authService = AuthenticationService(projection, SessionManager())
 
-        val (session, tenants) = authService.login("user@example.com", "secret")
+            val (session, tenants) = authService.login("user@example.com", "secret")
 
-        assertNotNull(session)
-        assertEquals("u1", session.userId)
-        assertEquals(emptyList<String>(), tenants)
-    }
+            assertNotNull(session)
+            assertEquals("u1", session.userId)
+            assertEquals(emptyList<String>(), tenants)
+        }
 
     @Test
-    fun `login fails for invalid password`() = runTest {
-        val projection = buildProjection("secret")
-        val authService = AuthenticationService(projection, SessionManager())
+    fun `login fails for invalid password`() =
+        runTest {
+            val projection = buildProjection("secret")
+            val authService = AuthenticationService(projection, SessionManager())
 
-        assertFailsWith<com.eventstore.domain.exceptions.InvalidCredentialsException> {
-            authService.login("user@example.com", "wrong")
+            assertFailsWith<com.eventstore.domain.exceptions.InvalidCredentialsException> {
+                authService.login("user@example.com", "wrong")
+            }
         }
-    }
 }
-

@@ -14,34 +14,34 @@ data class RemoveUserTenantRequest(
     val userId: String,
     val tenantId: String,
     val removedBy: String = "system",
-    val reason: String? = null
+    val reason: String? = null,
 )
 
 class RemoveUserFromTenantService(
     private val userProjectionService: UserProjectionService,
     config: Config,
-    eventPublisher: SystemEventPublisher
+    eventPublisher: SystemEventPublisher,
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: RemoveUserTenantRequest): Boolean {
         userProjectionService.getUser(request.userId) ?: throw UserNotFoundException(request.userId)
 
         val now = Instant.now()
-        val payload = UserTenantRemovedEvent(
-            userId = request.userId,
-            tenantId = request.tenantId,
-            removedBy = request.removedBy,
-            removedAt = now,
-            reason = request.reason
-        )
+        val payload =
+            UserTenantRemovedEvent(
+                userId = request.userId,
+                tenantId = request.tenantId,
+                removedBy = request.removedBy,
+                removedAt = now,
+                reason = request.reason,
+            )
 
         eventPublisher.publishEvent(
             topicId = SystemTopics.USERS_TOPIC_ID,
             eventType = UserEventType.TENANT_REMOVED,
             payload = payload.toPayload(),
-            timestamp = now
+            timestamp = now,
         )
 
         return true
     }
 }
-

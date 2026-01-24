@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class ApiKeyHasherTest {
-
     @Test
     fun `hash produces consistent output`() {
         val key = "es_test123456789"
@@ -54,7 +53,3 @@ class ApiKeyHasherTest {
         assertFalse(ApiKeyHasher.verify(key, wrongHash))
     }
 }
-
-
-
-

@@ -15,7 +15,7 @@ import java.util.*
  */
 class SyncDispatcherManager(
     private val consumerRepository: ConsumerRepository,
-    private val eventRepository: EventRepository
+    private val eventRepository: EventRepository,
 ) : EventDispatcher {
     private val logger = LoggerFactory.getLogger(SyncDispatcherManager::class.java)
     private val processedTopics = mutableSetOf<UUID>()
@@ -70,7 +70,10 @@ class SyncDispatcherManager(
      * This is similar to TopicDispatcher.deliverPendingEvents but without retry logic
      * and backoff, as we want immediate synchronous processing in tests.
      */
-    private suspend fun deliverPendingEvents(consumer: Consumer, topicId: UUID) {
+    private suspend fun deliverPendingEvents(
+        consumer: Consumer,
+        topicId: UUID,
+    ) {
         val eventsToDeliver = mutableListOf<com.eventstore.domain.Event>()
         val topicToLatestEventId = mutableMapOf<UUID, String>()
 
@@ -80,10 +83,11 @@ class SyncDispatcherManager(
 
             try {
                 val lastEventId = lastEventIdStr?.let { EventId.fromString(it) }
-                val events = eventRepository.getEvents(
-                    topicId = topicId,
-                    sinceEventId = lastEventId
-                )
+                val events =
+                    eventRepository.getEvents(
+                        topicId = topicId,
+                        sinceEventId = lastEventId,
+                    )
 
                 if (events.isNotEmpty()) {
                     eventsToDeliver.addAll(events)
@@ -115,4 +119,3 @@ class SyncDispatcherManager(
         }
     }
 }
-

@@ -26,4 +26,3 @@ class EventStorageException(message: String, cause: Throwable? = null) :
 
 class TopicConfigException(message: String, cause: Throwable? = null) :
     DomainException("Topic configuration failed: $message", cause)
-

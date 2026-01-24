@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 class TenantProjectionService(
-    private val tenantRepository: TenantRepository
+    private val tenantRepository: TenantRepository,
 ) {
     private val logger = LoggerFactory.getLogger(TenantProjectionService::class.java)
     private val mutex = Mutex()
@@ -65,15 +65,16 @@ class TenantProjectionService(
         when (event.type) {
             TenantEventType.CREATED -> {
                 val payload = TenantCreatedEvent.fromPayload(event.payload)
-                val tenant = Tenant(
-                    tenantId = payload.tenantId,
-                    name = payload.name,
-                    createdAt = payload.createdAt,
-                    updatedAt = null,
-                    deletedAt = null,
-                    quota = payload.quota,
-                    metadata = payload.metadata
-                )
+                val tenant =
+                    Tenant(
+                        tenantId = payload.tenantId,
+                        name = payload.name,
+                        createdAt = payload.createdAt,
+                        updatedAt = null,
+                        deletedAt = null,
+                        quota = payload.quota,
+                        metadata = payload.metadata,
+                    )
                 tenantRepository.save(tenant)
             }
 
@@ -85,12 +86,13 @@ class TenantProjectionService(
                     return
                 }
 
-                val updated = existing.copy(
-                    name = payload.name ?: existing.name,
-                    quota = payload.quota ?: existing.quota,
-                    updatedAt = payload.updatedAt,
-                    metadata = payload.metadata ?: existing.metadata
-                )
+                val updated =
+                    existing.copy(
+                        name = payload.name ?: existing.name,
+                        quota = payload.quota ?: existing.quota,
+                        updatedAt = payload.updatedAt,
+                        metadata = payload.metadata ?: existing.metadata,
+                    )
                 tenantRepository.save(updated)
             }
 
@@ -102,10 +104,11 @@ class TenantProjectionService(
                     return
                 }
 
-                val deleted = existing.copy(
-                    deletedAt = payload.deletedAt,
-                    updatedAt = payload.deletedAt
-                )
+                val deleted =
+                    existing.copy(
+                        deletedAt = payload.deletedAt,
+                        updatedAt = payload.deletedAt,
+                    )
                 tenantRepository.save(deleted)
             }
 

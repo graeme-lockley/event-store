@@ -6,13 +6,16 @@ import java.util.concurrent.ConcurrentHashMap
 data class Session(
     val sessionId: String,
     val userId: String,
-    val tenantIds: List<String>
+    val tenantIds: List<String>,
 )
 
 class SessionManager {
     private val sessions = ConcurrentHashMap<String, Session>()
 
-    fun createSession(userId: String, tenantIds: List<String>): Session {
+    fun createSession(
+        userId: String,
+        tenantIds: List<String>,
+    ): Session {
         val sessionId = UUID.randomUUID().toString()
         val session = Session(sessionId, userId, tenantIds)
         sessions[sessionId] = session
@@ -27,4 +30,3 @@ class SessionManager {
         }
     }
 }
-

@@ -16,21 +16,21 @@ import java.util.*
  * Creates the appropriate Consumer subclass based on the registration request type.
  */
 class ConsumerFactoryImpl : ConsumerFactory {
-
     override fun create(request: ConsumerRegistrationRequest): Consumer {
         val consumerId = UUID.randomUUID().toString()
 
         return when (request) {
             is HttpConsumerRegistrationRequest -> {
-                val callbackUrl = try {
-                    URI(request.callbackUrl).toURL()
-                } catch (e: Exception) {
-                    throw IllegalArgumentException("Invalid callback URL: ${e.message}", e)
-                }
+                val callbackUrl =
+                    try {
+                        URI(request.callbackUrl).toURL()
+                    } catch (e: Exception) {
+                        throw IllegalArgumentException("Invalid callback URL: ${e.message}", e)
+                    }
                 HttpConsumer(
                     id = consumerId,
                     callbackUrl = callbackUrl,
-                    topics = request.topics
+                    topics = request.topics,
                 )
             }
 
@@ -38,7 +38,7 @@ class ConsumerFactoryImpl : ConsumerFactory {
                 InMemoryConsumer(
                     id = consumerId,
                     handler = request.handler,
-                    topics = request.topics
+                    topics = request.topics,
                 )
             }
 
@@ -49,4 +49,3 @@ class ConsumerFactoryImpl : ConsumerFactory {
         }
     }
 }
-

@@ -1,12 +1,12 @@
 package com.eventstore.integration
 
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.serialization.jackson.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.cookie
+import io.ktor.client.request.get
+import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.jackson.jackson
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
@@ -36,20 +36,22 @@ abstract class BaseTenantIntegrationTest {
         configDir = tempDir.resolve("config")
 
         // Initialize the helper with test-specific directories
-        eventStoreHelper = EventStoreTestHelper(
-            dataDir = dataDir,
-            configDir = configDir
-        )
+        eventStoreHelper =
+            EventStoreTestHelper(
+                dataDir = dataDir,
+                configDir = configDir,
+            )
 
         // Start the event-store instance
         eventStoreHelper.start()
 
         // Create HTTP client with JSON serialization
-        httpClient = HttpClient(CIO) {
-            install(ContentNegotiation) {
-                jackson()
+        httpClient =
+            HttpClient(CIO) {
+                install(ContentNegotiation) {
+                    jackson()
+                }
             }
-        }
 
         // Wait for server to be ready and bootstrap to complete
         waitForServerReady()
@@ -78,33 +80,34 @@ abstract class BaseTenantIntegrationTest {
      * Waits for the server to be ready and bootstrap to complete.
      * Polls the health endpoint until it responds successfully.
      */
-    protected fun waitForServerReady() = runBlocking {
-        val baseUrl = eventStoreHelper.getBaseUrl()
-        val maxAttempts = 30
-        val delayMs = 200L
+    protected fun waitForServerReady() =
+        runBlocking {
+            val baseUrl = eventStoreHelper.getBaseUrl()
+            val maxAttempts = 30
+            val delayMs = 200L
 
-        var serverReady = false
-        for (attempt in 0 until maxAttempts) {
-            try {
-                val response = httpClient.get("$baseUrl/health")
-                if (response.status == HttpStatusCode.OK) {
-                    // Server is ready. Wait a bit more for bootstrap projections to process
-                    delay(500)
-                    serverReady = true
-                    break
+            var serverReady = false
+            for (attempt in 0 until maxAttempts) {
+                try {
+                    val response = httpClient.get("$baseUrl/health")
+                    if (response.status == HttpStatusCode.OK) {
+                        // Server is ready. Wait a bit more for bootstrap projections to process
+                        delay(500)
+                        serverReady = true
+                        break
+                    }
+                } catch (_: Exception) {
+                    // Server not ready yet, continue waiting
                 }
-            } catch (_: Exception) {
-                // Server not ready yet, continue waiting
+                if (attempt < maxAttempts - 1) {
+                    println("Waiting for server to be ready... (attempt ${attempt + 1}/$maxAttempts)")
+                    delay(delayMs)
+                }
             }
-            if (attempt < maxAttempts - 1) {
-                println("Waiting for server to be ready... (attempt ${attempt + 1}/$maxAttempts)")
-                delay(delayMs)
+            if (!serverReady) {
+                throw IllegalStateException("Server failed to become ready after ${maxAttempts * delayMs}ms")
             }
         }
-        if (!serverReady) {
-            throw IllegalStateException("Server failed to become ready after ${maxAttempts * delayMs}ms")
-        }
-    }
 
     /**
      * Authenticates with the default admin credentials
@@ -123,7 +126,7 @@ abstract class BaseTenantIntegrationTest {
     protected suspend fun waitForProjection(
         maxAttempts: Int = 10,
         delayMs: Long = 100,
-        condition: suspend () -> Boolean
+        condition: suspend () -> Boolean,
     ) {
         tenantClient.waitForProjection(maxAttempts, delayMs, condition)
     }

@@ -15,7 +15,7 @@ import java.util.*
 
 class NamespaceProjectionService(
     private val namespaceRepository: NamespaceRepository,
-    private val tenantProjectionService: TenantProjectionService? = null
+    private val tenantProjectionService: TenantProjectionService? = null,
 ) {
     private val logger = LoggerFactory.getLogger(NamespaceProjectionService::class.java)
     private val mutex = Mutex()
@@ -32,11 +32,17 @@ class NamespaceProjectionService(
         }
     }
 
-    suspend fun getNamespaceByName(tenantName: String, name: String): Namespace? {
+    suspend fun getNamespaceByName(
+        tenantName: String,
+        name: String,
+    ): Namespace? {
         return namespaceRepository.findByName(tenantName, name)?.takeIf { it.isActive }
     }
 
-    suspend fun getNamespaceById(tenantId: UUID, namespaceId: UUID): Namespace? {
+    suspend fun getNamespaceById(
+        tenantId: UUID,
+        namespaceId: UUID,
+    ): Namespace? {
         return namespaceRepository.findById(tenantId, namespaceId)?.takeIf { it.isActive }
     }
 
@@ -44,41 +50,48 @@ class NamespaceProjectionService(
         return namespaceRepository.findById(namespaceId)?.takeIf { it.isActive }
     }
 
-    suspend fun getAllNamespaces(): List<Namespace> =
-        namespaceRepository.findAll().filter { it.isActive }
+    suspend fun getAllNamespaces(): List<Namespace> = namespaceRepository.findAll().filter { it.isActive }
 
-    suspend fun namespaceExistsByName(tenantName: String, name: String): Boolean =
-        getNamespaceByName(tenantName, name) != null
+    suspend fun namespaceExistsByName(
+        tenantName: String,
+        name: String,
+    ): Boolean = getNamespaceByName(tenantName, name) != null
 
     // Backward compatibility - deprecated
     @Deprecated("Use getNamespaceByName instead", ReplaceWith("getNamespaceByName(tenantId, namespaceId)"))
-    suspend fun getNamespace(tenantId: String, namespaceId: String): Namespace? =
-        getNamespaceByName(tenantId, namespaceId)
+    suspend fun getNamespace(
+        tenantId: String,
+        namespaceId: String,
+    ): Namespace? = getNamespaceByName(tenantId, namespaceId)
 
     // Backward compatibility - deprecated
     @Deprecated("Use namespaceExistsByName instead", ReplaceWith("namespaceExistsByName(tenantId, namespaceId)"))
-    suspend fun namespaceExists(tenantId: String, namespaceId: String): Boolean =
-        namespaceExistsByName(tenantId, namespaceId)
+    suspend fun namespaceExists(
+        tenantId: String,
+        namespaceId: String,
+    ): Boolean = namespaceExistsByName(tenantId, namespaceId)
 
     private suspend fun applyEvent(event: Event) {
         when (event.type) {
             NamespaceEventType.CREATED -> {
                 val payload = NamespaceCreatedEvent.fromPayload(event.payload)
                 // Get tenantName from payload (included by service layer) or look up from tenant
-                val tenantName = (event.payload["tenantName"] as? String)
-                    ?: tenantProjectionService?.getTenantById(payload.tenantId)?.name
-                    ?: error("tenantName not found in event payload and tenant lookup unavailable")
-                val ns = Namespace(
-                    namespaceId = payload.namespaceId,
-                    tenantId = payload.tenantId,
-                    tenantName = tenantName,
-                    name = payload.name,
-                    description = payload.description,
-                    createdAt = payload.createdAt,
-                    updatedAt = null,
-                    deletedAt = null,
-                    metadata = payload.metadata
-                )
+                val tenantName =
+                    (event.payload["tenantName"] as? String)
+                        ?: tenantProjectionService?.getTenantById(payload.tenantId)?.name
+                        ?: error("tenantName not found in event payload and tenant lookup unavailable")
+                val ns =
+                    Namespace(
+                        namespaceId = payload.namespaceId,
+                        tenantId = payload.tenantId,
+                        tenantName = tenantName,
+                        name = payload.name,
+                        description = payload.description,
+                        createdAt = payload.createdAt,
+                        updatedAt = null,
+                        deletedAt = null,
+                        metadata = payload.metadata,
+                    )
                 namespaceRepository.save(ns)
             }
 
@@ -89,12 +102,13 @@ class NamespaceProjectionService(
                     logger.warn("Received namespace.updated for unknown namespace namespaceId ${payload.namespaceId}")
                     return
                 }
-                val updated = existing.copy(
-                    name = payload.name ?: existing.name,
-                    description = payload.description ?: existing.description,
-                    updatedAt = payload.updatedAt,
-                    metadata = payload.metadata ?: existing.metadata
-                )
+                val updated =
+                    existing.copy(
+                        name = payload.name ?: existing.name,
+                        description = payload.description ?: existing.description,
+                        updatedAt = payload.updatedAt,
+                        metadata = payload.metadata ?: existing.metadata,
+                    )
                 namespaceRepository.save(updated)
             }
 
@@ -113,4 +127,3 @@ class NamespaceProjectionService(
         }
     }
 }
-

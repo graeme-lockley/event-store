@@ -12,7 +12,7 @@ class RegisterConsumerService(
     private val consumerRepository: ConsumerRepository,
     private val topicRepository: TopicRepository,
     private val consumerFactory: ConsumerFactory,
-    private val eventDispatcher: EventDispatcher
+    private val eventDispatcher: EventDispatcher,
 ) {
     suspend fun execute(request: ConsumerRegistrationRequest): String {
         val topicIds = request.topics.keys.toSet()
@@ -25,13 +25,14 @@ class RegisterConsumerService(
         }
 
         // Use factory to create consumer with topicIds
-        val consumer = try {
-            consumerFactory.create(request)
-        } catch (e: IllegalArgumentException) {
-            throw InvalidConsumerRegistrationException(e.message ?: "Invalid consumer configuration")
-        } catch (e: UnsupportedOperationException) {
-            throw InvalidConsumerRegistrationException(e.message ?: "Consumer type not supported")
-        }
+        val consumer =
+            try {
+                consumerFactory.create(request)
+            } catch (e: IllegalArgumentException) {
+                throw InvalidConsumerRegistrationException(e.message ?: "Invalid consumer configuration")
+            } catch (e: UnsupportedOperationException) {
+                throw InvalidConsumerRegistrationException(e.message ?: "Consumer type not supported")
+            }
 
         // Save consumer
         consumerRepository.save(consumer)

@@ -12,25 +12,25 @@ object TenantNameValidator {
         when {
             tenantName.isBlank() -> throw InvalidTenantNameException(
                 tenantName,
-                "Tenant name cannot be blank"
+                "Tenant name cannot be blank",
             )
             tenantName.length < MIN_LENGTH -> throw InvalidTenantNameException(
                 tenantName,
-                "Tenant name must be at least $MIN_LENGTH characters long"
+                "Tenant name must be at least $MIN_LENGTH characters long",
             )
             tenantName.length > MAX_LENGTH -> throw InvalidTenantNameException(
                 tenantName,
-                "Tenant name must be at most $MAX_LENGTH characters long"
+                "Tenant name must be at most $MAX_LENGTH characters long",
             )
             tenantName.equals(SystemTopics.SYSTEM_TENANT_NAME, ignoreCase = true) -> throw InvalidTenantNameException(
                 tenantName,
-                "Tenant name '$tenantName' is reserved for system operations"
+                "Tenant name '$tenantName' is reserved for system operations",
             )
             !VALID_NAME_PATTERN.matches(tenantName) -> throw InvalidTenantNameException(
                 tenantName,
                 "Tenant name must contain only alphanumeric characters and hyphens, " +
-                        "must start and end with alphanumeric characters, " +
-                        "and match pattern: ^[a-zA-Z0-9][a-zA-Z0-9-]{0,62}[a-zA-Z0-9]$"
+                    "must start and end with alphanumeric characters, " +
+                    "and match pattern: ^[a-zA-Z0-9][a-zA-Z0-9-]{0,62}[a-zA-Z0-9]$",
             )
         }
     }

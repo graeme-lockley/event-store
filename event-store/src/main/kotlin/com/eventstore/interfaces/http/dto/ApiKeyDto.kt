@@ -3,8 +3,9 @@ package com.eventstore.interfaces.http.dto
 data class CreateApiKeyRequestDto(
     val name: String,
     val description: String? = null,
-    val expiresAt: String? = null, // ISO 8601 format
-    val scopes: Set<String>? = null
+    // ISO 8601 format
+    val expiresAt: String? = null,
+    val scopes: Set<String>? = null,
 )
 
 data class ApiKeyResponseDto(
@@ -18,16 +19,16 @@ data class ApiKeyResponseDto(
     val revokedAt: String?,
     val scopes: Set<String>?,
     val isActive: Boolean,
-    val key: String? = null // Only included on creation
+    // Only included on creation
+    val key: String? = null,
 )
 
 data class ApiKeyListResponseDto(
-    val apiKeys: List<ApiKeyResponseDto>
+    val apiKeys: List<ApiKeyResponseDto>,
 )
 
 data class ApiKeyRevokeResponseDto(
     val message: String,
     val keyId: String,
-    val revokedAt: String
+    val revokedAt: String,
 )
-

@@ -5,7 +5,7 @@ import com.eventstore.infrastructure.projections.TenantProjectionService
 import java.util.UUID
 
 class GetTenantService(
-    private val tenantProjectionService: TenantProjectionService
+    private val tenantProjectionService: TenantProjectionService,
 ) {
     suspend fun getTenant(tenantId: UUID): Tenant? = tenantProjectionService.getTenantById(tenantId)
 
@@ -13,4 +13,3 @@ class GetTenantService(
 
     suspend fun listTenants(): List<Tenant> = tenantProjectionService.getAllTenants()
 }
-

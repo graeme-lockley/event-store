@@ -17,13 +17,13 @@ data class CreateTenantRequest(
     val name: String,
     val quota: Quota? = null,
     val metadata: Map<String, Any> = emptyMap(),
-    val createdBy: String = "system"
+    val createdBy: String = "system",
 )
 
 class CreateTenantService(
     private val tenantProjectionService: TenantProjectionService,
     config: Config,
-    eventPublisher: SystemEventPublisher
+    eventPublisher: SystemEventPublisher,
 ) : BaseSystemService(config, eventPublisher) {
     suspend fun execute(request: CreateTenantRequest): Tenant {
         // Validate tenant name format
@@ -35,14 +35,15 @@ class CreateTenantService(
 
         val now = Instant.now()
         val resourceId = UUID.randomUUID()
-        val tenantCreated = TenantCreatedEvent(
-            tenantId = resourceId,
-            name = request.name,
-            quota = request.quota,
-            createdBy = request.createdBy,
-            createdAt = now,
-            metadata = request.metadata
-        )
+        val tenantCreated =
+            TenantCreatedEvent(
+                tenantId = resourceId,
+                name = request.name,
+                quota = request.quota,
+                createdBy = request.createdBy,
+                createdAt = now,
+                metadata = request.metadata,
+            )
 
         val payload = tenantCreated.toPayload()
 
@@ -50,7 +51,7 @@ class CreateTenantService(
             topicId = SystemTopics.TENANTS_TOPIC_ID,
             eventType = TenantEventType.CREATED,
             payload = payload,
-            timestamp = now
+            timestamp = now,
         )
 
         return Tenant(
@@ -60,7 +61,7 @@ class CreateTenantService(
             updatedAt = null,
             deletedAt = null,
             quota = request.quota,
-            metadata = request.metadata
+            metadata = request.metadata,
         )
     }
 }

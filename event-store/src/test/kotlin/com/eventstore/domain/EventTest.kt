@@ -7,7 +7,6 @@ import java.util.*
 import kotlin.test.assertEquals
 
 class EventTest {
-
     @Test
     fun `should create valid event`() {
         val topicId = UUID.randomUUID()
@@ -63,13 +62,14 @@ class EventTest {
         val topicId = UUID.randomUUID()
         val eventId = EventId.create(topicId, 1L)
         val timestamp = Instant.now()
-        val payload = mapOf(
-            "id" to "123",
-            "name" to "Alice",
-            "age" to 30,
-            "active" to true,
-            "tags" to listOf("admin", "user")
-        )
+        val payload =
+            mapOf(
+                "id" to "123",
+                "name" to "Alice",
+                "age" to 30,
+                "active" to true,
+                "tags" to listOf("admin", "user"),
+            )
 
         val event = Event(eventId, timestamp, "user.created", payload)
         assertEquals(payload, event.payload)

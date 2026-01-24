@@ -8,7 +8,3 @@ class ApiKeyAlreadyRevokedException(id: String) :
 
 class InvalidApiKeyException(message: String) :
     RuntimeException("Invalid API key: $message")
-
-
-
-

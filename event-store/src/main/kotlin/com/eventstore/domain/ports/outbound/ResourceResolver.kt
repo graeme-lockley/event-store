@@ -9,11 +9,14 @@ import java.util.*
 interface ResourceResolver {
     suspend fun resolveTenantName(tenantName: String): UUID
 
-    suspend fun resolveNamespaceName(tenantId: UUID, namespaceName: String): UUID
+    suspend fun resolveNamespaceName(
+        tenantId: UUID,
+        namespaceName: String,
+    ): UUID
 
-    suspend fun resolveTopicName(tenantId: UUID, namespaceId: UUID, topicName: String): UUID
+    suspend fun resolveTopicName(
+        tenantId: UUID,
+        namespaceId: UUID,
+        topicName: String,
+    ): UUID
 }
-
-
-
-

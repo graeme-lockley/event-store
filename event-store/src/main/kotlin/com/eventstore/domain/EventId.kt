@@ -9,7 +9,7 @@ import java.util.*
  */
 data class EventId(
     val topicId: UUID,
-    val sequence: Long
+    val sequence: Long,
 ) {
     init {
         require(sequence >= 0) { "Sequence must be non-negative" }
@@ -34,14 +34,17 @@ data class EventId(
 
             return EventId(
                 topicId = UUID.fromString(parts[0]),
-                sequence = parts[1].toLong()
+                sequence = parts[1].toLong(),
             )
         }
 
         /**
          * Creates an EventId from its components.
          */
-        fun create(topicId: UUID, sequence: Long): EventId {
+        fun create(
+            topicId: UUID,
+            sequence: Long,
+        ): EventId {
             return EventId(topicId, sequence)
         }
     }
@@ -55,4 +58,3 @@ data class EventId(
 
     override fun toString(): String = "$topicId/$sequence"
 }
-
